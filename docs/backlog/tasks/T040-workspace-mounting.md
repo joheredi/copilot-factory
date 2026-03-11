@@ -5,7 +5,7 @@
 | **ID**                    | T040                                                                |
 | **Epic**                  | [E008: Workspace Management](../epics/E008-workspace-management.md) |
 | **Type**                  | feature                                                             |
-| **Status**                | pending                                                             |
+| **Status**                | done                                                                |
 | **Priority**              | P0                                                                  |
 | **Owner**                 | backend-engineer                                                    |
 | **AI Executable**         | Yes                                                                 |

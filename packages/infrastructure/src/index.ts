@@ -33,6 +33,8 @@ export type {
   FileSystem,
 } from "./workspace/index.js";
 
+export type { MountPacketsInput, MountPacketsResult } from "./workspace/index.js";
+
 export {
   WorkspaceManager,
   GitOperationError,
@@ -41,4 +43,9 @@ export {
   createExecGitOperations,
   parseWorktreeListOutput,
   createNodeFileSystem,
+  WorkspacePacketMounter,
+  PacketMountError,
+  TASK_PACKET_FILENAME,
+  RUN_CONFIG_FILENAME,
+  POLICY_SNAPSHOT_FILENAME,
 } from "./workspace/index.js";

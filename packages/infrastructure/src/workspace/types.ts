@@ -178,4 +178,29 @@ export interface FileSystem {
    * @returns True if the path exists and is accessible.
    */
   exists(path: string): Promise<boolean>;
+
+  /**
+   * Write string content to a file, creating it if it doesn't exist.
+   * Overwrites existing content.
+   *
+   * @param path - Absolute file path to write.
+   * @param content - String content to write.
+   */
+  writeFile(path: string, content: string): Promise<void>;
+
+  /**
+   * Read the full contents of a file as a UTF-8 string.
+   *
+   * @param path - Absolute file path to read.
+   * @returns The file contents as a string.
+   * @throws If the file does not exist or is not readable.
+   */
+  readFile(path: string): Promise<string>;
+
+  /**
+   * Remove a file. Does not throw if the file does not exist.
+   *
+   * @param path - Absolute file path to remove.
+   */
+  unlink(path: string): Promise<void>;
 }

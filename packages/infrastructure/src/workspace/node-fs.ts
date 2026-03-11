@@ -3,7 +3,7 @@
  * Production {@link FileSystem} implementation using Node.js `fs/promises`.
  */
 
-import { mkdir, access } from "node:fs/promises";
+import { mkdir, access, writeFile, readFile, unlink } from "node:fs/promises";
 
 import type { FileSystem } from "./types.js";
 
@@ -27,6 +27,30 @@ export function createNodeFileSystem(): FileSystem {
         return true;
       } catch {
         return false;
+      }
+    },
+
+    async writeFile(path: string, content: string): Promise<void> {
+      await writeFile(path, content, "utf-8");
+    },
+
+    async readFile(path: string): Promise<string> {
+      return await readFile(path, "utf-8");
+    },
+
+    async unlink(path: string): Promise<void> {
+      try {
+        await unlink(path);
+      } catch (err: unknown) {
+        // Ignore ENOENT — file already gone
+        if (
+          err instanceof Error &&
+          "code" in err &&
+          (err as NodeJS.ErrnoException).code === "ENOENT"
+        ) {
+          return;
+        }
+        throw err;
       }
     },
   };

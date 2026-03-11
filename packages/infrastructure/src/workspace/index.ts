@@ -27,6 +27,18 @@ export { GitOperationError, WorkspaceBranchExistsError, WorkspaceDirtyError } fr
 
 export { WorkspaceManager } from "./workspace-manager.js";
 
+// ─── Workspace Packet Mounter ─────────────────────────────────────────────────
+
+export {
+  WorkspacePacketMounter,
+  PacketMountError,
+  TASK_PACKET_FILENAME,
+  RUN_CONFIG_FILENAME,
+  POLICY_SNAPSHOT_FILENAME,
+} from "./workspace-packet-mounter.js";
+
+export type { MountPacketsInput, MountPacketsResult } from "./workspace-packet-mounter.js";
+
 // ─── Git Operations ────────────────────────────────────────────────────────────
 
 export { createExecGitOperations, parseWorktreeListOutput } from "./exec-git-operations.js";

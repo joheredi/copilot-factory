@@ -382,3 +382,33 @@ Created ReverseDependencyService in `packages/application` that automatically re
 - T049 (file scope policy), T050 (validation policy), T051 (retry/escalation policy) — same pattern in domain/config
 - T052 (hierarchical config resolution) — the merge utility here is the foundation
 - T053 (policy snapshot generation) — combines all resolved policies into snapshot
+
+---
+
+### T040: Implement workspace packet and config mounting — DONE
+
+**What was done:**
+
+- Extended `FileSystem` interface in `packages/infrastructure/src/workspace/types.ts` with `writeFile`, `readFile`, and `unlink` methods
+- Updated `node-fs.ts` production implementation with the new methods (ENOENT-safe unlink)
+- Created `WorkspacePacketMounter` class in `packages/infrastructure/src/workspace/workspace-packet-mounter.ts`:
+  - `mountPackets(workspacePath, input)` — writes task-packet.json, run-config.json, and effective-policy-snapshot.json to workspace root
+  - `unmountPackets(workspacePath)` — removes all three files (best-effort, idempotent)
+  - Write-then-verify pattern: each file is read back and parsed as JSON after writing
+  - Atomic cleanup guarantee: if any write/verification fails, all previously written files are removed
+- Created `PacketMountError` error class with workspace path, failed filename, and cause
+- Exported `MountPacketsInput`, `MountPacketsResult` types, all constants and classes from barrel exports
+- Updated existing `createMockFs` in workspace-manager.test.ts to include new FileSystem methods
+- 15 new tests covering: happy path, write order, verification, partial cleanup, cleanup resilience, unmount, error diagnostics
+- 1,978 total tests passing
+
+**Patterns established:**
+
+- FileSystem interface is the central filesystem abstraction in infrastructure — extend it for new file operations
+- Write-then-verify pattern for mounted files ensures workers never start with corrupt context
+- Cleanup-on-failure uses `[...writtenPaths, currentFilePath]` to include both completed and in-progress files
+
+**Next steps:**
+
+- T044 (Worker Supervisor) is now unblocked — depends on T030 ✅, T039 ✅, T040 ✅, T043 ✅
+- T041 (workspace cleanup for terminal states) and T042 (ReconcileWorkspacesCommand) can proceed

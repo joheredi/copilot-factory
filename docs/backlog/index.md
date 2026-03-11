@@ -160,7 +160,7 @@ See [phase documents](phases/) for details.
 | [T037](tasks/T037-reverse-dep-recalc.md)            | Implement reverse-dependency recalculation                                            | E007 | P0       | feature    | done    |
 | [T038](tasks/T038-dep-reconciliation.md)            | Implement dependency reconciliation loop                                              | E007 | P1       | feature    | pending |
 | [T039](tasks/T039-worktree-creation.md)             | Implement git worktree creation per task                                              | E008 | P0       | feature    | done    |
-| [T040](tasks/T040-workspace-mounting.md)            | Implement workspace packet and config mounting                                        | E008 | P0       | feature    | pending |
+| [T040](tasks/T040-workspace-mounting.md)            | Implement workspace packet and config mounting                                        | E008 | P0       | feature    | done    |
 | [T041](tasks/T041-workspace-cleanup.md)             | Implement workspace cleanup for terminal states                                       | E008 | P1       | feature    | pending |
 | [T042](tasks/T042-reconcile-workspaces.md)          | Implement ReconcileWorkspacesCommand                                                  | E008 | P1       | feature    | pending |
 | [T043](tasks/T043-worker-runtime-interface.md)      | Define worker runtime interface                                                       | E009 | P0       | foundation | done    |

@@ -46,6 +46,9 @@ function createMockFs(
   return {
     mkdir: vi.fn().mockResolvedValue(undefined),
     exists: vi.fn().mockResolvedValue(false),
+    writeFile: vi.fn().mockResolvedValue(undefined),
+    readFile: vi.fn().mockResolvedValue(""),
+    unlink: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   } as FileSystem & { [K in keyof FileSystem]: ReturnType<typeof vi.fn> };
 }
