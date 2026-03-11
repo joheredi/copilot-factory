@@ -1,17 +1,17 @@
 # T012: Create migrations for MergeQueueItem, ValidationRun, Job tables
 
-| Field | Value |
-|---|---|
-| **ID** | T012 |
-| **Epic** | [E002: Domain Model & Persistence](../epics/E002-domain-model-persistence.md) |
-| **Type** | foundation |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T006](./T006-sqlite-drizzle-setup.md), [T007](./T007-domain-enums-types.md), [T009](./T009-migration-task.md) |
-| **Blocks** | [T014](./T014-entity-repositories.md), [T025](./T025-job-queue-core.md), [T063](./T063-merge-queue.md) |
+| Field                     | Value                                                                                                          |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T012                                                                                                           |
+| **Epic**                  | [E002: Domain Model & Persistence](../epics/E002-domain-model-persistence.md)                                  |
+| **Type**                  | foundation                                                                                                     |
+| **Status**                | pending                                                                                                        |
+| **Priority**              | P0                                                                                                             |
+| **Owner**                 | backend-engineer                                                                                               |
+| **AI Executable**         | Yes                                                                                                            |
+| **Human Review Required** | Yes                                                                                                            |
+| **Dependencies**          | [T006](./T006-sqlite-drizzle-setup.md), [T007](./T007-domain-enums-types.md), [T009](./T009-migration-task.md) |
+| **Blocks**                | [T014](./T014-entity-repositories.md), [T025](./T025-job-queue-core.md), [T063](./T063-merge-queue.md)         |
 
 ---
 

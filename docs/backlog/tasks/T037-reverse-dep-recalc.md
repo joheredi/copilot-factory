@@ -1,17 +1,17 @@
 # T037: Implement reverse-dependency recalculation
 
-| Field | Value |
-|---|---|
-| **ID** | T037 |
-| **Epic** | [E007: Dependency & Readiness Engine](../epics/E007-dependency-readiness.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T036](./T036-readiness-computation.md) |
-| **Blocks** | [T038](./T038-dep-reconciliation.md) |
+| Field                     | Value                                                                        |
+| ------------------------- | ---------------------------------------------------------------------------- |
+| **ID**                    | T037                                                                         |
+| **Epic**                  | [E007: Dependency & Readiness Engine](../epics/E007-dependency-readiness.md) |
+| **Type**                  | feature                                                                      |
+| **Status**                | pending                                                                      |
+| **Priority**              | P0                                                                           |
+| **Owner**                 | backend-engineer                                                             |
+| **AI Executable**         | Yes                                                                          |
+| **Human Review Required** | Yes                                                                          |
+| **Dependencies**          | [T036](./T036-readiness-computation.md)                                      |
+| **Blocks**                | [T038](./T038-dep-reconciliation.md)                                         |
 
 ---
 

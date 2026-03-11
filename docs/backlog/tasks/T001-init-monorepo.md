@@ -1,17 +1,17 @@
 # T001: Initialize pnpm monorepo workspace
 
-| Field | Value |
-|---|---|
-| **ID** | T001 |
-| **Epic** | [E001: Repository & Platform Foundation](../epics/E001-platform-foundation.md) |
-| **Type** | foundation |
-| **Status** | done |
-| **Priority** | P0 |
-| **Owner** | platform-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | None |
-| **Blocks** | [T002](./T002-typescript-config.md), [T003](./T003-eslint-prettier.md), [T004](./T004-vitest-setup.md), [T005](./T005-ci-pipeline.md), [T006](./T006-sqlite-drizzle-setup.md) |
+| Field                     | Value                                                                                                                                                                         |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T001                                                                                                                                                                          |
+| **Epic**                  | [E001: Repository & Platform Foundation](../epics/E001-platform-foundation.md)                                                                                                |
+| **Type**                  | foundation                                                                                                                                                                    |
+| **Status**                | done                                                                                                                                                                          |
+| **Priority**              | P0                                                                                                                                                                            |
+| **Owner**                 | platform-engineer                                                                                                                                                             |
+| **AI Executable**         | Yes                                                                                                                                                                           |
+| **Human Review Required** | Yes                                                                                                                                                                           |
+| **Dependencies**          | None                                                                                                                                                                          |
+| **Blocks**                | [T002](./T002-typescript-config.md), [T003](./T003-eslint-prettier.md), [T004](./T004-vitest-setup.md), [T005](./T005-ci-pipeline.md), [T006](./T006-sqlite-drizzle-setup.md) |
 
 ---
 
@@ -28,7 +28,7 @@ Establish the foundational monorepo structure so all subsequent packages can be 
 ### In Scope
 
 - Root package.json with private:true and pnpm workspace config
-- pnpm-workspace.yaml listing apps/* and packages/*
+- pnpm-workspace.yaml listing apps/_ and packages/_
 - Directory scaffolding for all apps and packages
 - Minimal package.json for each workspace with @factory/ scope
 - .gitignore, .editorconfig, .nvmrc (Node 20+)
@@ -54,7 +54,7 @@ The implementing agent should read these files before starting:
 3. Scaffold directories: apps/control-plane, apps/web-ui, apps/worker-runner
 4. Scaffold directories: packages/domain, packages/application, packages/infrastructure, packages/schemas, packages/config, packages/observability, packages/ui-components, packages/testing
 5. Each workspace gets package.json with name (@factory/control-plane etc.), version 0.1.0
-6. Add .gitignore covering node_modules, dist, .env, *.db, /workspaces, /artifacts
+6. Add .gitignore covering node_modules, dist, .env, \*.db, /workspaces, /artifacts
 7. Add .editorconfig and .nvmrc
 
 ## Acceptance Criteria

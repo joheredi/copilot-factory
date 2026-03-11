@@ -1,17 +1,17 @@
 # T034: Implement crash recovery with partial artifact capture
 
-| Field | Value |
-|---|---|
-| **ID** | T034 |
-| **Epic** | [E006: Lease Management & Heartbeats](../epics/E006-lease-management.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P1 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T033](./T033-lease-reclaim.md), [T069](./T069-artifact-storage.md) |
-| **Blocks** | None |
+| Field                     | Value                                                                    |
+| ------------------------- | ------------------------------------------------------------------------ |
+| **ID**                    | T034                                                                     |
+| **Epic**                  | [E006: Lease Management & Heartbeats](../epics/E006-lease-management.md) |
+| **Type**                  | feature                                                                  |
+| **Status**                | pending                                                                  |
+| **Priority**              | P1                                                                       |
+| **Owner**                 | backend-engineer                                                         |
+| **AI Executable**         | Yes                                                                      |
+| **Human Review Required** | Yes                                                                      |
+| **Dependencies**          | [T033](./T033-lease-reclaim.md), [T069](./T069-artifact-storage.md)      |
+| **Blocks**                | None                                                                     |
 
 ---
 

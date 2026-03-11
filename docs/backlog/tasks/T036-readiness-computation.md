@@ -1,17 +1,17 @@
 # T036: Implement readiness computation
 
-| Field | Value |
-|---|---|
-| **ID** | T036 |
-| **Epic** | [E007: Dependency & Readiness Engine](../epics/E007-dependency-readiness.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T035](./T035-dag-validation.md) |
-| **Blocks** | [T037](./T037-reverse-dep-recalc.md), [T027](./T027-scheduler-service.md) |
+| Field                     | Value                                                                        |
+| ------------------------- | ---------------------------------------------------------------------------- |
+| **ID**                    | T036                                                                         |
+| **Epic**                  | [E007: Dependency & Readiness Engine](../epics/E007-dependency-readiness.md) |
+| **Type**                  | feature                                                                      |
+| **Status**                | pending                                                                      |
+| **Priority**              | P0                                                                           |
+| **Owner**                 | backend-engineer                                                             |
+| **AI Executable**         | Yes                                                                          |
+| **Human Review Required** | Yes                                                                          |
+| **Dependencies**          | [T035](./T035-dag-validation.md)                                             |
+| **Blocks**                | [T037](./T037-reverse-dep-recalc.md), [T027](./T027-scheduler-service.md)    |
 
 ---
 

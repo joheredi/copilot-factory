@@ -1,17 +1,17 @@
 # T040: Implement workspace packet and config mounting
 
-| Field | Value |
-|---|---|
-| **ID** | T040 |
-| **Epic** | [E008: Workspace Management](../epics/E008-workspace-management.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T039](./T039-worktree-creation.md) |
-| **Blocks** | [T044](./T044-worker-supervisor.md) |
+| Field                     | Value                                                               |
+| ------------------------- | ------------------------------------------------------------------- |
+| **ID**                    | T040                                                                |
+| **Epic**                  | [E008: Workspace Management](../epics/E008-workspace-management.md) |
+| **Type**                  | feature                                                             |
+| **Status**                | pending                                                             |
+| **Priority**              | P0                                                                  |
+| **Owner**                 | backend-engineer                                                    |
+| **AI Executable**         | Yes                                                                 |
+| **Human Review Required** | Yes                                                                 |
+| **Dependencies**          | [T039](./T039-worktree-creation.md)                                 |
+| **Blocks**                | [T044](./T044-worker-supervisor.md)                                 |
 
 ---
 

@@ -1,17 +1,17 @@
 # T081: Implement Project and Repository CRUD endpoints
 
-| Field | Value |
-|---|---|
-| **ID** | T081 |
-| **Epic** | [E017: REST API Layer](../epics/E017-rest-api.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T008](./T008-migration-project-repo.md), [T014](./T014-entity-repositories.md), [T080](./T080-nestjs-bootstrap.md) |
-| **Blocks** | [T089](./T089-react-spa-init.md) |
+| Field                     | Value                                                                                                               |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T081                                                                                                                |
+| **Epic**                  | [E017: REST API Layer](../epics/E017-rest-api.md)                                                                   |
+| **Type**                  | feature                                                                                                             |
+| **Status**                | pending                                                                                                             |
+| **Priority**              | P0                                                                                                                  |
+| **Owner**                 | backend-engineer                                                                                                    |
+| **AI Executable**         | Yes                                                                                                                 |
+| **Human Review Required** | Yes                                                                                                                 |
+| **Dependencies**          | [T008](./T008-migration-project-repo.md), [T014](./T014-entity-repositories.md), [T080](./T080-nestjs-bootstrap.md) |
+| **Blocks**                | [T089](./T089-react-spa-init.md)                                                                                    |
 
 ---
 

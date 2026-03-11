@@ -1,17 +1,17 @@
 # T041: Implement workspace cleanup for terminal states
 
-| Field | Value |
-|---|---|
-| **ID** | T041 |
-| **Epic** | [E008: Workspace Management](../epics/E008-workspace-management.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P1 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T039](./T039-worktree-creation.md) |
-| **Blocks** | [T042](./T042-reconcile-workspaces.md) |
+| Field                     | Value                                                               |
+| ------------------------- | ------------------------------------------------------------------- |
+| **ID**                    | T041                                                                |
+| **Epic**                  | [E008: Workspace Management](../epics/E008-workspace-management.md) |
+| **Type**                  | feature                                                             |
+| **Status**                | pending                                                             |
+| **Priority**              | P1                                                                  |
+| **Owner**                 | backend-engineer                                                    |
+| **AI Executable**         | Yes                                                                 |
+| **Human Review Required** | Yes                                                                 |
+| **Dependencies**          | [T039](./T039-worktree-creation.md)                                 |
+| **Blocks**                | [T042](./T042-reconcile-workspaces.md)                              |
 
 ---
 

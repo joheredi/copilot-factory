@@ -42,14 +42,14 @@ API design must be stable early since UI depends on it. Versioning strategy need
 
 ## Tasks
 
-| ID | Title | Priority | Status |
-|---|---|---|---|
-| [T080](../tasks/T080-nestjs-bootstrap.md) | Implement NestJS application bootstrap and module structure | P0 | pending |
-| [T081](../tasks/T081-api-project-repo.md) | Implement Project and Repository CRUD endpoints | P0 | pending |
-| [T082](../tasks/T082-api-task-management.md) | Implement Task management endpoints | P0 | pending |
-| [T083](../tasks/T083-api-worker-pool.md) | Implement WorkerPool and AgentProfile endpoints | P1 | pending |
-| [T084](../tasks/T084-api-artifacts-reviews.md) | Implement Artifact and Review packet retrieval endpoints | P1 | pending |
-| [T085](../tasks/T085-api-audit-policy-config.md) | Implement Audit, Policy, and Config endpoints | P1 | pending |
+| ID                                               | Title                                                       | Priority | Status  |
+| ------------------------------------------------ | ----------------------------------------------------------- | -------- | ------- |
+| [T080](../tasks/T080-nestjs-bootstrap.md)        | Implement NestJS application bootstrap and module structure | P0       | pending |
+| [T081](../tasks/T081-api-project-repo.md)        | Implement Project and Repository CRUD endpoints             | P0       | pending |
+| [T082](../tasks/T082-api-task-management.md)     | Implement Task management endpoints                         | P0       | pending |
+| [T083](../tasks/T083-api-worker-pool.md)         | Implement WorkerPool and AgentProfile endpoints             | P1       | pending |
+| [T084](../tasks/T084-api-artifacts-reviews.md)   | Implement Artifact and Review packet retrieval endpoints    | P1       | pending |
+| [T085](../tasks/T085-api-audit-policy-config.md) | Implement Audit, Policy, and Config endpoints               | P1       | pending |
 
 ## Sequencing Notes
 

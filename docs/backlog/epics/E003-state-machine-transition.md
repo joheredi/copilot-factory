@@ -43,13 +43,13 @@ State machine must exactly match docs/prd/002-data-model.md. Transition precondi
 
 ## Tasks
 
-| ID | Title | Priority | Status |
-|---|---|---|---|
-| [T015](../tasks/T015-task-state-machine.md) | Implement Task state machine with transition validation | P0 | pending |
-| [T016](../tasks/T016-supporting-state-machines.md) | Implement supporting state machines | P0 | pending |
-| [T017](../tasks/T017-transition-service.md) | Build centralized State Transition Service | P0 | pending |
-| [T018](../tasks/T018-atomic-transition-audit.md) | Implement atomic transition + audit persistence | P0 | pending |
-| [T019](../tasks/T019-optimistic-concurrency.md) | Implement optimistic concurrency control | P0 | pending |
+| ID                                                 | Title                                                   | Priority | Status  |
+| -------------------------------------------------- | ------------------------------------------------------- | -------- | ------- |
+| [T015](../tasks/T015-task-state-machine.md)        | Implement Task state machine with transition validation | P0       | pending |
+| [T016](../tasks/T016-supporting-state-machines.md) | Implement supporting state machines                     | P0       | pending |
+| [T017](../tasks/T017-transition-service.md)        | Build centralized State Transition Service              | P0       | pending |
+| [T018](../tasks/T018-atomic-transition-audit.md)   | Implement atomic transition + audit persistence         | P0       | pending |
+| [T019](../tasks/T019-optimistic-concurrency.md)    | Implement optimistic concurrency control                | P0       | pending |
 
 ## Sequencing Notes
 

@@ -1,17 +1,17 @@
 # T079: Implement starter metrics inventory
 
-| Field | Value |
-|---|---|
-| **ID** | T079 |
-| **Epic** | [E016: Observability](../epics/E016-observability.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P1 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T078](./T078-prometheus-endpoint.md) |
-| **Blocks** | None |
+| Field                     | Value                                                 |
+| ------------------------- | ----------------------------------------------------- |
+| **ID**                    | T079                                                  |
+| **Epic**                  | [E016: Observability](../epics/E016-observability.md) |
+| **Type**                  | feature                                               |
+| **Status**                | pending                                               |
+| **Priority**              | P1                                                    |
+| **Owner**                 | backend-engineer                                      |
+| **AI Executable**         | Yes                                                   |
+| **Human Review Required** | Yes                                                   |
+| **Dependencies**          | [T078](./T078-prometheus-endpoint.md)                 |
+| **Blocks**                | None                                                  |
 
 ---
 

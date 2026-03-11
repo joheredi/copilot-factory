@@ -1,44 +1,43 @@
-
 # Agent Prompts / Contracts
 
 ### 4.1 General Contract Design Principles
 
 All agents must:
 
-* act only within their assigned role
-* operate on one task or one review cycle only
-* consume structured input
-* produce structured output
-* never self-assign or self-transition task state
-* stop when completion criteria are met
-* surface uncertainty explicitly
-* avoid broad repo exploration unless permitted
+- act only within their assigned role
+- operate on one task or one review cycle only
+- consume structured input
+- produce structured output
+- never self-assign or self-transition task state
+- stop when completion criteria are met
+- surface uncertainty explicitly
+- avoid broad repo exploration unless permitted
 
 ### 4.2 Common Input Contract
 
 Every agent invocation receives:
 
-* `role`
-* `task_packet` or equivalent stage packet
-* `repo_policy`
-* `tool_policy`
-* `workspace_context`
-* `stop_conditions`
-* `time_budget_seconds`
-* `expires_at`
-* `output_schema`
+- `role`
+- `task_packet` or equivalent stage packet
+- `repo_policy`
+- `tool_policy`
+- `workspace_context`
+- `stop_conditions`
+- `time_budget_seconds`
+- `expires_at`
+- `output_schema`
 
 ### 4.3 Common Output Contract
 
 Every agent must return:
 
-* `status`
-* `summary`
-* `decision` or `result`
-* `artifacts_created`
-* `risks`
-* `open_questions`
-* `structured_payload`
+- `status`
+- `summary`
+- `decision` or `result`
+- `artifacts_created`
+- `risks`
+- `open_questions`
+- `structured_payload`
 
 Agents must always populate `risks` and `open_questions` even if empty (`[]`). These fields are included in all packet schemas. The orchestrator may use `risks` with severity `critical` as an automatic escalation trigger per escalation policy.
 
@@ -46,32 +45,32 @@ Agents must always populate `risks` and `open_questions` even if empty (`[]`). T
 
 #### Responsibilities
 
-* analyze backlog candidates
-* consider priority, blockers, dependencies, scope, and risk
-* recommend top task candidates and rationale
-* recommend decomposition when tasks are too large
+- analyze backlog candidates
+- consider priority, blockers, dependencies, scope, and risk
+- recommend top task candidates and rationale
+- recommend decomposition when tasks are too large
 
 #### Must Not
 
-* assign workers
-* mutate task state directly
-* ignore dependency graph
+- assign workers
+- mutate task state directly
+- ignore dependency graph
 
 #### Input Fields
 
-* backlog snapshot
-* dependency graph summary
-* repository/project goals
-* scoring policy
-* recent completions/failures
+- backlog snapshot
+- dependency graph summary
+- repository/project goals
+- scoring policy
+- recent completions/failures
 
 #### Output Fields
 
-* ranked candidates
-* rationale per candidate
-* risks
-* suggested reviewers/capabilities
-* decomposition recommendations if applicable
+- ranked candidates
+- rationale per candidate
+- risks
+- suggested reviewers/capabilities
+- decomposition recommendations if applicable
 
 #### Prompt Skeleton
 
@@ -81,46 +80,46 @@ Agents must always populate `risks` and `open_questions` even if empty (`[]`). T
 
 #### Responsibilities
 
-* implement a single task in an isolated workspace
-* follow repo and task policies
-* keep changes within relevant scope
-* run all required validations from the assigned validation profile before emitting the result packet
-* emit a complete dev result packet
+- implement a single task in an isolated workspace
+- follow repo and task policies
+- keep changes within relevant scope
+- run all required validations from the assigned validation profile before emitting the result packet
+- emit a complete dev result packet
 
 #### Must Not
 
-* take another task
-* modify orchestration metadata
-* self-approve
-* merge changes
-* broaden scope without declaring it
+- take another task
+- modify orchestration metadata
+- self-approve
+- merge changes
+- broaden scope without declaring it
 
 #### Input Fields
 
-* task packet
-* rejection packet if rework
-* code map or relevant file references
-* workspace path
-* repo conventions
-* validation requirements
+- task packet
+- rejection packet if rework
+- code map or relevant file references
+- workspace path
+- repo conventions
+- validation requirements
 
 #### Output Fields
 
-* implementation summary
-* files changed
-* tests added/updated
-* validations run and results
-* assumptions
-* risks
-* commit SHA / patch refs
-* unresolved issues
+- implementation summary
+- files changed
+- tests added/updated
+- validations run and results
+- assumptions
+- risks
+- commit SHA / patch refs
+- unresolved issues
 
 **Unresolved issues rules:**
 
-* `unresolved_issues` is for acceptable incompleteness only (e.g., "needs follow-up performance optimization"), not for blocking failures.
-* Blocking failures must be reported via `status: "failed"`, not listed as unresolved issues.
-* The orchestrator includes `dev_result.unresolved_issues` in reviewer input context so reviewers can evaluate whether the incompleteness is acceptable.
-* The lead reviewer must explicitly address unresolved issues in their decision: accept them, require follow-up tasks, or reject.
+- `unresolved_issues` is for acceptable incompleteness only (e.g., "needs follow-up performance optimization"), not for blocking failures.
+- Blocking failures must be reported via `status: "failed"`, not listed as unresolved issues.
+- The orchestrator includes `dev_result.unresolved_issues` in reviewer input context so reviewers can evaluate whether the incompleteness is acceptable.
+- The lead reviewer must explicitly address unresolved issues in their decision: accept them, require follow-up tasks, or reject.
 
 #### Prompt Skeleton
 
@@ -130,33 +129,33 @@ Agents must always populate `risks` and `open_questions` even if empty (`[]`). T
 
 #### Responsibilities
 
-* review from one specific perspective
-* identify issues, severity, and rationale
-* distinguish blocking from non-blocking issues
-* avoid duplicate or speculative feedback
+- review from one specific perspective
+- identify issues, severity, and rationale
+- distinguish blocking from non-blocking issues
+- avoid duplicate or speculative feedback
 
 #### Must Not
 
-* implement fixes
-* broaden into unrelated domains
-* reject for minor stylistic preferences unless policy says so
+- implement fixes
+- broaden into unrelated domains
+- reject for minor stylistic preferences unless policy says so
 
 #### Input Fields
 
-* task packet
-* dev result packet
-* diff summary or diff access
-* reviewer domain policy
-* review rubric
+- task packet
+- dev result packet
+- diff summary or diff access
+- reviewer domain policy
+- review rubric
 
 #### Output Fields
 
-* verdict
-* blocking issues
-* non-blocking issues
-* rationale
-* confidence
-* suggested follow-up tasks if applicable
+- verdict
+- blocking issues
+- non-blocking issues
+- rationale
+- confidence
+- suggested follow-up tasks if applicable
 
 #### Prompt Skeleton
 
@@ -166,32 +165,32 @@ Agents must always populate `risks` and `open_questions` even if empty (`[]`). T
 
 #### Responsibilities
 
-* consolidate specialist reviews
-* deduplicate and normalize issues
-* make practical approval decision
-* prevent endless rejection loops
+- consolidate specialist reviews
+- deduplicate and normalize issues
+- make practical approval decision
+- prevent endless rejection loops
 
 #### Must Not
 
-* introduce new unrelated objections without strong evidence
-* require perfection over shipping quality
-* ignore severe reviewer findings
+- introduce new unrelated objections without strong evidence
+- require perfection over shipping quality
+- ignore severe reviewer findings
 
 #### Input Fields
 
-* task packet
-* dev result packet
-* all specialist review packets
-* lead review policy
-* review history for this task
+- task packet
+- dev result packet
+- all specialist review packets
+- lead review policy
+- review history for this task
 
 #### Output Fields
 
-* final decision
-* blocking issues only
-* non-blocking suggestions
-* follow-up task recommendations
-* rationale for approval/rejection
+- final decision
+- blocking issues only
+- non-blocking suggestions
+- follow-up task recommendations
+- rationale for approval/rejection
 
 #### Prompt Skeleton
 
@@ -201,38 +200,38 @@ Agents must always populate `risks` and `open_questions` even if empty (`[]`). T
 
 #### Responsibilities
 
-* analyze merge/rebase conflicts when deterministic merge fails and policy allows AI assistance
-* recommend conflict resolution strategy while preserving approved intent and mainline correctness
-* produce a structured MergeAssistPacket (see `docs/008-packet-and-schema-spec.md`)
+- analyze merge/rebase conflicts when deterministic merge fails and policy allows AI assistance
+- recommend conflict resolution strategy while preserving approved intent and mainline correctness
+- produce a structured MergeAssistPacket (see `docs/008-packet-and-schema-spec.md`)
 
 #### Must Not
 
-* merge directly without orchestration instruction
-* change task scope during conflict resolution
-* modify files outside the conflict regions
-* introduce unrelated changes
+- merge directly without orchestration instruction
+- change task scope during conflict resolution
+- modify files outside the conflict regions
+- introduce unrelated changes
 
 #### Input Fields
 
-* task packet
-* dev result packet (approved implementation)
-* merge conflict details (conflicting files, conflict markers, base/ours/theirs)
-* effective merge policy
-* mainline context (recent commits to target branch)
+- task packet
+- dev result packet (approved implementation)
+- merge conflict details (conflicting files, conflict markers, base/ours/theirs)
+- effective merge policy
+- mainline context (recent commits to target branch)
 
 #### Output Fields
 
-* recommendation: `auto_resolve | reject_to_dev | escalate`
-* resolution_strategy: description of how conflicts would be resolved
-* files_affected: list of files with proposed resolution
-* confidence: `high | medium | low`
-* rationale
+- recommendation: `auto_resolve | reject_to_dev | escalate`
+- resolution_strategy: description of how conflicts would be resolved
+- files_affected: list of files with proposed resolution
+- confidence: `high | medium | low`
+- rationale
 
 #### Stop Conditions
 
-* emit exactly one MergeAssistPacket
-* if confidence is `low` or resolution is unclear, recommend `reject_to_dev` or `escalate`
-* do not attempt resolution if more than `merge_policy.max_assist_conflict_files` files are in conflict
+- emit exactly one MergeAssistPacket
+- if confidence is `low` or resolution is unclear, recommend `reject_to_dev` or `escalate`
+- do not attempt resolution if more than `merge_policy.max_assist_conflict_files` files are in conflict
 
 #### Post-Resolution Validation
 
@@ -246,39 +245,39 @@ The merge module must validate that merge assist output stays within the approve
 
 #### Responsibilities
 
-* analyze regressions or failed post-merge validations
-* determine whether the failure is caused by the merged change or a pre-existing issue
-* recommend recovery action: revert, targeted fix task, or escalation
+- analyze regressions or failed post-merge validations
+- determine whether the failure is caused by the merged change or a pre-existing issue
+- recommend recovery action: revert, targeted fix task, or escalation
 
 #### Must Not
 
-* execute reverts directly
-* modify repository state
-* ignore evidence from validation results
-* recommend "no action" when validation has failed
+- execute reverts directly
+- modify repository state
+- ignore evidence from validation results
+- recommend "no action" when validation has failed
 
 #### Input Fields
 
-* task packet (the task that was merged)
-* merge packet (merge execution details)
-* validation result packet (post-merge validation output)
-* failure evidence (test output, error logs, regression details)
-* recent merge history (other recent merges that may have contributed)
+- task packet (the task that was merged)
+- merge packet (merge execution details)
+- validation result packet (post-merge validation output)
+- failure evidence (test output, error logs, regression details)
+- recent merge history (other recent merges that may have contributed)
 
 #### Output Fields
 
-* recommendation: `revert | hotfix_task | escalate | pre_existing`
-* confidence: `high | medium | low`
-* rationale: explanation of analysis
-* failure_attribution: which change likely caused the failure
-* suggested_revert_scope: files/commits to revert (if recommendation is `revert`)
-* follow_up_task_description: description of fix task (if recommendation is `hotfix_task`)
+- recommendation: `revert | hotfix_task | escalate | pre_existing`
+- confidence: `high | medium | low`
+- rationale: explanation of analysis
+- failure_attribution: which change likely caused the failure
+- suggested_revert_scope: files/commits to revert (if recommendation is `revert`)
+- follow_up_task_description: description of fix task (if recommendation is `hotfix_task`)
 
 #### Stop Conditions
 
-* emit exactly one PostMergeAnalysisPacket
-* if confidence is `low`, recommend `escalate`
-* must complete within `lease_policy.lease_ttl_seconds`
+- emit exactly one PostMergeAnalysisPacket
+- if confidence is `low`, recommend `escalate`
+- must complete within `lease_policy.lease_ttl_seconds`
 
 #### Orchestrator Behavior
 
@@ -300,10 +299,10 @@ All prompts should be backed by JSON schemas so outputs are machine-validated.
 
 **Schema validation failure handling:**
 
-* If a worker emits output that fails JSON parsing, this is a fatal error. The run is marked `FAILED` and counted against `retry_policy.max_attempts`.
-* If a worker emits parseable JSON that fails schema validation (wrong types, missing required fields, invalid enums), the orchestrator rejects the result and may attempt one schema repair pass (extracting valid fields, applying defaults for missing optional fields). If repair fails, the run is marked `FAILED`.
-* Schema validation failures are NOT treated as transient/retry-eligible failures. They indicate an agent implementation or prompt error.
-* If the same agent profile produces schema validation failures on 3 consecutive runs across any tasks, the orchestrator should disable the profile and escalate to the operator.
-* All schema validation failures produce a `schema_violation` audit event with the validation error details.
+- If a worker emits output that fails JSON parsing, this is a fatal error. The run is marked `FAILED` and counted against `retry_policy.max_attempts`.
+- If a worker emits parseable JSON that fails schema validation (wrong types, missing required fields, invalid enums), the orchestrator rejects the result and may attempt one schema repair pass (extracting valid fields, applying defaults for missing optional fields). If repair fails, the run is marked `FAILED`.
+- Schema validation failures are NOT treated as transient/retry-eligible failures. They indicate an agent implementation or prompt error.
+- If the same agent profile produces schema validation failures on 3 consecutive runs across any tasks, the orchestrator should disable the profile and escalate to the operator.
+- All schema validation failures produce a `schema_violation` audit event with the validation error details.
 
 ---

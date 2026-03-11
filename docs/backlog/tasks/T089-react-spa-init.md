@@ -1,17 +1,17 @@
 # T089: Initialize React SPA with Vite, Tailwind, shadcn/ui
 
-| Field | Value |
-|---|---|
-| **ID** | T089 |
-| **Epic** | [E019: Web UI Foundation](../epics/E019-web-ui-foundation.md) |
-| **Type** | foundation |
-| **Status** | pending |
-| **Priority** | P1 |
-| **Owner** | frontend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T001](./T001-init-monorepo.md), [T081](./T081-api-project-repo.md) |
-| **Blocks** | [T090](./T090-api-client-tanstack.md), [T091](./T091-websocket-client.md), [T092](./T092-app-shell.md) |
+| Field                     | Value                                                                                                  |
+| ------------------------- | ------------------------------------------------------------------------------------------------------ |
+| **ID**                    | T089                                                                                                   |
+| **Epic**                  | [E019: Web UI Foundation](../epics/E019-web-ui-foundation.md)                                          |
+| **Type**                  | foundation                                                                                             |
+| **Status**                | pending                                                                                                |
+| **Priority**              | P1                                                                                                     |
+| **Owner**                 | frontend-engineer                                                                                      |
+| **AI Executable**         | Yes                                                                                                    |
+| **Human Review Required** | Yes                                                                                                    |
+| **Dependencies**          | [T001](./T001-init-monorepo.md), [T081](./T081-api-project-repo.md)                                    |
+| **Blocks**                | [T090](./T090-api-client-tanstack.md), [T091](./T091-websocket-client.md), [T092](./T092-app-shell.md) |
 
 ---
 

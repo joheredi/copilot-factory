@@ -1,17 +1,17 @@
 # T047: Implement policy-aware command wrapper
 
-| Field | Value |
-|---|---|
-| **ID** | T047 |
-| **Epic** | [E009: Worker Runtime & Execution](../epics/E009-worker-runtime.md) |
-| **Type** | security |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T048](./T048-command-policy.md) |
-| **Blocks** | [T045](./T045-copilot-cli-adapter.md), [T055](./T055-validation-command-exec.md) |
+| Field                     | Value                                                                            |
+| ------------------------- | -------------------------------------------------------------------------------- |
+| **ID**                    | T047                                                                             |
+| **Epic**                  | [E009: Worker Runtime & Execution](../epics/E009-worker-runtime.md)              |
+| **Type**                  | security                                                                         |
+| **Status**                | pending                                                                          |
+| **Priority**              | P0                                                                               |
+| **Owner**                 | backend-engineer                                                                 |
+| **AI Executable**         | Yes                                                                              |
+| **Human Review Required** | Yes                                                                              |
+| **Dependencies**          | [T048](./T048-command-policy.md)                                                 |
+| **Blocks**                | [T045](./T045-copilot-cli-adapter.md), [T055](./T055-validation-command-exec.md) |
 
 ---
 
@@ -53,7 +53,7 @@ The implementing agent should read these files before starting:
 4. If allow_shell_compound_commands is false, reject commands with ; && || | etc.
 5. If allow_subshells is false, reject $() and backtick substitution
 6. On denial: emit policy_violation artifact with details, throw PolicyViolationError
-7. Simple glob matching for patterns where * matches remaining args
+7. Simple glob matching for patterns where \* matches remaining args
 
 ## Acceptance Criteria
 

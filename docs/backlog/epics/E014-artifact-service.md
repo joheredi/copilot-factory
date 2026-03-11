@@ -40,12 +40,12 @@ Filesystem operations are not transactional. Must handle concurrent writes caref
 
 ## Tasks
 
-| ID | Title | Priority | Status |
-|---|---|---|---|
-| [T069](../tasks/T069-artifact-storage.md) | Implement filesystem artifact storage | P0 | pending |
-| [T070](../tasks/T070-artifact-retrieval.md) | Implement artifact reference resolution and retrieval | P0 | pending |
-| [T071](../tasks/T071-retry-summarization.md) | Implement summarization packet generation for retries | P1 | pending |
-| [T072](../tasks/T072-partial-work-snapshot.md) | Implement partial work snapshot on lease reclaim | P1 | pending |
+| ID                                             | Title                                                 | Priority | Status  |
+| ---------------------------------------------- | ----------------------------------------------------- | -------- | ------- |
+| [T069](../tasks/T069-artifact-storage.md)      | Implement filesystem artifact storage                 | P0       | pending |
+| [T070](../tasks/T070-artifact-retrieval.md)    | Implement artifact reference resolution and retrieval | P0       | pending |
+| [T071](../tasks/T071-retry-summarization.md)   | Implement summarization packet generation for retries | P1       | pending |
+| [T072](../tasks/T072-partial-work-snapshot.md) | Implement partial work snapshot on lease reclaim      | P1       | pending |
 
 ## Sequencing Notes
 

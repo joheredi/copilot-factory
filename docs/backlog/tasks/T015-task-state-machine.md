@@ -1,17 +1,17 @@
 # T015: Implement Task state machine with transition validation
 
-| Field | Value |
-|---|---|
-| **ID** | T015 |
-| **Epic** | [E003: State Machine & Transition Engine](../epics/E003-state-machine-transition.md) |
-| **Type** | foundation |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T007](./T007-domain-enums-types.md), [T014](./T014-entity-repositories.md) |
-| **Blocks** | [T017](./T017-transition-service.md), [T018](./T018-atomic-transition-audit.md) |
+| Field                     | Value                                                                                |
+| ------------------------- | ------------------------------------------------------------------------------------ |
+| **ID**                    | T015                                                                                 |
+| **Epic**                  | [E003: State Machine & Transition Engine](../epics/E003-state-machine-transition.md) |
+| **Type**                  | foundation                                                                           |
+| **Status**                | pending                                                                              |
+| **Priority**              | P0                                                                                   |
+| **Owner**                 | backend-engineer                                                                     |
+| **AI Executable**         | Yes                                                                                  |
+| **Human Review Required** | Yes                                                                                  |
+| **Dependencies**          | [T007](./T007-domain-enums-types.md), [T014](./T014-entity-repositories.md)          |
+| **Blocks**                | [T017](./T017-transition-service.md), [T018](./T018-atomic-transition-audit.md)      |
 
 ---
 

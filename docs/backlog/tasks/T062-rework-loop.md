@@ -1,17 +1,17 @@
 # T062: Implement rework loop with rejection context
 
-| Field | Value |
-|---|---|
-| **ID** | T062 |
-| **Epic** | [E012: Review Pipeline](../epics/E012-review-pipeline.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P1 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T061](./T061-review-decision-apply.md) |
-| **Blocks** | None |
+| Field                     | Value                                                     |
+| ------------------------- | --------------------------------------------------------- |
+| **ID**                    | T062                                                      |
+| **Epic**                  | [E012: Review Pipeline](../epics/E012-review-pipeline.md) |
+| **Type**                  | feature                                                   |
+| **Status**                | pending                                                   |
+| **Priority**              | P1                                                        |
+| **Owner**                 | backend-engineer                                          |
+| **AI Executable**         | Yes                                                       |
+| **Human Review Required** | Yes                                                       |
+| **Dependencies**          | [T061](./T061-review-decision-apply.md)                   |
+| **Blocks**                | None                                                      |
 
 ---
 

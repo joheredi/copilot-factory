@@ -40,12 +40,12 @@ Validation commands may fail for environment-specific reasons. Must handle timeo
 
 ## Tasks
 
-| ID | Title | Priority | Status |
-|---|---|---|---|
-| [T054](../tasks/T054-validation-runner-abstraction.md) | Implement validation runner abstraction | P0 | pending |
-| [T055](../tasks/T055-validation-command-exec.md) | Implement test/lint/build command execution | P0 | pending |
-| [T056](../tasks/T056-validation-packet-emission.md) | Implement ValidationResultPacket emission | P0 | pending |
-| [T057](../tasks/T057-validation-gates.md) | Implement validation gate checking for state transitions | P0 | pending |
+| ID                                                     | Title                                                    | Priority | Status  |
+| ------------------------------------------------------ | -------------------------------------------------------- | -------- | ------- |
+| [T054](../tasks/T054-validation-runner-abstraction.md) | Implement validation runner abstraction                  | P0       | pending |
+| [T055](../tasks/T055-validation-command-exec.md)       | Implement test/lint/build command execution              | P0       | pending |
+| [T056](../tasks/T056-validation-packet-emission.md)    | Implement ValidationResultPacket emission                | P0       | pending |
+| [T057](../tasks/T057-validation-gates.md)              | Implement validation gate checking for state transitions | P0       | pending |
 
 ## Sequencing Notes
 

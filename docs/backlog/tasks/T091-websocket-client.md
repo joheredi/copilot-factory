@@ -1,17 +1,17 @@
 # T091: Implement WebSocket client for live updates
 
-| Field | Value |
-|---|---|
-| **ID** | T091 |
-| **Epic** | [E019: Web UI Foundation](../epics/E019-web-ui-foundation.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P1 |
-| **Owner** | frontend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T086](./T086-websocket-gateway.md), [T089](./T089-react-spa-init.md) |
-| **Blocks** | [T093](./T093-ui-dashboard.md), [T094](./T094-ui-task-board.md) |
+| Field                     | Value                                                                 |
+| ------------------------- | --------------------------------------------------------------------- |
+| **ID**                    | T091                                                                  |
+| **Epic**                  | [E019: Web UI Foundation](../epics/E019-web-ui-foundation.md)         |
+| **Type**                  | feature                                                               |
+| **Status**                | pending                                                               |
+| **Priority**              | P1                                                                    |
+| **Owner**                 | frontend-engineer                                                     |
+| **AI Executable**         | Yes                                                                   |
+| **Human Review Required** | Yes                                                                   |
+| **Dependencies**          | [T086](./T086-websocket-gateway.md), [T089](./T089-react-spa-init.md) |
+| **Blocks**                | [T093](./T093-ui-dashboard.md), [T094](./T094-ui-task-board.md)       |
 
 ---
 

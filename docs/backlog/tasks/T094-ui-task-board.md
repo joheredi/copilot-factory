@@ -1,17 +1,17 @@
 # T094: Build task board with status filtering and pagination
 
-| Field | Value |
-|---|---|
-| **ID** | T094 |
-| **Epic** | [E020: Web UI Feature Views](../epics/E020-web-ui-features.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P1 |
-| **Owner** | frontend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T090](./T090-api-client-tanstack.md), [T092](./T092-app-shell.md) |
-| **Blocks** | [T104](./T104-ui-operator-task.md) |
+| Field                     | Value                                                              |
+| ------------------------- | ------------------------------------------------------------------ |
+| **ID**                    | T094                                                               |
+| **Epic**                  | [E020: Web UI Feature Views](../epics/E020-web-ui-features.md)     |
+| **Type**                  | feature                                                            |
+| **Status**                | pending                                                            |
+| **Priority**              | P1                                                                 |
+| **Owner**                 | frontend-engineer                                                  |
+| **AI Executable**         | Yes                                                                |
+| **Human Review Required** | Yes                                                                |
+| **Dependencies**          | [T090](./T090-api-client-tanstack.md), [T092](./T092-app-shell.md) |
+| **Blocks**                | [T104](./T104-ui-operator-task.md)                                 |
 
 ---
 

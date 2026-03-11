@@ -1,17 +1,17 @@
 # T087: Implement task state change event broadcasting
 
-| Field | Value |
-|---|---|
-| **ID** | T087 |
-| **Epic** | [E018: Real-time Events](../epics/E018-realtime-events.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P1 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T086](./T086-websocket-gateway.md), [T017](./T017-transition-service.md) |
-| **Blocks** | None |
+| Field                     | Value                                                                     |
+| ------------------------- | ------------------------------------------------------------------------- |
+| **ID**                    | T087                                                                      |
+| **Epic**                  | [E018: Real-time Events](../epics/E018-realtime-events.md)                |
+| **Type**                  | feature                                                                   |
+| **Status**                | pending                                                                   |
+| **Priority**              | P1                                                                        |
+| **Owner**                 | backend-engineer                                                          |
+| **AI Executable**         | Yes                                                                       |
+| **Human Review Required** | Yes                                                                       |
+| **Dependencies**          | [T086](./T086-websocket-gateway.md), [T017](./T017-transition-service.md) |
+| **Blocks**                | None                                                                      |
 
 ---
 

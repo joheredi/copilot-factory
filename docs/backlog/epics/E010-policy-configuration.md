@@ -42,14 +42,14 @@ Policy resolution precedence must exactly match the spec. Edge cases in file sco
 
 ## Tasks
 
-| ID | Title | Priority | Status |
-|---|---|---|---|
-| [T048](../tasks/T048-command-policy.md) | Implement command policy model and enforcement | P0 | pending |
-| [T049](../tasks/T049-file-scope-policy.md) | Implement file scope policy model and enforcement | P0 | pending |
-| [T050](../tasks/T050-validation-policy.md) | Implement validation policy with profile selection | P0 | pending |
-| [T051](../tasks/T051-retry-escalation-policy.md) | Implement retry and escalation policy evaluation | P0 | pending |
-| [T052](../tasks/T052-hierarchical-config.md) | Implement hierarchical configuration resolution | P0 | pending |
-| [T053](../tasks/T053-policy-snapshot.md) | Implement effective policy snapshot generation | P0 | pending |
+| ID                                               | Title                                              | Priority | Status  |
+| ------------------------------------------------ | -------------------------------------------------- | -------- | ------- |
+| [T048](../tasks/T048-command-policy.md)          | Implement command policy model and enforcement     | P0       | pending |
+| [T049](../tasks/T049-file-scope-policy.md)       | Implement file scope policy model and enforcement  | P0       | pending |
+| [T050](../tasks/T050-validation-policy.md)       | Implement validation policy with profile selection | P0       | pending |
+| [T051](../tasks/T051-retry-escalation-policy.md) | Implement retry and escalation policy evaluation   | P0       | pending |
+| [T052](../tasks/T052-hierarchical-config.md)     | Implement hierarchical configuration resolution    | P0       | pending |
+| [T053](../tasks/T053-policy-snapshot.md)         | Implement effective policy snapshot generation     | P0       | pending |
 
 ## Sequencing Notes
 

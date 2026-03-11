@@ -1,17 +1,17 @@
 # T109: Integration test: merge conflict and failure paths
 
-| Field | Value |
-|---|---|
-| **ID** | T109 |
-| **Epic** | [E022: Integration Testing & E2E](../epics/E022-integration-testing.md) |
-| **Type** | test |
-| **Status** | pending |
-| **Priority** | P1 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T106](./T106-test-harness.md), [T066](./T066-conflict-classification.md), [T067](./T067-post-merge-failure.md) |
-| **Blocks** | None |
+| Field                     | Value                                                                                                           |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T109                                                                                                            |
+| **Epic**                  | [E022: Integration Testing & E2E](../epics/E022-integration-testing.md)                                         |
+| **Type**                  | test                                                                                                            |
+| **Status**                | pending                                                                                                         |
+| **Priority**              | P1                                                                                                              |
+| **Owner**                 | backend-engineer                                                                                                |
+| **AI Executable**         | Yes                                                                                                             |
+| **Human Review Required** | Yes                                                                                                             |
+| **Dependencies**          | [T106](./T106-test-harness.md), [T066](./T066-conflict-classification.md), [T067](./T067-post-merge-failure.md) |
+| **Blocks**                | None                                                                                                            |
 
 ---
 

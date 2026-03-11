@@ -1,17 +1,17 @@
 # T020: Define shared Zod types for packets
 
-| Field | Value |
-|---|---|
-| **ID** | T020 |
-| **Epic** | [E004: Packet Schemas & Validation](../epics/E004-packet-schemas.md) |
-| **Type** | foundation |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T004](./T004-vitest-setup.md) |
-| **Blocks** | [T021](./T021-schemas-task-dev.md), [T022](./T022-schemas-review.md), [T023](./T023-schemas-merge-validation.md), [T024](./T024-schema-cross-validation.md) |
+| Field                     | Value                                                                                                                                                       |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T020                                                                                                                                                        |
+| **Epic**                  | [E004: Packet Schemas & Validation](../epics/E004-packet-schemas.md)                                                                                        |
+| **Type**                  | foundation                                                                                                                                                  |
+| **Status**                | pending                                                                                                                                                     |
+| **Priority**              | P0                                                                                                                                                          |
+| **Owner**                 | backend-engineer                                                                                                                                            |
+| **AI Executable**         | Yes                                                                                                                                                         |
+| **Human Review Required** | Yes                                                                                                                                                         |
+| **Dependencies**          | [T004](./T004-vitest-setup.md)                                                                                                                              |
+| **Blocks**                | [T021](./T021-schemas-task-dev.md), [T022](./T022-schemas-review.md), [T023](./T023-schemas-merge-validation.md), [T024](./T024-schema-cross-validation.md) |
 
 ---
 

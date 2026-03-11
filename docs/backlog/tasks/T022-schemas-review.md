@@ -1,17 +1,17 @@
 # T022: Define ReviewPacket and LeadReviewDecisionPacket schemas
 
-| Field | Value |
-|---|---|
-| **ID** | T022 |
-| **Epic** | [E004: Packet Schemas & Validation](../epics/E004-packet-schemas.md) |
-| **Type** | foundation |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T020](./T020-shared-zod-types.md) |
-| **Blocks** | [T024](./T024-schema-cross-validation.md), [T061](./T061-review-decision-apply.md) |
+| Field                     | Value                                                                              |
+| ------------------------- | ---------------------------------------------------------------------------------- |
+| **ID**                    | T022                                                                               |
+| **Epic**                  | [E004: Packet Schemas & Validation](../epics/E004-packet-schemas.md)               |
+| **Type**                  | foundation                                                                         |
+| **Status**                | pending                                                                            |
+| **Priority**              | P0                                                                                 |
+| **Owner**                 | backend-engineer                                                                   |
+| **AI Executable**         | Yes                                                                                |
+| **Human Review Required** | Yes                                                                                |
+| **Dependencies**          | [T020](./T020-shared-zod-types.md)                                                 |
+| **Blocks**                | [T024](./T024-schema-cross-validation.md), [T061](./T061-review-decision-apply.md) |
 
 ---
 

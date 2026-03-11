@@ -1,17 +1,17 @@
 # T085: Implement Audit, Policy, and Config endpoints
 
-| Field | Value |
-|---|---|
-| **ID** | T085 |
-| **Epic** | [E017: REST API Layer](../epics/E017-rest-api.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P1 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T074](./T074-audit-query-service.md), [T052](./T052-hierarchical-config.md), [T080](./T080-nestjs-bootstrap.md) |
-| **Blocks** | [T089](./T089-react-spa-init.md) |
+| Field                     | Value                                                                                                            |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T085                                                                                                             |
+| **Epic**                  | [E017: REST API Layer](../epics/E017-rest-api.md)                                                                |
+| **Type**                  | feature                                                                                                          |
+| **Status**                | pending                                                                                                          |
+| **Priority**              | P1                                                                                                               |
+| **Owner**                 | backend-engineer                                                                                                 |
+| **AI Executable**         | Yes                                                                                                              |
+| **Human Review Required** | Yes                                                                                                              |
+| **Dependencies**          | [T074](./T074-audit-query-service.md), [T052](./T052-hierarchical-config.md), [T080](./T080-nestjs-bootstrap.md) |
+| **Blocks**                | [T089](./T089-react-spa-init.md)                                                                                 |
 
 ---
 

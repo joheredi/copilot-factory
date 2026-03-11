@@ -1,17 +1,17 @@
 # T016: Implement supporting state machines
 
-| Field | Value |
-|---|---|
-| **ID** | T016 |
-| **Epic** | [E003: State Machine & Transition Engine](../epics/E003-state-machine-transition.md) |
-| **Type** | foundation |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T007](./T007-domain-enums-types.md) |
-| **Blocks** | [T017](./T017-transition-service.md) |
+| Field                     | Value                                                                                |
+| ------------------------- | ------------------------------------------------------------------------------------ |
+| **ID**                    | T016                                                                                 |
+| **Epic**                  | [E003: State Machine & Transition Engine](../epics/E003-state-machine-transition.md) |
+| **Type**                  | foundation                                                                           |
+| **Status**                | pending                                                                              |
+| **Priority**              | P0                                                                                   |
+| **Owner**                 | backend-engineer                                                                     |
+| **AI Executable**         | Yes                                                                                  |
+| **Human Review Required** | Yes                                                                                  |
+| **Dependencies**          | [T007](./T007-domain-enums-types.md)                                                 |
+| **Blocks**                | [T017](./T017-transition-service.md)                                                 |
 
 ---
 

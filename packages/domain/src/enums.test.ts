@@ -117,12 +117,8 @@ describe("WorkerLeaseStatus (PRD 002 §2.2)", () => {
       "CRASHED",
       "RECLAIMED",
     ];
-    expect(valuesOf(WorkerLeaseStatus)).toEqual(
-      expect.arrayContaining(expected),
-    );
-    expect(expected).toEqual(
-      expect.arrayContaining(valuesOf(WorkerLeaseStatus)),
-    );
+    expect(valuesOf(WorkerLeaseStatus)).toEqual(expect.arrayContaining(expected));
+    expect(expected).toEqual(expect.arrayContaining(valuesOf(WorkerLeaseStatus)));
   });
 
   it("should have keys matching values", () => {
@@ -152,12 +148,8 @@ describe("ReviewCycleStatus (PRD 002 §2.2)", () => {
       "REJECTED",
       "ESCALATED",
     ];
-    expect(valuesOf(ReviewCycleStatus)).toEqual(
-      expect.arrayContaining(expected),
-    );
-    expect(expected).toEqual(
-      expect.arrayContaining(valuesOf(ReviewCycleStatus)),
-    );
+    expect(valuesOf(ReviewCycleStatus)).toEqual(expect.arrayContaining(expected));
+    expect(expected).toEqual(expect.arrayContaining(valuesOf(ReviewCycleStatus)));
   });
 
   it("should have keys matching values", () => {
@@ -187,12 +179,8 @@ describe("MergeQueueItemStatus (PRD 002 §2.2)", () => {
       "REQUEUED",
       "FAILED",
     ];
-    expect(valuesOf(MergeQueueItemStatus)).toEqual(
-      expect.arrayContaining(expected),
-    );
-    expect(expected).toEqual(
-      expect.arrayContaining(valuesOf(MergeQueueItemStatus)),
-    );
+    expect(valuesOf(MergeQueueItemStatus)).toEqual(expect.arrayContaining(expected));
+    expect(expected).toEqual(expect.arrayContaining(valuesOf(MergeQueueItemStatus)));
   });
 
   it("should have keys matching values", () => {
@@ -228,13 +216,7 @@ describe("WorkerPoolType (PRD 002 §2.3)", () => {
   });
 
   it("should contain all types from the PRD spec", () => {
-    const expected = [
-      "developer",
-      "reviewer",
-      "lead-reviewer",
-      "merge-assist",
-      "planner",
-    ];
+    const expected = ["developer", "reviewer", "lead-reviewer", "merge-assist", "planner"];
     expect(valuesOf(WorkerPoolType)).toEqual(expect.arrayContaining(expected));
     expect(expected).toEqual(expect.arrayContaining(valuesOf(WorkerPoolType)));
   });
@@ -275,14 +257,7 @@ describe("JobStatus (PRD 002 §2.3)", () => {
   });
 
   it("should contain all statuses from the PRD spec", () => {
-    const expected = [
-      "pending",
-      "claimed",
-      "running",
-      "completed",
-      "failed",
-      "cancelled",
-    ];
+    const expected = ["pending", "claimed", "running", "completed", "failed", "cancelled"];
     expect(valuesOf(JobStatus)).toEqual(expect.arrayContaining(expected));
     expect(expected).toEqual(expect.arrayContaining(valuesOf(JobStatus)));
   });
@@ -298,19 +273,9 @@ describe("ValidationRunScope (PRD 002 §2.3)", () => {
   });
 
   it("should contain all scopes from the PRD spec", () => {
-    const expected = [
-      "pre-dev",
-      "during-dev",
-      "pre-review",
-      "pre-merge",
-      "post-merge",
-    ];
-    expect(valuesOf(ValidationRunScope)).toEqual(
-      expect.arrayContaining(expected),
-    );
-    expect(expected).toEqual(
-      expect.arrayContaining(valuesOf(ValidationRunScope)),
-    );
+    const expected = ["pre-dev", "during-dev", "pre-review", "pre-merge", "post-merge"];
+    expect(valuesOf(ValidationRunScope)).toEqual(expect.arrayContaining(expected));
+    expect(expected).toEqual(expect.arrayContaining(valuesOf(ValidationRunScope)));
   });
 });
 
@@ -324,21 +289,9 @@ describe("ValidationCheckType (PRD 008 §8.3.3)", () => {
   });
 
   it("should contain all types from the PRD spec", () => {
-    const expected = [
-      "test",
-      "lint",
-      "build",
-      "typecheck",
-      "policy",
-      "schema",
-      "security",
-    ];
-    expect(valuesOf(ValidationCheckType)).toEqual(
-      expect.arrayContaining(expected),
-    );
-    expect(expected).toEqual(
-      expect.arrayContaining(valuesOf(ValidationCheckType)),
-    );
+    const expected = ["test", "lint", "build", "typecheck", "policy", "schema", "security"];
+    expect(valuesOf(ValidationCheckType)).toEqual(expect.arrayContaining(expected));
+    expect(expected).toEqual(expect.arrayContaining(valuesOf(ValidationCheckType)));
   });
 });
 
@@ -353,12 +306,8 @@ describe("ValidationCheckStatus (PRD 008 §8.3.3)", () => {
 
   it("should contain all statuses from the PRD spec", () => {
     const expected = ["passed", "failed", "skipped"];
-    expect(valuesOf(ValidationCheckStatus)).toEqual(
-      expect.arrayContaining(expected),
-    );
-    expect(expected).toEqual(
-      expect.arrayContaining(valuesOf(ValidationCheckStatus)),
-    );
+    expect(valuesOf(ValidationCheckStatus)).toEqual(expect.arrayContaining(expected));
+    expect(expected).toEqual(expect.arrayContaining(valuesOf(ValidationCheckStatus)));
   });
 });
 
@@ -462,18 +411,9 @@ describe("LeadReviewDecision (PRD 008 §8.7.3)", () => {
   });
 
   it("should contain all decisions from the PRD spec", () => {
-    const expected = [
-      "approved",
-      "approved_with_follow_up",
-      "changes_requested",
-      "escalated",
-    ];
-    expect(valuesOf(LeadReviewDecision)).toEqual(
-      expect.arrayContaining(expected),
-    );
-    expect(expected).toEqual(
-      expect.arrayContaining(valuesOf(LeadReviewDecision)),
-    );
+    const expected = ["approved", "approved_with_follow_up", "changes_requested", "escalated"];
+    expect(valuesOf(LeadReviewDecision)).toEqual(expect.arrayContaining(expected));
+    expect(expected).toEqual(expect.arrayContaining(valuesOf(LeadReviewDecision)));
   });
 });
 
@@ -504,12 +444,8 @@ describe("MergeAssistRecommendation (PRD 008 §8.9.3)", () => {
 
   it("should contain all recommendations from the PRD spec", () => {
     const expected = ["auto_resolve", "reject_to_dev", "escalate"];
-    expect(valuesOf(MergeAssistRecommendation)).toEqual(
-      expect.arrayContaining(expected),
-    );
-    expect(expected).toEqual(
-      expect.arrayContaining(valuesOf(MergeAssistRecommendation)),
-    );
+    expect(valuesOf(MergeAssistRecommendation)).toEqual(expect.arrayContaining(expected));
+    expect(expected).toEqual(expect.arrayContaining(valuesOf(MergeAssistRecommendation)));
   });
 });
 
@@ -524,12 +460,8 @@ describe("PostMergeAnalysisRecommendation (PRD 008 §8.11.3)", () => {
 
   it("should contain all recommendations from the PRD spec", () => {
     const expected = ["revert", "hotfix_task", "escalate", "pre_existing"];
-    expect(valuesOf(PostMergeAnalysisRecommendation)).toEqual(
-      expect.arrayContaining(expected),
-    );
-    expect(expected).toEqual(
-      expect.arrayContaining(valuesOf(PostMergeAnalysisRecommendation)),
-    );
+    expect(valuesOf(PostMergeAnalysisRecommendation)).toEqual(expect.arrayContaining(expected));
+    expect(expected).toEqual(expect.arrayContaining(valuesOf(PostMergeAnalysisRecommendation)));
   });
 });
 
@@ -583,12 +515,8 @@ describe("FileScopeEnforcementLevel (PRD 002 §2.3)", () => {
 
   it("should contain all levels from the PRD spec", () => {
     const expected = ["strict", "audit", "advisory"];
-    expect(valuesOf(FileScopeEnforcementLevel)).toEqual(
-      expect.arrayContaining(expected),
-    );
-    expect(expected).toEqual(
-      expect.arrayContaining(valuesOf(FileScopeEnforcementLevel)),
-    );
+    expect(valuesOf(FileScopeEnforcementLevel)).toEqual(expect.arrayContaining(expected));
+    expect(expected).toEqual(expect.arrayContaining(valuesOf(FileScopeEnforcementLevel)));
   });
 });
 
@@ -603,12 +531,8 @@ describe("EscalationAction (PRD 002 §2.7)", () => {
 
   it("should contain all actions from the PRD spec", () => {
     const expected = ["escalate", "fail_then_escalate"];
-    expect(valuesOf(EscalationAction)).toEqual(
-      expect.arrayContaining(expected),
-    );
-    expect(expected).toEqual(
-      expect.arrayContaining(valuesOf(EscalationAction)),
-    );
+    expect(valuesOf(EscalationAction)).toEqual(expect.arrayContaining(expected));
+    expect(expected).toEqual(expect.arrayContaining(valuesOf(EscalationAction)));
   });
 });
 

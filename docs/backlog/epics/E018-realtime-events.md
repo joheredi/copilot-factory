@@ -39,11 +39,11 @@ WebSocket connections need lifecycle management. Must handle disconnects gracefu
 
 ## Tasks
 
-| ID | Title | Priority | Status |
-|---|---|---|---|
-| [T086](../tasks/T086-websocket-gateway.md) | Implement WebSocket gateway for live events | P1 | pending |
-| [T087](../tasks/T087-task-events.md) | Implement task state change event broadcasting | P1 | pending |
-| [T088](../tasks/T088-queue-worker-events.md) | Implement queue and worker status broadcasting | P2 | pending |
+| ID                                           | Title                                          | Priority | Status  |
+| -------------------------------------------- | ---------------------------------------------- | -------- | ------- |
+| [T086](../tasks/T086-websocket-gateway.md)   | Implement WebSocket gateway for live events    | P1       | pending |
+| [T087](../tasks/T087-task-events.md)         | Implement task state change event broadcasting | P1       | pending |
+| [T088](../tasks/T088-queue-worker-events.md) | Implement queue and worker status broadcasting | P2       | pending |
 
 ## Sequencing Notes
 

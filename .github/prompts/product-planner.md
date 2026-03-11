@@ -3,6 +3,7 @@ You are a senior technical product planner and software architect.
 Your task is to generate a complete, execution-ready project backlog from the product and architecture documentation in this repository.
 
 The backlog will be consumed primarily by AI coding agents, so it must be:
+
 - precise
 - implementation-oriented
 - dependency-aware
@@ -17,6 +18,7 @@ All source product and design documents are located under:
 - `docs/prd/*.md`
 
 These documents may include:
+
 - PRDs
 - architecture documents
 - non-functional requirements
@@ -29,6 +31,7 @@ These documents may include:
 You must read and synthesize all relevant documents under `docs/prd/` before producing the backlog.
 
 If some files are clearly obsolete, contradictory, or overlapping:
+
 - call that out explicitly
 - make the most reasonable synthesis possible
 - do not silently ignore meaningful conflicts
@@ -40,6 +43,7 @@ If some files are clearly obsolete, contradictory, or overlapping:
 Produce a backlog that translates the product and architecture into a practical development plan from foundation to production-ready system.
 
 The output must be suitable for:
+
 - humans who need a complete view of scope, sequencing, and risks
 - AI coding agents that execute one task at a time with limited context
 
@@ -77,6 +81,7 @@ The output must be suitable for:
 ## Backlog design rules
 
 Each task must be:
+
 - small enough for one coding agent to complete in one focused work session
 - large enough to produce meaningful progress
 - independently understandable
@@ -84,17 +89,20 @@ Each task must be:
 - verifiable by tests, review, or observable outcome
 
 Avoid vague tasks like:
+
 - "build auth"
 - "create frontend"
 - "implement backend"
 
 Prefer concrete tasks like:
+
 - "Add JWT validation middleware for API requests"
 - "Create database migration for tenant, user, and role tables"
 - "Implement POST /customers endpoint with validation and persistence"
 - "Build customer list page with pagination and empty/loading states"
 
 Avoid Placeholder tasks:
+
 - Do not create placeholder, umbrella, or non-executable tasks unless they are true spikes or decision records.
 - Each implementation task should correspond to a concrete change that can be completed and validated.
 
@@ -115,6 +123,7 @@ Generate the backlog as repository documentation using this structure:
 Use stable IDs and deterministic sortable filenames.
 
 Examples:
+
 - `E001-platform-foundation.md`
 - `T001-repo-bootstrap.md`
 - `P01-foundation.md`
@@ -130,6 +139,7 @@ Detailed implementation instructions belong in epic and task documents.
 Create `docs/backlog/index.md` as the single entry point for the backlog.
 
 It must include:
+
 - purpose of the backlog
 - how to use the backlog
 - backlog file organization
@@ -156,6 +166,7 @@ The index must be concise enough to scan quickly while still giving a complete m
 Create one file per epic under `docs/backlog/epics/`.
 
 For each epic include:
+
 - ID
 - Title
 - Summary
@@ -177,6 +188,7 @@ For each epic include:
 Create one file per executable task under `docs/backlog/tasks/`.
 
 For each task include:
+
 - ID
 - Title
 - Epic
@@ -210,6 +222,7 @@ Make each task independently understandable and safe for small-context execution
 If phases materially improve execution, create phase docs under `docs/backlog/phases/`.
 
 Each phase should include:
+
 - ID
 - Title
 - Goal
@@ -220,6 +233,7 @@ Each phase should include:
 - Risks
 
 Suggested examples:
+
 - Phase 0: repo/platform foundation
 - Phase 1: core domain skeleton
 - Phase 2: first end-to-end vertical slice
@@ -232,6 +246,7 @@ Suggested examples:
 If useful, create `docs/backlog/agents/execution-rules.md`.
 
 This should explain:
+
 - how AI agents should navigate the backlog
 - that they should execute one task at a time
 - how to determine whether a task is ready
@@ -246,6 +261,7 @@ This should explain:
 ## For each backlog item include
 
 At minimum, every backlog item must capture:
+
 - ID
 - Title
 - Epic
@@ -270,24 +286,30 @@ At minimum, every backlog item must capture:
 Your generated backlog must contain, either in the index or supporting documents:
 
 ### 1. Executive summary
+
 - major workstreams
 - recommended implementation order
 - key risks
 - assumptions/gaps discovered
 
 ### 2. Epic list
+
 A concise list of epics with purpose and dependency order.
 
 ### 3. Detailed backlog
+
 The full backlog in structured repository documentation.
 
 ### 4. Dependency graph
+
 Show task/epic dependency relationships in a simple readable format.
 
 ### 5. Recommended delivery phases
+
 Show logical implementation groupings and rollout order.
 
 ### 6. AI-agent execution guidance
+
 Explain how autonomous coding agents should safely consume the backlog.
 
 ---
@@ -316,9 +338,9 @@ In addition to the markdown backlog docs, you may also generate a machine-readab
 Using this shape:
 
 {
-  "epics": [],
-  "tasks": [],
-  "phases": []
+"epics": [],
+"tasks": [],
+"phases": []
 }
 
 The JSON must align with the markdown documents and use the same stable IDs.
@@ -330,6 +352,7 @@ The JSON must align with the markdown documents and use the same stable IDs.
 Create the backlog artifacts in the repository, not just as a single response.
 
 At minimum, generate:
+
 - `docs/backlog/index.md`
 - epic docs
 - task docs
@@ -337,6 +360,7 @@ At minimum, generate:
 If the backlog is large, still ensure the index links to everything and that all task docs are scoped for isolated execution.
 
 Before finalizing the backlog, review it for:
+
 - oversized tasks that should be split
 - missing dependency edges
 - duplicate or redundant tasks

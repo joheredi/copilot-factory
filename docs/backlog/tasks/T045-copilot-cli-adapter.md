@@ -1,17 +1,17 @@
 # T045: Implement Copilot CLI execution adapter
 
-| Field | Value |
-|---|---|
-| **ID** | T045 |
-| **Epic** | [E009: Worker Runtime & Execution](../epics/E009-worker-runtime.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T043](./T043-worker-runtime-interface.md), [T047](./T047-command-wrapper.md) |
-| **Blocks** | [T107](./T107-e2e-full-lifecycle.md) |
+| Field                     | Value                                                                         |
+| ------------------------- | ----------------------------------------------------------------------------- |
+| **ID**                    | T045                                                                          |
+| **Epic**                  | [E009: Worker Runtime & Execution](../epics/E009-worker-runtime.md)           |
+| **Type**                  | feature                                                                       |
+| **Status**                | pending                                                                       |
+| **Priority**              | P0                                                                            |
+| **Owner**                 | backend-engineer                                                              |
+| **AI Executable**         | Yes                                                                           |
+| **Human Review Required** | Yes                                                                           |
+| **Dependencies**          | [T043](./T043-worker-runtime-interface.md), [T047](./T047-command-wrapper.md) |
+| **Blocks**                | [T107](./T107-e2e-full-lifecycle.md)                                          |
 
 ---
 

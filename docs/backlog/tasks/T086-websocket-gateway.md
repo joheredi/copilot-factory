@@ -1,17 +1,17 @@
 # T086: Implement WebSocket gateway for live events
 
-| Field | Value |
-|---|---|
-| **ID** | T086 |
-| **Epic** | [E018: Real-time Events](../epics/E018-realtime-events.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P1 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T080](./T080-nestjs-bootstrap.md) |
-| **Blocks** | [T087](./T087-task-events.md), [T088](./T088-queue-worker-events.md), [T091](./T091-websocket-client.md) |
+| Field                     | Value                                                                                                    |
+| ------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T086                                                                                                     |
+| **Epic**                  | [E018: Real-time Events](../epics/E018-realtime-events.md)                                               |
+| **Type**                  | feature                                                                                                  |
+| **Status**                | pending                                                                                                  |
+| **Priority**              | P1                                                                                                       |
+| **Owner**                 | backend-engineer                                                                                         |
+| **AI Executable**         | Yes                                                                                                      |
+| **Human Review Required** | Yes                                                                                                      |
+| **Dependencies**          | [T080](./T080-nestjs-bootstrap.md)                                                                       |
+| **Blocks**                | [T087](./T087-task-events.md), [T088](./T088-queue-worker-events.md), [T091](./T091-websocket-client.md) |
 
 ---
 

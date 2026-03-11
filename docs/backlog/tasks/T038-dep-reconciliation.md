@@ -1,17 +1,17 @@
 # T038: Implement dependency reconciliation loop
 
-| Field | Value |
-|---|---|
-| **ID** | T038 |
-| **Epic** | [E007: Dependency & Readiness Engine](../epics/E007-dependency-readiness.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P1 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T037](./T037-reverse-dep-recalc.md), [T029](./T029-reconciliation-sweep.md) |
-| **Blocks** | None |
+| Field                     | Value                                                                        |
+| ------------------------- | ---------------------------------------------------------------------------- |
+| **ID**                    | T038                                                                         |
+| **Epic**                  | [E007: Dependency & Readiness Engine](../epics/E007-dependency-readiness.md) |
+| **Type**                  | feature                                                                      |
+| **Status**                | pending                                                                      |
+| **Priority**              | P1                                                                           |
+| **Owner**                 | backend-engineer                                                             |
+| **AI Executable**         | Yes                                                                          |
+| **Human Review Required** | Yes                                                                          |
+| **Dependencies**          | [T037](./T037-reverse-dep-recalc.md), [T029](./T029-reconciliation-sweep.md) |
+| **Blocks**                | None                                                                         |
 
 ---
 

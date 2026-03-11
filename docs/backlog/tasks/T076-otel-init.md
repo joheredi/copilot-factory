@@ -1,17 +1,17 @@
 # T076: Initialize OpenTelemetry TracerProvider
 
-| Field | Value |
-|---|---|
-| **ID** | T076 |
-| **Epic** | [E016: Observability](../epics/E016-observability.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P1 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T075](./T075-structured-logging.md) |
-| **Blocks** | [T077](./T077-otel-spans.md) |
+| Field                     | Value                                                 |
+| ------------------------- | ----------------------------------------------------- |
+| **ID**                    | T076                                                  |
+| **Epic**                  | [E016: Observability](../epics/E016-observability.md) |
+| **Type**                  | feature                                               |
+| **Status**                | pending                                               |
+| **Priority**              | P1                                                    |
+| **Owner**                 | backend-engineer                                      |
+| **AI Executable**         | Yes                                                   |
+| **Human Review Required** | Yes                                                   |
+| **Dependencies**          | [T075](./T075-structured-logging.md)                  |
+| **Blocks**                | [T077](./T077-otel-spans.md)                          |
 
 ---
 

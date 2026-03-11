@@ -1,17 +1,17 @@
 # T100: Build audit explorer view
 
-| Field | Value |
-|---|---|
-| **ID** | T100 |
-| **Epic** | [E020: Web UI Feature Views](../epics/E020-web-ui-features.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P2 |
-| **Owner** | frontend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T074](./T074-audit-query-service.md), [T090](./T090-api-client-tanstack.md), [T092](./T092-app-shell.md) |
-| **Blocks** | None |
+| Field                     | Value                                                                                                     |
+| ------------------------- | --------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T100                                                                                                      |
+| **Epic**                  | [E020: Web UI Feature Views](../epics/E020-web-ui-features.md)                                            |
+| **Type**                  | feature                                                                                                   |
+| **Status**                | pending                                                                                                   |
+| **Priority**              | P2                                                                                                        |
+| **Owner**                 | frontend-engineer                                                                                         |
+| **AI Executable**         | Yes                                                                                                       |
+| **Human Review Required** | Yes                                                                                                       |
+| **Dependencies**          | [T074](./T074-audit-query-service.md), [T090](./T090-api-client-tanstack.md), [T092](./T092-app-shell.md) |
+| **Blocks**                | None                                                                                                      |
 
 ---
 

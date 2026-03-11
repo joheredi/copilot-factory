@@ -69,8 +69,7 @@ export const WorkerLeaseStatus = {
 } as const;
 
 /** Union of all valid worker lease status values. */
-export type WorkerLeaseStatus =
-  (typeof WorkerLeaseStatus)[keyof typeof WorkerLeaseStatus];
+export type WorkerLeaseStatus = (typeof WorkerLeaseStatus)[keyof typeof WorkerLeaseStatus];
 
 // ─── Review Cycle Lifecycle (PRD 002 §2.2) ──────────────────────────────────
 
@@ -95,8 +94,7 @@ export const ReviewCycleStatus = {
 } as const;
 
 /** Union of all valid review cycle status values. */
-export type ReviewCycleStatus =
-  (typeof ReviewCycleStatus)[keyof typeof ReviewCycleStatus];
+export type ReviewCycleStatus = (typeof ReviewCycleStatus)[keyof typeof ReviewCycleStatus];
 
 // ─── Merge Queue Lifecycle (PRD 002 §2.2) ───────────────────────────────────
 
@@ -120,8 +118,7 @@ export const MergeQueueItemStatus = {
 } as const;
 
 /** Union of all valid merge queue item status values. */
-export type MergeQueueItemStatus =
-  (typeof MergeQueueItemStatus)[keyof typeof MergeQueueItemStatus];
+export type MergeQueueItemStatus = (typeof MergeQueueItemStatus)[keyof typeof MergeQueueItemStatus];
 
 // ─── Dependencies (PRD 002 §2.3) ────────────────────────────────────────────
 
@@ -162,8 +159,7 @@ export const WorkerPoolType = {
 } as const;
 
 /** Union of all valid worker pool type values. */
-export type WorkerPoolType =
-  (typeof WorkerPoolType)[keyof typeof WorkerPoolType];
+export type WorkerPoolType = (typeof WorkerPoolType)[keyof typeof WorkerPoolType];
 
 // ─── Job System (PRD 002 §2.3) ──────────────────────────────────────────────
 
@@ -222,8 +218,7 @@ export const ValidationRunScope = {
 } as const;
 
 /** Union of all valid validation run scope values. */
-export type ValidationRunScope =
-  (typeof ValidationRunScope)[keyof typeof ValidationRunScope];
+export type ValidationRunScope = (typeof ValidationRunScope)[keyof typeof ValidationRunScope];
 
 /**
  * Validation check type values.
@@ -243,8 +238,7 @@ export const ValidationCheckType = {
 } as const;
 
 /** Union of all valid validation check type values. */
-export type ValidationCheckType =
-  (typeof ValidationCheckType)[keyof typeof ValidationCheckType];
+export type ValidationCheckType = (typeof ValidationCheckType)[keyof typeof ValidationCheckType];
 
 /**
  * Validation check status values.
@@ -315,8 +309,7 @@ export const FileChangeType = {
 } as const;
 
 /** Union of all valid file change type values. */
-export type FileChangeType =
-  (typeof FileChangeType)[keyof typeof FileChangeType];
+export type FileChangeType = (typeof FileChangeType)[keyof typeof FileChangeType];
 
 // ─── Issues (PRD 008 §8.3.2) ────────────────────────────────────────────────
 
@@ -376,8 +369,7 @@ export const LeadReviewDecision = {
 } as const;
 
 /** Union of all valid lead review decision values. */
-export type LeadReviewDecision =
-  (typeof LeadReviewDecision)[keyof typeof LeadReviewDecision];
+export type LeadReviewDecision = (typeof LeadReviewDecision)[keyof typeof LeadReviewDecision];
 
 // ─── Merge (PRD 008 §8.8–§8.9) ──────────────────────────────────────────────
 
@@ -518,5 +510,4 @@ export const EscalationAction = {
 } as const;
 
 /** Union of all valid escalation action values. */
-export type EscalationAction =
-  (typeof EscalationAction)[keyof typeof EscalationAction];
+export type EscalationAction = (typeof EscalationAction)[keyof typeof EscalationAction];

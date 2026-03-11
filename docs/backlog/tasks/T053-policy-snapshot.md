@@ -1,17 +1,17 @@
 # T053: Implement effective policy snapshot generation
 
-| Field | Value |
-|---|---|
-| **ID** | T053 |
-| **Epic** | [E010: Policy & Configuration](../epics/E010-policy-configuration.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T048](./T048-command-policy.md), [T049](./T049-file-scope-policy.md), [T050](./T050-validation-policy.md), [T051](./T051-retry-escalation-policy.md), [T052](./T052-hierarchical-config.md) |
-| **Blocks** | [T040](./T040-workspace-mounting.md), [T045](./T045-copilot-cli-adapter.md) |
+| Field                     | Value                                                                                                                                                                                        |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T053                                                                                                                                                                                         |
+| **Epic**                  | [E010: Policy & Configuration](../epics/E010-policy-configuration.md)                                                                                                                        |
+| **Type**                  | feature                                                                                                                                                                                      |
+| **Status**                | pending                                                                                                                                                                                      |
+| **Priority**              | P0                                                                                                                                                                                           |
+| **Owner**                 | backend-engineer                                                                                                                                                                             |
+| **AI Executable**         | Yes                                                                                                                                                                                          |
+| **Human Review Required** | Yes                                                                                                                                                                                          |
+| **Dependencies**          | [T048](./T048-command-policy.md), [T049](./T049-file-scope-policy.md), [T050](./T050-validation-policy.md), [T051](./T051-retry-escalation-policy.md), [T052](./T052-hierarchical-config.md) |
+| **Blocks**                | [T040](./T040-workspace-mounting.md), [T045](./T045-copilot-cli-adapter.md)                                                                                                                  |
 
 ---
 

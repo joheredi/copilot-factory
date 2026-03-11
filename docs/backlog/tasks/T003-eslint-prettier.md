@@ -1,17 +1,17 @@
 # T003: Set up ESLint and Prettier
 
-| Field | Value |
-|---|---|
-| **ID** | T003 |
-| **Epic** | [E001: Repository & Platform Foundation](../epics/E001-platform-foundation.md) |
-| **Type** | foundation |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | platform-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T001](./T001-init-monorepo.md), [T002](./T002-typescript-config.md) |
-| **Blocks** | [T005](./T005-ci-pipeline.md) |
+| Field                     | Value                                                                          |
+| ------------------------- | ------------------------------------------------------------------------------ |
+| **ID**                    | T003                                                                           |
+| **Epic**                  | [E001: Repository & Platform Foundation](../epics/E001-platform-foundation.md) |
+| **Type**                  | foundation                                                                     |
+| **Status**                | done                                                                           |
+| **Priority**              | P0                                                                             |
+| **Owner**                 | platform-engineer                                                              |
+| **AI Executable**         | Yes                                                                            |
+| **Human Review Required** | Yes                                                                            |
+| **Dependencies**          | [T001](./T001-init-monorepo.md), [T002](./T002-typescript-config.md)           |
+| **Blocks**                | [T005](./T005-ci-pipeline.md)                                                  |
 
 ---
 
@@ -54,9 +54,9 @@ The implementing agent should read these files before starting:
 
 ## Acceptance Criteria
 
-- [ ] pnpm lint runs without errors on existing code
-- [ ] pnpm format:check passes
-- [ ] Pre-commit hook runs lint-staged
+- [x] pnpm lint runs without errors on existing code
+- [x] pnpm format:check passes
+- [x] Pre-commit hook runs lint-staged
 
 ## Definition of Done
 

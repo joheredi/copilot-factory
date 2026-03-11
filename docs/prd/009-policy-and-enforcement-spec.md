@@ -41,19 +41,35 @@ Command policy defines what a worker is allowed to execute and how execution is 
   "allowed_commands": [
     {
       "command": "pnpm",
-      "allowed_args_prefixes": ["install", "test", "lint", "build", "dev", "exec", "db:migrate", "seed"]
+      "allowed_args_prefixes": [
+        "install",
+        "test",
+        "lint",
+        "build",
+        "dev",
+        "exec",
+        "db:migrate",
+        "seed"
+      ]
     },
     {
       "command": "git",
-      "allowed_args_prefixes": ["status", "diff", "show", "checkout", "switch", "branch", "worktree", "add", "commit", "rebase", "merge"]
+      "allowed_args_prefixes": [
+        "status",
+        "diff",
+        "show",
+        "checkout",
+        "switch",
+        "branch",
+        "worktree",
+        "add",
+        "commit",
+        "rebase",
+        "merge"
+      ]
     }
   ],
-  "denied_patterns": [
-    "rm -rf /",
-    "curl * | sh",
-    "sudo *",
-    "ssh *"
-  ],
+  "denied_patterns": ["rm -rf /", "curl * | sh", "sudo *", "ssh *"],
   "allow_shell_compound_commands": false,
   "allow_subshells": false,
   "allow_env_expansion": false,
@@ -69,13 +85,13 @@ Command policy defines what a worker is allowed to execute and how execution is 
 
 ### 9.3.3 Enforcement Rules
 
-* All command execution must pass through a policy-aware wrapper owned by the runtime adapter.
-* The wrapper must receive structured command arguments, not raw shell strings, unless an explicit shell mode is allowed.
-* Default V1 behavior is deny-by-default with command allowlists.
-* Shell compound commands, subshells, and dynamic command construction are denied unless the effective policy explicitly permits them.
-* A denied command attempt produces a policy violation artifact and fails the run or escalates according to escalation policy.
-* `forbidden_arg_patterns` are evaluated after allowlist matching. A command that passes the allowlist but matches a forbidden pattern is still denied.
-* Patterns use simple glob matching where `*` matches any remaining arguments.
+- All command execution must pass through a policy-aware wrapper owned by the runtime adapter.
+- The wrapper must receive structured command arguments, not raw shell strings, unless an explicit shell mode is allowed.
+- Default V1 behavior is deny-by-default with command allowlists.
+- Shell compound commands, subshells, and dynamic command construction are denied unless the effective policy explicitly permits them.
+- A denied command attempt produces a policy violation artifact and fails the run or escalates according to escalation policy.
+- `forbidden_arg_patterns` are evaluated after allowlist matching. A command that passes the allowlist but matches a forbidden pattern is still denied.
+- Patterns use simple glob matching where `*` matches any remaining arguments.
 
 ## 9.4 File Scope Policy
 
@@ -83,20 +99,9 @@ Command policy defines what a worker is allowed to execute and how execution is 
 
 ```json
 {
-  "read_roots": [
-    "apps/control-plane/",
-    "packages/domain/",
-    "docs/"
-  ],
-  "write_roots": [
-    "apps/control-plane/",
-    "packages/domain/"
-  ],
-  "deny_roots": [
-    ".github/workflows/",
-    "secrets/",
-    "infra/production/"
-  ],
+  "read_roots": ["apps/control-plane/", "packages/domain/", "docs/"],
+  "write_roots": ["apps/control-plane/", "packages/domain/"],
+  "deny_roots": [".github/workflows/", "secrets/", "infra/production/"],
   "allow_read_outside_scope": true,
   "allow_write_outside_scope": false,
   "on_violation": "fail_run"
@@ -105,11 +110,11 @@ Command policy defines what a worker is allowed to execute and how execution is 
 
 ### 9.4.2 Enforcement Rules
 
-* Read access outside `read_roots` is denied unless `allow_read_outside_scope` is true.
-* Write access is only permitted within `write_roots`.
-* Any write under `deny_roots` is always denied.
-* V1 enforcement may combine preflight path checks with post-run diff validation. If both are available, both should be used.
-* Default V1 behavior: read access may exceed task file scope when needed for context, but writes must remain within allowed roots unless a human/operator override is present.
+- Read access outside `read_roots` is denied unless `allow_read_outside_scope` is true.
+- Write access is only permitted within `write_roots`.
+- Any write under `deny_roots` is always denied.
+- V1 enforcement may combine preflight path checks with post-run diff validation. If both are available, both should be used.
+- Default V1 behavior: read access may exceed task file scope when needed for context, but writes must remain within allowed roots unless a human/operator override is present.
 
 **Precedence rules when roots overlap:**
 
@@ -151,9 +156,9 @@ Command policy defines what a worker is allowed to execute and how execution is 
 
 ### 9.5.2 Rules
 
-* Validation profile selection is deterministic from task type, repository config, and workflow template.
-* Required checks must pass before the orchestrator can move a task into the next gated phase.
-* Validation results must be emitted as `validation_result_packet`.
+- Validation profile selection is deterministic from task type, repository config, and workflow template.
+- Required checks must pass before the orchestrator can move a task into the next gated phase.
+- Validation results must be emitted as `validation_result_packet`.
 
 ### 9.5.3 Profile Selection Algorithm
 
@@ -166,8 +171,8 @@ Profile selection follows this precedence order:
 
 **Error handling:**
 
-* If the resolved profile name does not exist in the policy snapshot, the orchestrator must fail the transition and emit a `missing_validation_profile` audit event.
-* Profiles are not inheritable in V1. Each profile must be self-contained with its own `required_checks`, `optional_checks`, and `commands`.
+- If the resolved profile name does not exist in the policy snapshot, the orchestrator must fail the transition and emit a `missing_validation_profile` audit event.
+- Profiles are not inheritable in V1. Each profile must be self-contained with its own `required_checks`, `optional_checks`, and `commands`.
 
 ## 9.6 Retry Policy
 
@@ -187,10 +192,10 @@ Profile selection follows this precedence order:
 
 ### 9.6.2 Rules
 
-* `max_attempts` counts retries after the initial attempt.
-* A run may be retried automatically only for retry-eligible failure classes such as transient infrastructure failure, timeout, or non-deterministic tool crash.
-* Rework after `CHANGES_REQUESTED` is not counted as an automatic retry; it is a review-driven reassignment with rejection context.
-* Once `max_attempts` is exceeded, the task must move to `ESCALATED` or `FAILED` according to escalation policy.
+- `max_attempts` counts retries after the initial attempt.
+- A run may be retried automatically only for retry-eligible failure classes such as transient infrastructure failure, timeout, or non-deterministic tool crash.
+- Rework after `CHANGES_REQUESTED` is not counted as an automatic retry; it is a review-driven reassignment with rejection context.
+- Once `max_attempts` is exceeded, the task must move to `ESCALATED` or `FAILED` according to escalation policy.
 
 ## 9.7 Escalation Policy
 
@@ -216,11 +221,11 @@ Profile selection follows this precedence order:
 
 V1 must support escalation at minimum for:
 
-* max automatic retries exceeded
-* review round limit exceeded
-* repeated merge failure
-* security-sensitive policy violation
-* unresolved ambiguity where safe autonomous action is not possible
+- max automatic retries exceeded
+- review round limit exceeded
+- repeated merge failure
+- security-sensitive policy violation
+- unresolved ambiguity where safe autonomous action is not possible
 
 Escalation routes to a human/operator queue by default.
 
@@ -240,32 +245,32 @@ Escalation routes to a human/operator queue by default.
 
 ### 9.8.2 Protocol Rules
 
-* Heartbeats are push-based from worker process to control plane or supervisor.
-* Workers must send a heartbeat every `heartbeat_interval_seconds`.
-* A worker is considered stale after `missed_heartbeat_threshold` missed intervals plus grace period.
-* On stale detection, the lease manager marks the run timed out, records an audit event, and applies retry/escalation policy.
-* Lease TTL is an upper bound even if heartbeats continue.
+- Heartbeats are push-based from worker process to control plane or supervisor.
+- Workers must send a heartbeat every `heartbeat_interval_seconds`.
+- A worker is considered stale after `missed_heartbeat_threshold` missed intervals plus grace period.
+- On stale detection, the lease manager marks the run timed out, records an audit event, and applies retry/escalation policy.
+- Lease TTL is an upper bound even if heartbeats continue.
 
 #### Graceful Completion Protocol
 
-* Before emitting a result packet, the worker must send a terminal heartbeat with a `completing: true` flag.
-* Upon receiving a terminal heartbeat, the lease manager extends the stale-detection window by `grace_period_seconds` to avoid race conditions.
-* A result packet received within `grace_period_seconds` after a lease is marked stale must still be accepted if it is schema-valid and all IDs match the run context.
+- Before emitting a result packet, the worker must send a terminal heartbeat with a `completing: true` flag.
+- Upon receiving a terminal heartbeat, the lease manager extends the stale-detection window by `grace_period_seconds` to avoid race conditions.
+- A result packet received within `grace_period_seconds` after a lease is marked stale must still be accepted if it is schema-valid and all IDs match the run context.
 
 #### Network Partition Handling
 
-* If a worker cannot reach the control plane to send heartbeats, it should continue working but must emit its result packet to the workspace filesystem as a fallback.
-* On lease reclaim, the orchestrator checks the workspace for a filesystem-persisted result packet before marking the run as lost.
-* V1 does not require heartbeat acknowledgment from the control plane. Future versions may add bidirectional heartbeats for partition detection.
+- If a worker cannot reach the control plane to send heartbeats, it should continue working but must emit its result packet to the workspace filesystem as a fallback.
+- On lease reclaim, the orchestrator checks the workspace for a filesystem-persisted result packet before marking the run as lost.
+- V1 does not require heartbeat acknowledgment from the control plane. Future versions may add bidirectional heartbeats for partition detection.
 
 ### 9.8.3 Default Values
 
 Recommended V1 defaults:
 
-* development lease TTL: 30 minutes
-* reviewer lease TTL: 10 minutes
-* merge worker lease TTL: 15 minutes
-* heartbeat interval: 30 seconds
+- development lease TTL: 30 minutes
+- reviewer lease TTL: 10 minutes
+- merge worker lease TTL: 15 minutes
+- heartbeat interval: 30 seconds
 
 ## 9.9 Review Policy
 
@@ -282,9 +287,9 @@ Recommended V1 defaults:
 
 ### 9.9.2 Rules
 
-* `max_review_rounds` defaults to `3`.
-* Exceeding the review round limit triggers escalation.
-* Review routing may add optional reviewers based on file/path/risk rules, but the lead reviewer is always required for final decision.
+- `max_review_rounds` defaults to `3`.
+- Exceeding the review round limit triggers escalation.
+- Review routing may add optional reviewers based on file/path/risk rules, but the lead reviewer is always required for final decision.
 
 ## 9.10 Retention and Cleanup Policy
 
@@ -301,9 +306,9 @@ Recommended V1 defaults:
 
 ### 9.10.2 Rules
 
-* Terminal cleanup states for workspaces are `DONE`, `FAILED`, and `CANCELLED`.
-* `ESCALATED` workspaces are retained by default until operator resolution.
-* Failed workspaces are retained by default for debugging and replay.
+- Terminal cleanup states for workspaces are `DONE`, `FAILED`, and `CANCELLED`.
+- `ESCALATED` workspaces are retained by default until operator resolution.
+- Failed workspaces are retained by default for debugging and replay.
 
 ## 9.11 Post-Merge Failure Policy
 
@@ -313,17 +318,17 @@ When `POST_MERGE_VALIDATION` fails, the orchestrator applies a severity-based de
 
 The validation result's overall status and the number/severity of failing checks determine failure severity:
 
-* **critical**: any security check fails, or more than `post_merge_failure_policy.critical_check_threshold` required checks fail
-* **high**: any required check fails but does not meet critical threshold
-* **low**: only optional checks fail
+- **critical**: any security check fails, or more than `post_merge_failure_policy.critical_check_threshold` required checks fail
+- **high**: any required check fails but does not meet critical threshold
+- **low**: only optional checks fail
 
 ### 9.11.2 Response by Severity
 
-| Severity | Automatic Action | Merge Queue | Operator Notification |
-|---|---|---|---|
-| `critical` | Generate revert task immediately | Pause queue for affected repository | Immediate alert; queue stays paused until operator confirms resume |
-| `high` | Invoke post-merge analysis agent (if enabled) | Continue processing queue | Alert operator; await agent recommendation or operator decision |
-| `low` | Create diagnostic follow-up task | Continue processing queue | Informational notification |
+| Severity   | Automatic Action                              | Merge Queue                         | Operator Notification                                              |
+| ---------- | --------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------ |
+| `critical` | Generate revert task immediately              | Pause queue for affected repository | Immediate alert; queue stays paused until operator confirms resume |
+| `high`     | Invoke post-merge analysis agent (if enabled) | Continue processing queue           | Alert operator; await agent recommendation or operator decision    |
+| `low`      | Create diagnostic follow-up task              | Continue processing queue           | Informational notification                                         |
 
 ### 9.11.3 Post-Merge Analysis Agent Integration
 
@@ -332,10 +337,10 @@ When the post-merge analysis agent is enabled and failure severity is `high`:
 1. Orchestrator invokes the agent with failure evidence.
 2. Agent emits a PostMergeAnalysisPacket with recommendation.
 3. Orchestrator applies the recommendation per policy:
-   * `revert` → generate revert task, optionally pause queue
-   * `hotfix_task` → create follow-up task with priority boost
-   * `escalate` → move to operator queue
-   * `pre_existing` → create diagnostic task, do not revert
+   - `revert` → generate revert task, optionally pause queue
+   - `hotfix_task` → create follow-up task with priority boost
+   - `escalate` → move to operator queue
+   - `pre_existing` → create diagnostic task, do not revert
 
 When the agent is unavailable or disabled, `high` severity failures default to generating a revert task and alerting the operator.
 
@@ -375,9 +380,9 @@ When the agent is unavailable or disabled, `high` severity failures default to g
 
 ### Rules
 
-* The merge module uses the strategy specified by the effective policy. Task-level overrides may select from `allowed_strategies`.
-* Merge conflict classification is deterministic based on `conflict_classification` thresholds. The merge assist agent is advisory only.
-* If merge assist is enabled and confidence is below `high` when `require_high_confidence` is true, the recommendation is ignored and the conflict is classified by the deterministic rules.
+- The merge module uses the strategy specified by the effective policy. Task-level overrides may select from `allowed_strategies`.
+- Merge conflict classification is deterministic based on `conflict_classification` thresholds. The merge assist agent is advisory only.
+- If merge assist is enabled and confidence is below `high` when `require_high_confidence` is true, the recommendation is ignored and the conflict is classified by the deterministic rules.
 
 ## 9.12 Configuration Precedence
 

@@ -1,17 +1,17 @@
 # T058: Implement Review Router with deterministic rules
 
-| Field | Value |
-|---|---|
-| **ID** | T058 |
-| **Epic** | [E012: Review Pipeline](../epics/E012-review-pipeline.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T011](./T011-migration-lease-review.md), [T014](./T014-entity-repositories.md), [T017](./T017-transition-service.md) |
-| **Blocks** | [T059](./T059-reviewer-dispatch.md), [T060](./T060-lead-reviewer-dispatch.md) |
+| Field                     | Value                                                                                                                 |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T058                                                                                                                  |
+| **Epic**                  | [E012: Review Pipeline](../epics/E012-review-pipeline.md)                                                             |
+| **Type**                  | feature                                                                                                               |
+| **Status**                | pending                                                                                                               |
+| **Priority**              | P0                                                                                                                    |
+| **Owner**                 | backend-engineer                                                                                                      |
+| **AI Executable**         | Yes                                                                                                                   |
+| **Human Review Required** | Yes                                                                                                                   |
+| **Dependencies**          | [T011](./T011-migration-lease-review.md), [T014](./T014-entity-repositories.md), [T017](./T017-transition-service.md) |
+| **Blocks**                | [T059](./T059-reviewer-dispatch.md), [T060](./T060-lead-reviewer-dispatch.md)                                         |
 
 ---
 

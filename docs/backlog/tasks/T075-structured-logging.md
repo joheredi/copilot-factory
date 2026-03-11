@@ -1,17 +1,17 @@
 # T075: Implement structured logging with correlation IDs
 
-| Field | Value |
-|---|---|
-| **ID** | T075 |
-| **Epic** | [E015: Audit & Event System](../epics/E015-audit-events.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P1 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T004](./T004-vitest-setup.md) |
-| **Blocks** | [T076](./T076-otel-init.md) |
+| Field                     | Value                                                       |
+| ------------------------- | ----------------------------------------------------------- |
+| **ID**                    | T075                                                        |
+| **Epic**                  | [E015: Audit & Event System](../epics/E015-audit-events.md) |
+| **Type**                  | feature                                                     |
+| **Status**                | pending                                                     |
+| **Priority**              | P1                                                          |
+| **Owner**                 | backend-engineer                                            |
+| **AI Executable**         | Yes                                                         |
+| **Human Review Required** | Yes                                                         |
+| **Dependencies**          | [T004](./T004-vitest-setup.md)                              |
+| **Blocks**                | [T076](./T076-otel-init.md)                                 |
 
 ---
 

@@ -44,8 +44,8 @@ iteration. Load the same stack every loop to ensure consistency:
    - Create a task file at `docs/backlog/tasks/` to track the failure.
    - Update `docs/backlog/index.md` to reference it.
    - Commit, push, and **exit**. Do not work on anything else.
-   If no build tooling exists yet (e.g., T001 hasn't been completed),
-   skip the pre-flight check.
+     If no build tooling exists yet (e.g., T001 hasn't been completed),
+     skip the pre-flight check.
 4. Choose the highest-priority ready task. **You decide** what has the
    highest priority — not necessarily the first item in the list.
 5. Load the full task file from `docs/backlog/tasks/`. Read ALL of its

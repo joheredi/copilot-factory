@@ -1,17 +1,17 @@
 # T063: Implement merge queue with ordering contract
 
-| Field | Value |
-|---|---|
-| **ID** | T063 |
-| **Epic** | [E013: Merge Pipeline](../epics/E013-merge-pipeline.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T012](./T012-migration-merge-job.md), [T014](./T014-entity-repositories.md), [T017](./T017-transition-service.md) |
-| **Blocks** | [T064](./T064-rebase-merge-exec.md), [T065](./T065-merge-strategies.md), [T066](./T066-conflict-classification.md) |
+| Field                     | Value                                                                                                              |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| **ID**                    | T063                                                                                                               |
+| **Epic**                  | [E013: Merge Pipeline](../epics/E013-merge-pipeline.md)                                                            |
+| **Type**                  | feature                                                                                                            |
+| **Status**                | pending                                                                                                            |
+| **Priority**              | P0                                                                                                                 |
+| **Owner**                 | backend-engineer                                                                                                   |
+| **AI Executable**         | Yes                                                                                                                |
+| **Human Review Required** | Yes                                                                                                                |
+| **Dependencies**          | [T012](./T012-migration-merge-job.md), [T014](./T014-entity-repositories.md), [T017](./T017-transition-service.md) |
+| **Blocks**                | [T064](./T064-rebase-merge-exec.md), [T065](./T065-merge-strategies.md), [T066](./T066-conflict-classification.md) |
 
 ---
 

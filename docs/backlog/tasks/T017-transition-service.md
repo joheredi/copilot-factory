@@ -1,17 +1,17 @@
 # T017: Build centralized State Transition Service
 
-| Field | Value |
-|---|---|
-| **ID** | T017 |
-| **Epic** | [E003: State Machine & Transition Engine](../epics/E003-state-machine-transition.md) |
-| **Type** | foundation |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T015](./T015-task-state-machine.md), [T016](./T016-supporting-state-machines.md), [T014](./T014-entity-repositories.md) |
-| **Blocks** | [T018](./T018-atomic-transition-audit.md), [T019](./T019-optimistic-concurrency.md), [T027](./T027-scheduler-service.md), [T030](./T030-lease-acquisition.md), [T058](./T058-review-router.md), [T061](./T061-review-decision-apply.md), [T063](./T063-merge-queue.md) |
+| Field                     | Value                                                                                                                                                                                                                                                                  |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T017                                                                                                                                                                                                                                                                   |
+| **Epic**                  | [E003: State Machine & Transition Engine](../epics/E003-state-machine-transition.md)                                                                                                                                                                                   |
+| **Type**                  | foundation                                                                                                                                                                                                                                                             |
+| **Status**                | pending                                                                                                                                                                                                                                                                |
+| **Priority**              | P0                                                                                                                                                                                                                                                                     |
+| **Owner**                 | backend-engineer                                                                                                                                                                                                                                                       |
+| **AI Executable**         | Yes                                                                                                                                                                                                                                                                    |
+| **Human Review Required** | Yes                                                                                                                                                                                                                                                                    |
+| **Dependencies**          | [T015](./T015-task-state-machine.md), [T016](./T016-supporting-state-machines.md), [T014](./T014-entity-repositories.md)                                                                                                                                               |
+| **Blocks**                | [T018](./T018-atomic-transition-audit.md), [T019](./T019-optimistic-concurrency.md), [T027](./T027-scheduler-service.md), [T030](./T030-lease-acquisition.md), [T058](./T058-review-router.md), [T061](./T061-review-decision-apply.md), [T063](./T063-merge-queue.md) |
 
 ---
 

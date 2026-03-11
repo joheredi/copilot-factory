@@ -143,9 +143,7 @@ const DEFAULTS = {
  * conn.close();
  * ```
  */
-export function createDatabaseConnection(
-  config: DatabaseConfig,
-): DatabaseConnection {
+export function createDatabaseConnection(config: DatabaseConfig): DatabaseConnection {
   const filePath = resolve(config.filePath);
 
   // Ensure the parent directory exists so better-sqlite3 can create the file
@@ -170,7 +168,6 @@ export function createDatabaseConnection(
   // Explicitly set foreign_keys in all cases — SQLite's compile-time default
   // may vary across builds, so always be explicit.
   sqlite.pragma(`foreign_keys = ${foreignKeys ? "ON" : "OFF"}`);
-
 
   const db = drizzle(sqlite);
 

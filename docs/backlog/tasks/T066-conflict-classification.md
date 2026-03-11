@@ -1,17 +1,17 @@
 # T066: Implement merge conflict classification
 
-| Field | Value |
-|---|---|
-| **ID** | T066 |
-| **Epic** | [E013: Merge Pipeline](../epics/E013-merge-pipeline.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T064](./T064-rebase-merge-exec.md) |
-| **Blocks** | [T067](./T067-post-merge-failure.md) |
+| Field                     | Value                                                   |
+| ------------------------- | ------------------------------------------------------- |
+| **ID**                    | T066                                                    |
+| **Epic**                  | [E013: Merge Pipeline](../epics/E013-merge-pipeline.md) |
+| **Type**                  | feature                                                 |
+| **Status**                | pending                                                 |
+| **Priority**              | P0                                                      |
+| **Owner**                 | backend-engineer                                        |
+| **AI Executable**         | Yes                                                     |
+| **Human Review Required** | Yes                                                     |
+| **Dependencies**          | [T064](./T064-rebase-merge-exec.md)                     |
+| **Blocks**                | [T067](./T067-post-merge-failure.md)                    |
 
 ---
 

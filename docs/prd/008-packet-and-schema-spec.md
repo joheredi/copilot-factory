@@ -6,10 +6,10 @@ This document defines the canonical packet shapes used for artifact-based handof
 
 The goals are:
 
-* machine-validatable contracts
-* stable versioned packets
-* bounded context for each worker
-* reproducible execution and review
+- machine-validatable contracts
+- stable versioned packets
+- bounded context for each worker
+- reproducible execution and review
 
 All packet producers and consumers must treat the schemas in this document as the canonical V1 contract.
 
@@ -19,9 +19,9 @@ All packet producers and consumers must treat the schemas in this document as th
 
 Every packet must include:
 
-* `packet_type`
-* `schema_version`
-* `created_at`
+- `packet_type`
+- `schema_version`
+- `created_at`
 
 V1 uses `schema_version: "1.0"`.
 
@@ -31,24 +31,24 @@ Backward-incompatible changes require a new schema version. Additive optional fi
 
 Every packet that belongs to a task must include:
 
-* `task_id`
-* `repository_id`
+- `task_id`
+- `repository_id`
 
 Packets that belong to a specific execution/review/merge stage must also include the relevant ID:
 
-* `run_id`
-* `review_cycle_id`
-* `merge_queue_item_id`
-* `validation_run_id`
+- `run_id`
+- `review_cycle_id`
+- `merge_queue_item_id`
+- `validation_run_id`
 
 ### 8.2.3 Status Semantics
 
 Packet-level execution status must use:
 
-* `success`
-* `failed`
-* `partial`
-* `blocked`
+- `success`
+- `failed`
+- `partial`
+- `blocked`
 
 Task state remains owned by the orchestrator and must not be inferred directly from packet status.
 
@@ -58,9 +58,9 @@ Packets may reference large outputs instead of embedding them inline.
 
 Use:
 
-* `artifact_refs`: list of relative artifact paths or content-addressed IDs
-* `summary`: short human-readable synopsis
-* `details`: structured machine-readable payload
+- `artifact_refs`: list of relative artifact paths or content-addressed IDs
+- `summary`: short human-readable synopsis
+- `details`: structured machine-readable payload
 
 ## 8.3 Shared Types
 
@@ -76,9 +76,9 @@ Use:
 
 Fields:
 
-* `path`: repository-relative path
-* `change_type`: `added | modified | deleted | renamed`
-* `summary`: short explanation
+- `path`: repository-relative path
+- `change_type`: `added | modified | deleted | renamed`
+- `summary`: short explanation
 
 ### 8.3.2 Issue
 
@@ -96,13 +96,13 @@ Fields:
 
 Fields:
 
-* `severity`: `critical | high | medium | low`
-* `code`: stable issue identifier
-* `title`
-* `description`
-* `file_path` (optional)
-* `line` (optional)
-* `blocking`
+- `severity`: `critical | high | medium | low`
+- `code`: stable issue identifier
+- `title`
+- `description`
+- `file_path` (optional)
+- `line` (optional)
+- `blocking`
 
 ### 8.3.3 ValidationCheckResult
 
@@ -119,13 +119,13 @@ Fields:
 
 Fields:
 
-* `check_type`: `test | lint | build | typecheck | policy | schema | security`
-* `tool_name`
-* `command`
-* `status`: `passed | failed | skipped`
-* `duration_ms`
-* `summary`
-* `artifact_refs` (optional)
+- `check_type`: `test | lint | build | typecheck | policy | schema | security`
+- `tool_name`
+- `command`
+- `status`: `passed | failed | skipped`
+- `duration_ms`
+- `summary`
+- `artifact_refs` (optional)
 
 ## 8.4 TaskPacket
 
@@ -152,10 +152,7 @@ The TaskPacket is the canonical input to planner, developer, reviewer, merge-ass
       "Reclaim expired leases deterministically",
       "Emit audit events on reclaim"
     ],
-    "definition_of_done": [
-      "Implementation complete",
-      "Required validations pass"
-    ],
+    "definition_of_done": ["Implementation complete", "Required validations pass"],
     "risk_level": "medium",
     "suggested_file_scope": [
       "apps/control-plane/src/modules/leases/**",
@@ -204,22 +201,22 @@ The TaskPacket is the canonical input to planner, developer, reviewer, merge-ass
 
 ### 8.4.3 Required Top-Level Fields
 
-* `packet_type`
-* `schema_version`
-* `created_at`
-* `task_id`
-* `repository_id`
-* `role` (enum: `planner | developer | reviewer | lead-reviewer | merge-assist | post-merge-analysis`)
-* `time_budget_seconds`
-* `expires_at`
-* `task`
-* `repository`
-* `workspace`
-* `repo_policy`
-* `tool_policy`
-* `validation_requirements`
-* `stop_conditions`
-* `expected_output`
+- `packet_type`
+- `schema_version`
+- `created_at`
+- `task_id`
+- `repository_id`
+- `role` (enum: `planner | developer | reviewer | lead-reviewer | merge-assist | post-merge-analysis`)
+- `time_budget_seconds`
+- `expires_at`
+- `task`
+- `repository`
+- `workspace`
+- `repo_policy`
+- `tool_policy`
+- `validation_requirements`
+- `stop_conditions`
+- `expected_output`
 
 ## 8.5 DevResultPacket
 
@@ -249,9 +246,7 @@ The DevResultPacket is the canonical output from a developer worker.
         "summary": "Added expiry sweep and reclaim logic"
       }
     ],
-    "tests_added_or_updated": [
-      "packages/testing/src/leases/reconcile.spec.ts"
-    ],
+    "tests_added_or_updated": ["packages/testing/src/leases/reconcile.spec.ts"],
     "validations_run": [
       {
         "check_type": "test",
@@ -262,32 +257,27 @@ The DevResultPacket is the canonical output from a developer worker.
         "summary": "8 tests passed"
       }
     ],
-    "assumptions": [
-      "Lease expiry uses wall-clock time from persisted timestamps"
-    ],
+    "assumptions": ["Lease expiry uses wall-clock time from persisted timestamps"],
     "risks": [],
     "unresolved_issues": []
   },
-  "artifact_refs": [
-    "runs/run-456/logs/developer.log",
-    "runs/run-456/outputs/diff.patch"
-  ]
+  "artifact_refs": ["runs/run-456/logs/developer.log", "runs/run-456/outputs/diff.patch"]
 }
 ```
 
 ### 8.5.3 Required Fields
 
-* `packet_type`
-* `schema_version`
-* `created_at`
-* `task_id`
-* `repository_id`
-* `run_id`
-* `status`
-* `summary`
-* `result.branch_name`
-* `result.files_changed`
-* `result.validations_run`
+- `packet_type`
+- `schema_version`
+- `created_at`
+- `task_id`
+- `repository_id`
+- `run_id`
+- `status`
+- `summary`
+- `result.branch_name`
+- `result.files_changed`
+- `result.validations_run`
 
 ## 8.6 ReviewPacket
 
@@ -330,9 +320,9 @@ The ReviewPacket is the output from a specialist reviewer.
 
 ### 8.6.3 Rules
 
-* `verdict` must be one of `approved | changes_requested | escalated`.
-* `blocking_issues` must be empty when `verdict` is `approved`.
-* Each issue must include `blocking: true` if placed in `blocking_issues`.
+- `verdict` must be one of `approved | changes_requested | escalated`.
+- `blocking_issues` must be empty when `verdict` is `approved`.
+- Each issue must include `blocking: true` if placed in `blocking_issues`.
 
 ## 8.7 LeadReviewDecisionPacket
 
@@ -363,8 +353,8 @@ This packet is the canonical output from the lead reviewer after consolidating s
 
 ### 8.7.3 Rules
 
-* `decision` must be one of `approved | approved_with_follow_up | changes_requested | escalated`.
-* The lead reviewer may only emit `changes_requested` if at least one blocking issue remains after consolidation.
+- `decision` must be one of `approved | approved_with_follow_up | changes_requested | escalated`.
+- The lead reviewer may only emit `changes_requested` if at least one blocking issue remains after consolidation.
 
 ## 8.8 MergePacket
 
@@ -393,9 +383,7 @@ The MergePacket captures the machine-readable result of merge preparation and in
     "rebase_performed": true,
     "validation_results": []
   },
-  "artifact_refs": [
-    "merges/merge-7/merge.log"
-  ]
+  "artifact_refs": ["merges/merge-7/merge.log"]
 }
 ```
 
@@ -434,10 +422,10 @@ The MergeAssistPacket is the output from the optional Merge Assist Agent when AI
 
 ### 8.9.3 Rules
 
-* `recommendation` must be one of `auto_resolve | reject_to_dev | escalate`.
-* `confidence` must be one of `high | medium | low`.
-* If `confidence` is `low`, `recommendation` must be `reject_to_dev` or `escalate`.
-* The merge module validates that `files_affected` are within the original approved diff scope.
+- `recommendation` must be one of `auto_resolve | reject_to_dev | escalate`.
+- `confidence` must be one of `high | medium | low`.
+- If `confidence` is `low`, `recommendation` must be `reject_to_dev` or `escalate`.
+- The merge module validates that `files_affected` are within the original approved diff scope.
 
 ## 8.10 ValidationResultPacket
 
@@ -515,12 +503,12 @@ The PostMergeAnalysisPacket is the output from the Post-Merge Analysis Agent whe
 
 ### 8.11.3 Rules
 
-* `recommendation` must be one of `revert | hotfix_task | escalate | pre_existing`.
-* `confidence` must be one of `high | medium | low`.
-* If `confidence` is `low`, `recommendation` must be `escalate`.
-* If `recommendation` is `revert`, `suggested_revert_scope` must be non-null.
-* If `recommendation` is `hotfix_task`, `follow_up_task_description` must be non-null.
-* If `recommendation` is `pre_existing`, the orchestrator should not revert but may create a diagnostic task.
+- `recommendation` must be one of `revert | hotfix_task | escalate | pre_existing`.
+- `confidence` must be one of `high | medium | low`.
+- If `confidence` is `low`, `recommendation` must be `escalate`.
+- If `recommendation` is `revert`, `suggested_revert_scope` must be non-null.
+- If `recommendation` is `hotfix_task`, `follow_up_task_description` must be non-null.
+- If `recommendation` is `pre_existing`, the orchestrator should not revert but may create a diagnostic task.
 
 ## 8.12 RejectionContext
 
@@ -528,9 +516,9 @@ When a task is reworked after `CHANGES_REQUESTED`, the next TaskPacket must incl
 
 **Conditional rules:**
 
-* On initial task attempts, `context.rejection_context` must be `null`.
-* On rework attempts (after `CHANGES_REQUESTED → ASSIGNED`), `context.rejection_context` must be a valid RejectionContext object.
-* On retry attempts (after `FAILED` with retry eligible), `context.rejection_context` remains `null` but `context.prior_partial_work` may reference partial artifacts from the failed run.
+- On initial task attempts, `context.rejection_context` must be `null`.
+- On rework attempts (after `CHANGES_REQUESTED → ASSIGNED`), `context.rejection_context` must be a valid RejectionContext object.
+- On retry attempts (after `FAILED` with retry eligible), `context.rejection_context` remains `null` but `context.prior_partial_work` may reference partial artifacts from the failed run.
 
 Canonical shape:
 
@@ -554,21 +542,21 @@ Canonical shape:
 
 Every concrete packet schema must enforce:
 
-* exact `packet_type`
-* required top-level fields
-* enum validation for statuses and decisions
-* rejection of unknown fields where stability matters
-* string format validation for timestamps
+- exact `packet_type`
+- required top-level fields
+- enum validation for statuses and decisions
+- rejection of unknown fields where stability matters
+- string format validation for timestamps
 
 V1 may define these schemas in JSON Schema, Zod, or TypeBox, but one machine-readable source of truth must be generated and shared across producers and consumers.
 
 Additionally, schema validation must enforce these cross-field invariants:
 
-* ReviewPacket: `blocking_issues` must be empty when `verdict` is `approved`
-* LeadReviewDecisionPacket: `changes_requested` requires at least one entry in `blocking_issues`
-* LeadReviewDecisionPacket: `approved_with_follow_up` requires non-empty `follow_up_task_refs`
-* MergeAssistPacket: `confidence: "low"` requires `recommendation` to be `reject_to_dev` or `escalate`
-* PostMergeAnalysisPacket: `confidence: "low"` requires `recommendation` to be `escalate`
+- ReviewPacket: `blocking_issues` must be empty when `verdict` is `approved`
+- LeadReviewDecisionPacket: `changes_requested` requires at least one entry in `blocking_issues`
+- LeadReviewDecisionPacket: `approved_with_follow_up` requires non-empty `follow_up_task_refs`
+- MergeAssistPacket: `confidence: "low"` requires `recommendation` to be `reject_to_dev` or `escalate`
+- PostMergeAnalysisPacket: `confidence: "low"` requires `recommendation` to be `escalate`
 
 V1 must use **Zod** as the schema validation library for TypeScript type inference and runtime validation. JSON Schema export may be generated from Zod schemas for cross-language consumers if needed later.
 
@@ -587,21 +575,21 @@ No worker result may be accepted into the orchestrator unless:
 
 Schema versions use `major.minor` format (e.g., `"1.0"`, `"1.1"`, `"2.0"`).
 
-* Minor version increments: additive optional fields only. Existing consumers must not break.
-* Major version increments: breaking changes (removed fields, type changes, new required fields).
+- Minor version increments: additive optional fields only. Existing consumers must not break.
+- Major version increments: breaking changes (removed fields, type changes, new required fields).
 
 ### Multi-Version Support
 
 The orchestrator must support validating packets against any schema version within the current major version:
 
-* A worker assigned under schema `1.0` may emit a `1.0` packet even if the system has upgraded to `1.1`.
-* The orchestrator must accept any valid packet within the same major version family.
-* Cross-major-version packets are rejected. Workers assigned under a previous major version that have not completed must be reclaimed and re-dispatched with updated schemas.
+- A worker assigned under schema `1.0` may emit a `1.0` packet even if the system has upgraded to `1.1`.
+- The orchestrator must accept any valid packet within the same major version family.
+- Cross-major-version packets are rejected. Workers assigned under a previous major version that have not completed must be reclaimed and re-dispatched with updated schemas.
 
 ### In-Flight Work During Upgrades
 
-* Minor version upgrades: no action needed. In-flight workers continue with their assigned schema version.
-* Major version upgrades: all in-flight workers must complete or be reclaimed before the upgrade is committed. The orchestrator should drain active leases before applying a major schema change.
+- Minor version upgrades: no action needed. In-flight workers continue with their assigned schema version.
+- Major version upgrades: all in-flight workers must complete or be reclaimed before the upgrade is committed. The orchestrator should drain active leases before applying a major schema change.
 
 ### Artifact Versioning
 

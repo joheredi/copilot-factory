@@ -1,17 +1,17 @@
 # T067: Implement post-merge validation and failure policy
 
-| Field | Value |
-|---|---|
-| **ID** | T067 |
-| **Epic** | [E013: Merge Pipeline](../epics/E013-merge-pipeline.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T056](./T056-validation-packet-emission.md), [T064](./T064-rebase-merge-exec.md), [T066](./T066-conflict-classification.md) |
-| **Blocks** | [T068](./T068-followup-task-gen.md) |
+| Field                     | Value                                                                                                                        |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T067                                                                                                                         |
+| **Epic**                  | [E013: Merge Pipeline](../epics/E013-merge-pipeline.md)                                                                      |
+| **Type**                  | feature                                                                                                                      |
+| **Status**                | pending                                                                                                                      |
+| **Priority**              | P0                                                                                                                           |
+| **Owner**                 | backend-engineer                                                                                                             |
+| **AI Executable**         | Yes                                                                                                                          |
+| **Human Review Required** | Yes                                                                                                                          |
+| **Dependencies**          | [T056](./T056-validation-packet-emission.md), [T064](./T064-rebase-merge-exec.md), [T066](./T066-conflict-classification.md) |
+| **Blocks**                | [T068](./T068-followup-task-gen.md)                                                                                          |
 
 ---
 

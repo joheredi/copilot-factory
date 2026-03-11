@@ -1,17 +1,17 @@
 # T025: Implement DB-backed job queue
 
-| Field | Value |
-|---|---|
-| **ID** | T025 |
-| **Epic** | [E005: Job Queue & Scheduling](../epics/E005-job-queue-scheduling.md) |
-| **Type** | foundation |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T012](./T012-migration-merge-job.md), [T014](./T014-entity-repositories.md) |
-| **Blocks** | [T026](./T026-job-dependencies.md), [T027](./T027-scheduler-service.md), [T028](./T028-scheduler-tick-loop.md), [T029](./T029-reconciliation-sweep.md) |
+| Field                     | Value                                                                                                                                                  |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **ID**                    | T025                                                                                                                                                   |
+| **Epic**                  | [E005: Job Queue & Scheduling](../epics/E005-job-queue-scheduling.md)                                                                                  |
+| **Type**                  | foundation                                                                                                                                             |
+| **Status**                | pending                                                                                                                                                |
+| **Priority**              | P0                                                                                                                                                     |
+| **Owner**                 | backend-engineer                                                                                                                                       |
+| **AI Executable**         | Yes                                                                                                                                                    |
+| **Human Review Required** | Yes                                                                                                                                                    |
+| **Dependencies**          | [T012](./T012-migration-merge-job.md), [T014](./T014-entity-repositories.md)                                                                           |
+| **Blocks**                | [T026](./T026-job-dependencies.md), [T027](./T027-scheduler-service.md), [T028](./T028-scheduler-tick-loop.md), [T029](./T029-reconciliation-sweep.md) |
 
 ---
 

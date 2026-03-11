@@ -1,17 +1,17 @@
 # T070: Implement artifact reference resolution and retrieval
 
-| Field | Value |
-|---|---|
-| **ID** | T070 |
-| **Epic** | [E014: Artifact Service](../epics/E014-artifact-service.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T069](./T069-artifact-storage.md) |
-| **Blocks** | [T084](./T084-api-artifacts-reviews.md) |
+| Field                     | Value                                                       |
+| ------------------------- | ----------------------------------------------------------- |
+| **ID**                    | T070                                                        |
+| **Epic**                  | [E014: Artifact Service](../epics/E014-artifact-service.md) |
+| **Type**                  | feature                                                     |
+| **Status**                | pending                                                     |
+| **Priority**              | P0                                                          |
+| **Owner**                 | backend-engineer                                            |
+| **AI Executable**         | Yes                                                         |
+| **Human Review Required** | Yes                                                         |
+| **Dependencies**          | [T069](./T069-artifact-storage.md)                          |
+| **Blocks**                | [T084](./T084-api-artifacts-reviews.md)                     |
 
 ---
 

@@ -41,12 +41,12 @@ UI framework choices are hard to change later. Component library selection matte
 
 ## Tasks
 
-| ID | Title | Priority | Status |
-|---|---|---|---|
-| [T089](../tasks/T089-react-spa-init.md) | Initialize React SPA with Vite, Tailwind, shadcn/ui | P1 | pending |
-| [T090](../tasks/T090-api-client-tanstack.md) | Implement API client layer with TanStack Query | P1 | pending |
-| [T091](../tasks/T091-websocket-client.md) | Implement WebSocket client for live updates | P1 | pending |
-| [T092](../tasks/T092-app-shell.md) | Build app shell with navigation layout | P1 | pending |
+| ID                                           | Title                                               | Priority | Status  |
+| -------------------------------------------- | --------------------------------------------------- | -------- | ------- |
+| [T089](../tasks/T089-react-spa-init.md)      | Initialize React SPA with Vite, Tailwind, shadcn/ui | P1       | pending |
+| [T090](../tasks/T090-api-client-tanstack.md) | Implement API client layer with TanStack Query      | P1       | pending |
+| [T091](../tasks/T091-websocket-client.md)    | Implement WebSocket client for live updates         | P1       | pending |
+| [T092](../tasks/T092-app-shell.md)           | Build app shell with navigation layout              | P1       | pending |
 
 ## Sequencing Notes
 

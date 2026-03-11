@@ -1,17 +1,17 @@
 # T074: Implement audit event query service
 
-| Field | Value |
-|---|---|
-| **ID** | T074 |
-| **Epic** | [E015: Audit & Event System](../epics/E015-audit-events.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P1 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T073](./T073-audit-event-recording.md) |
-| **Blocks** | [T085](./T085-api-audit-policy-config.md), [T100](./T100-ui-audit-explorer.md) |
+| Field                     | Value                                                                          |
+| ------------------------- | ------------------------------------------------------------------------------ |
+| **ID**                    | T074                                                                           |
+| **Epic**                  | [E015: Audit & Event System](../epics/E015-audit-events.md)                    |
+| **Type**                  | feature                                                                        |
+| **Status**                | pending                                                                        |
+| **Priority**              | P1                                                                             |
+| **Owner**                 | backend-engineer                                                               |
+| **AI Executable**         | Yes                                                                            |
+| **Human Review Required** | Yes                                                                            |
+| **Dependencies**          | [T073](./T073-audit-event-recording.md)                                        |
+| **Blocks**                | [T085](./T085-api-audit-policy-config.md), [T100](./T100-ui-audit-explorer.md) |
 
 ---
 

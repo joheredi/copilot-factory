@@ -1,17 +1,17 @@
 # T009: Create migrations for Task and TaskDependency tables
 
-| Field | Value |
-|---|---|
-| **ID** | T009 |
-| **Epic** | [E002: Domain Model & Persistence](../epics/E002-domain-model-persistence.md) |
-| **Type** | foundation |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T006](./T006-sqlite-drizzle-setup.md), [T007](./T007-domain-enums-types.md), [T008](./T008-migration-project-repo.md) |
-| **Blocks** | [T014](./T014-entity-repositories.md), [T015](./T015-task-state-machine.md), [T082](./T082-api-task-management.md) |
+| Field                     | Value                                                                                                                  |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T009                                                                                                                   |
+| **Epic**                  | [E002: Domain Model & Persistence](../epics/E002-domain-model-persistence.md)                                          |
+| **Type**                  | foundation                                                                                                             |
+| **Status**                | pending                                                                                                                |
+| **Priority**              | P0                                                                                                                     |
+| **Owner**                 | backend-engineer                                                                                                       |
+| **AI Executable**         | Yes                                                                                                                    |
+| **Human Review Required** | Yes                                                                                                                    |
+| **Dependencies**          | [T006](./T006-sqlite-drizzle-setup.md), [T007](./T007-domain-enums-types.md), [T008](./T008-migration-project-repo.md) |
+| **Blocks**                | [T014](./T014-entity-repositories.md), [T015](./T015-task-state-machine.md), [T082](./T082-api-task-management.md)     |
 
 ---
 

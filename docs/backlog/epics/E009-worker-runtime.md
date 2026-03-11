@@ -42,13 +42,13 @@ Copilot CLI integration details may require experimentation. Command wrapper mus
 
 ## Tasks
 
-| ID | Title | Priority | Status |
-|---|---|---|---|
-| [T043](../tasks/T043-worker-runtime-interface.md) | Define worker runtime interface | P0 | pending |
-| [T044](../tasks/T044-worker-supervisor.md) | Implement Worker Supervisor | P0 | pending |
-| [T045](../tasks/T045-copilot-cli-adapter.md) | Implement Copilot CLI execution adapter | P0 | pending |
-| [T046](../tasks/T046-output-capture-validation.md) | Implement structured output capture and validation | P0 | pending |
-| [T047](../tasks/T047-command-wrapper.md) | Implement policy-aware command wrapper | P0 | pending |
+| ID                                                 | Title                                              | Priority | Status  |
+| -------------------------------------------------- | -------------------------------------------------- | -------- | ------- |
+| [T043](../tasks/T043-worker-runtime-interface.md)  | Define worker runtime interface                    | P0       | pending |
+| [T044](../tasks/T044-worker-supervisor.md)         | Implement Worker Supervisor                        | P0       | pending |
+| [T045](../tasks/T045-copilot-cli-adapter.md)       | Implement Copilot CLI execution adapter            | P0       | pending |
+| [T046](../tasks/T046-output-capture-validation.md) | Implement structured output capture and validation | P0       | pending |
+| [T047](../tasks/T047-command-wrapper.md)           | Implement policy-aware command wrapper             | P0       | pending |
 
 ## Sequencing Notes
 

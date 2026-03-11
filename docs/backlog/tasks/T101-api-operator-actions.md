@@ -1,17 +1,17 @@
 # T101: Implement operator action API endpoints
 
-| Field | Value |
-|---|---|
-| **ID** | T101 |
-| **Epic** | [E021: Operator Actions & Overrides](../epics/E021-operator-actions.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P1 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T017](./T017-transition-service.md), [T080](./T080-nestjs-bootstrap.md) |
-| **Blocks** | [T102](./T102-operator-guards.md), [T103](./T103-escalation-resolution.md), [T104](./T104-ui-operator-task.md) |
+| Field                     | Value                                                                                                          |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T101                                                                                                           |
+| **Epic**                  | [E021: Operator Actions & Overrides](../epics/E021-operator-actions.md)                                        |
+| **Type**                  | feature                                                                                                        |
+| **Status**                | pending                                                                                                        |
+| **Priority**              | P1                                                                                                             |
+| **Owner**                 | backend-engineer                                                                                               |
+| **AI Executable**         | Yes                                                                                                            |
+| **Human Review Required** | Yes                                                                                                            |
+| **Dependencies**          | [T017](./T017-transition-service.md), [T080](./T080-nestjs-bootstrap.md)                                       |
+| **Blocks**                | [T102](./T102-operator-guards.md), [T103](./T103-escalation-resolution.md), [T104](./T104-ui-operator-task.md) |
 
 ---
 

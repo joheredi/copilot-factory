@@ -42,13 +42,13 @@ Race conditions between heartbeat timeout and result submission. Grace period lo
 
 ## Tasks
 
-| ID | Title | Priority | Status |
-|---|---|---|---|
-| [T030](../tasks/T030-lease-acquisition.md) | Implement lease acquisition with exclusivity | P0 | pending |
-| [T031](../tasks/T031-heartbeat-staleness.md) | Implement heartbeat receive and staleness detection | P0 | pending |
-| [T032](../tasks/T032-graceful-completion.md) | Implement graceful completion protocol | P0 | pending |
-| [T033](../tasks/T033-lease-reclaim.md) | Implement stale lease reclaim and retry/escalation | P0 | pending |
-| [T034](../tasks/T034-crash-recovery-artifacts.md) | Implement crash recovery with partial artifact capture | P1 | pending |
+| ID                                                | Title                                                  | Priority | Status  |
+| ------------------------------------------------- | ------------------------------------------------------ | -------- | ------- |
+| [T030](../tasks/T030-lease-acquisition.md)        | Implement lease acquisition with exclusivity           | P0       | pending |
+| [T031](../tasks/T031-heartbeat-staleness.md)      | Implement heartbeat receive and staleness detection    | P0       | pending |
+| [T032](../tasks/T032-graceful-completion.md)      | Implement graceful completion protocol                 | P0       | pending |
+| [T033](../tasks/T033-lease-reclaim.md)            | Implement stale lease reclaim and retry/escalation     | P0       | pending |
+| [T034](../tasks/T034-crash-recovery-artifacts.md) | Implement crash recovery with partial artifact capture | P1       | pending |
 
 ## Sequencing Notes
 

@@ -1,17 +1,17 @@
 # T004: Set up Vitest testing framework
 
-| Field | Value |
-|---|---|
-| **ID** | T004 |
-| **Epic** | [E001: Repository & Platform Foundation](../epics/E001-platform-foundation.md) |
-| **Type** | foundation |
-| **Status** | done |
-| **Priority** | P0 |
-| **Owner** | platform-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T001](./T001-init-monorepo.md), [T002](./T002-typescript-config.md) |
-| **Blocks** | [T005](./T005-ci-pipeline.md), [T015](./T015-task-state-machine.md), [T020](./T020-shared-zod-types.md) |
+| Field                     | Value                                                                                                   |
+| ------------------------- | ------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T004                                                                                                    |
+| **Epic**                  | [E001: Repository & Platform Foundation](../epics/E001-platform-foundation.md)                          |
+| **Type**                  | foundation                                                                                              |
+| **Status**                | done                                                                                                    |
+| **Priority**              | P0                                                                                                      |
+| **Owner**                 | platform-engineer                                                                                       |
+| **AI Executable**         | Yes                                                                                                     |
+| **Human Review Required** | Yes                                                                                                     |
+| **Dependencies**          | [T001](./T001-init-monorepo.md), [T002](./T002-typescript-config.md)                                    |
+| **Blocks**                | [T005](./T005-ci-pipeline.md), [T015](./T015-task-state-machine.md), [T020](./T020-shared-zod-types.md) |
 
 ---
 

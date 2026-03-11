@@ -1,17 +1,17 @@
 # T027: Implement Scheduler service
 
-| Field | Value |
-|---|---|
-| **ID** | T027 |
-| **Epic** | [E005: Job Queue & Scheduling](../epics/E005-job-queue-scheduling.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T014](./T014-entity-repositories.md), [T017](./T017-transition-service.md), [T025](./T025-job-queue-core.md) |
-| **Blocks** | [T028](./T028-scheduler-tick-loop.md) |
+| Field                     | Value                                                                                                         |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T027                                                                                                          |
+| **Epic**                  | [E005: Job Queue & Scheduling](../epics/E005-job-queue-scheduling.md)                                         |
+| **Type**                  | feature                                                                                                       |
+| **Status**                | pending                                                                                                       |
+| **Priority**              | P0                                                                                                            |
+| **Owner**                 | backend-engineer                                                                                              |
+| **AI Executable**         | Yes                                                                                                           |
+| **Human Review Required** | Yes                                                                                                           |
+| **Dependencies**          | [T014](./T014-entity-repositories.md), [T017](./T017-transition-service.md), [T025](./T025-job-queue-core.md) |
+| **Blocks**                | [T028](./T028-scheduler-tick-loop.md)                                                                         |
 
 ---
 

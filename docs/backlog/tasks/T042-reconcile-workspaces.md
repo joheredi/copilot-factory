@@ -1,17 +1,17 @@
 # T042: Implement ReconcileWorkspacesCommand
 
-| Field | Value |
-|---|---|
-| **ID** | T042 |
-| **Epic** | [E008: Workspace Management](../epics/E008-workspace-management.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P1 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T041](./T041-workspace-cleanup.md), [T029](./T029-reconciliation-sweep.md) |
-| **Blocks** | None |
+| Field                     | Value                                                                       |
+| ------------------------- | --------------------------------------------------------------------------- |
+| **ID**                    | T042                                                                        |
+| **Epic**                  | [E008: Workspace Management](../epics/E008-workspace-management.md)         |
+| **Type**                  | feature                                                                     |
+| **Status**                | pending                                                                     |
+| **Priority**              | P1                                                                          |
+| **Owner**                 | backend-engineer                                                            |
+| **AI Executable**         | Yes                                                                         |
+| **Human Review Required** | Yes                                                                         |
+| **Dependencies**          | [T041](./T041-workspace-cleanup.md), [T029](./T029-reconciliation-sweep.md) |
+| **Blocks**                | None                                                                        |
 
 ---
 

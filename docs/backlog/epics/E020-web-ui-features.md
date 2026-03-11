@@ -45,16 +45,16 @@ UI complexity is high. Must prioritize views that enable operational oversight.
 
 ## Tasks
 
-| ID | Title | Priority | Status |
-|---|---|---|---|
-| [T093](../tasks/T093-ui-dashboard.md) | Build dashboard view with system health summary | P1 | pending |
-| [T094](../tasks/T094-ui-task-board.md) | Build task board with status filtering and pagination | P1 | pending |
-| [T095](../tasks/T095-ui-task-detail.md) | Build task detail timeline view | P1 | pending |
-| [T096](../tasks/T096-ui-worker-pools.md) | Build worker pool monitoring panel | P2 | pending |
-| [T097](../tasks/T097-ui-review-center.md) | Build review center view | P2 | pending |
-| [T098](../tasks/T098-ui-merge-queue.md) | Build merge queue view | P2 | pending |
-| [T099](../tasks/T099-ui-config-editor.md) | Build configuration editor view | P2 | pending |
-| [T100](../tasks/T100-ui-audit-explorer.md) | Build audit explorer view | P2 | pending |
+| ID                                         | Title                                                 | Priority | Status  |
+| ------------------------------------------ | ----------------------------------------------------- | -------- | ------- |
+| [T093](../tasks/T093-ui-dashboard.md)      | Build dashboard view with system health summary       | P1       | pending |
+| [T094](../tasks/T094-ui-task-board.md)     | Build task board with status filtering and pagination | P1       | pending |
+| [T095](../tasks/T095-ui-task-detail.md)    | Build task detail timeline view                       | P1       | pending |
+| [T096](../tasks/T096-ui-worker-pools.md)   | Build worker pool monitoring panel                    | P2       | pending |
+| [T097](../tasks/T097-ui-review-center.md)  | Build review center view                              | P2       | pending |
+| [T098](../tasks/T098-ui-merge-queue.md)    | Build merge queue view                                | P2       | pending |
+| [T099](../tasks/T099-ui-config-editor.md)  | Build configuration editor view                       | P2       | pending |
+| [T100](../tasks/T100-ui-audit-explorer.md) | Build audit explorer view                             | P2       | pending |
 
 ## Sequencing Notes
 

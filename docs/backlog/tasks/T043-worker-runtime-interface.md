@@ -1,17 +1,17 @@
 # T043: Define worker runtime interface
 
-| Field | Value |
-|---|---|
-| **ID** | T043 |
-| **Epic** | [E009: Worker Runtime & Execution](../epics/E009-worker-runtime.md) |
-| **Type** | foundation |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T004](./T004-vitest-setup.md) |
-| **Blocks** | [T044](./T044-worker-supervisor.md), [T045](./T045-copilot-cli-adapter.md) |
+| Field                     | Value                                                                      |
+| ------------------------- | -------------------------------------------------------------------------- |
+| **ID**                    | T043                                                                       |
+| **Epic**                  | [E009: Worker Runtime & Execution](../epics/E009-worker-runtime.md)        |
+| **Type**                  | foundation                                                                 |
+| **Status**                | pending                                                                    |
+| **Priority**              | P0                                                                         |
+| **Owner**                 | backend-engineer                                                           |
+| **AI Executable**         | Yes                                                                        |
+| **Human Review Required** | Yes                                                                        |
+| **Dependencies**          | [T004](./T004-vitest-setup.md)                                             |
+| **Blocks**                | [T044](./T044-worker-supervisor.md), [T045](./T045-copilot-cli-adapter.md) |
 
 ---
 

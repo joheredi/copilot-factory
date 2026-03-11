@@ -1,17 +1,17 @@
 # T029: Implement reconciliation sweep job
 
-| Field | Value |
-|---|---|
-| **ID** | T029 |
-| **Epic** | [E005: Job Queue & Scheduling](../epics/E005-job-queue-scheduling.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P1 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T025](./T025-job-queue-core.md), [T027](./T027-scheduler-service.md) |
-| **Blocks** | None |
+| Field                     | Value                                                                 |
+| ------------------------- | --------------------------------------------------------------------- |
+| **ID**                    | T029                                                                  |
+| **Epic**                  | [E005: Job Queue & Scheduling](../epics/E005-job-queue-scheduling.md) |
+| **Type**                  | feature                                                               |
+| **Status**                | pending                                                               |
+| **Priority**              | P1                                                                    |
+| **Owner**                 | backend-engineer                                                      |
+| **AI Executable**         | Yes                                                                   |
+| **Human Review Required** | Yes                                                                   |
+| **Dependencies**          | [T025](./T025-job-queue-core.md), [T027](./T027-scheduler-service.md) |
+| **Blocks**                | None                                                                  |
 
 ---
 

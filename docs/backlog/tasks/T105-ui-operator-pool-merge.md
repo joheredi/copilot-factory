@@ -1,17 +1,17 @@
 # T105: Integrate operator controls into pool and merge queue UI
 
-| Field | Value |
-|---|---|
-| **ID** | T105 |
-| **Epic** | [E021: Operator Actions & Overrides](../epics/E021-operator-actions.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P2 |
-| **Owner** | frontend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T096](./T096-ui-worker-pools.md), [T098](./T098-ui-merge-queue.md), [T101](./T101-api-operator-actions.md) |
-| **Blocks** | None |
+| Field                     | Value                                                                                                       |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T105                                                                                                        |
+| **Epic**                  | [E021: Operator Actions & Overrides](../epics/E021-operator-actions.md)                                     |
+| **Type**                  | feature                                                                                                     |
+| **Status**                | pending                                                                                                     |
+| **Priority**              | P2                                                                                                          |
+| **Owner**                 | frontend-engineer                                                                                           |
+| **AI Executable**         | Yes                                                                                                         |
+| **Human Review Required** | Yes                                                                                                         |
+| **Dependencies**          | [T096](./T096-ui-worker-pools.md), [T098](./T098-ui-merge-queue.md), [T101](./T101-api-operator-actions.md) |
+| **Blocks**                | None                                                                                                        |
 
 ---
 

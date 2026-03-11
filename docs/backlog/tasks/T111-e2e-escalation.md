@@ -1,17 +1,17 @@
 # T111: Integration test: escalation triggers and resolution
 
-| Field | Value |
-|---|---|
-| **ID** | T111 |
-| **Epic** | [E022: Integration Testing & E2E](../epics/E022-integration-testing.md) |
-| **Type** | test |
-| **Status** | pending |
-| **Priority** | P1 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T106](./T106-test-harness.md), [T103](./T103-escalation-resolution.md) |
-| **Blocks** | None |
+| Field                     | Value                                                                   |
+| ------------------------- | ----------------------------------------------------------------------- |
+| **ID**                    | T111                                                                    |
+| **Epic**                  | [E022: Integration Testing & E2E](../epics/E022-integration-testing.md) |
+| **Type**                  | test                                                                    |
+| **Status**                | pending                                                                 |
+| **Priority**              | P1                                                                      |
+| **Owner**                 | backend-engineer                                                        |
+| **AI Executable**         | Yes                                                                     |
+| **Human Review Required** | Yes                                                                     |
+| **Dependencies**          | [T106](./T106-test-harness.md), [T103](./T103-escalation-resolution.md) |
+| **Blocks**                | None                                                                    |
 
 ---
 

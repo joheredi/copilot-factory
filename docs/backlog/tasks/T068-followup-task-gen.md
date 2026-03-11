@@ -1,17 +1,17 @@
 # T068: Implement follow-up task generation
 
-| Field | Value |
-|---|---|
-| **ID** | T068 |
-| **Epic** | [E013: Merge Pipeline](../epics/E013-merge-pipeline.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P1 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T067](./T067-post-merge-failure.md), [T061](./T061-review-decision-apply.md) |
-| **Blocks** | None |
+| Field                     | Value                                                                         |
+| ------------------------- | ----------------------------------------------------------------------------- |
+| **ID**                    | T068                                                                          |
+| **Epic**                  | [E013: Merge Pipeline](../epics/E013-merge-pipeline.md)                       |
+| **Type**                  | feature                                                                       |
+| **Status**                | pending                                                                       |
+| **Priority**              | P1                                                                            |
+| **Owner**                 | backend-engineer                                                              |
+| **AI Executable**         | Yes                                                                           |
+| **Human Review Required** | Yes                                                                           |
+| **Dependencies**          | [T067](./T067-post-merge-failure.md), [T061](./T061-review-decision-apply.md) |
+| **Blocks**                | None                                                                          |
 
 ---
 

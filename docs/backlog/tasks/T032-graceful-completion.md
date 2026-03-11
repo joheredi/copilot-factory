@@ -1,17 +1,17 @@
 # T032: Implement graceful completion protocol
 
-| Field | Value |
-|---|---|
-| **ID** | T032 |
-| **Epic** | [E006: Lease Management & Heartbeats](../epics/E006-lease-management.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T031](./T031-heartbeat-staleness.md) |
-| **Blocks** | [T046](./T046-output-capture-validation.md) |
+| Field                     | Value                                                                    |
+| ------------------------- | ------------------------------------------------------------------------ |
+| **ID**                    | T032                                                                     |
+| **Epic**                  | [E006: Lease Management & Heartbeats](../epics/E006-lease-management.md) |
+| **Type**                  | feature                                                                  |
+| **Status**                | pending                                                                  |
+| **Priority**              | P0                                                                       |
+| **Owner**                 | backend-engineer                                                         |
+| **AI Executable**         | Yes                                                                      |
+| **Human Review Required** | Yes                                                                      |
+| **Dependencies**          | [T031](./T031-heartbeat-staleness.md)                                    |
+| **Blocks**                | [T046](./T046-output-capture-validation.md)                              |
 
 ---
 

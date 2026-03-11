@@ -1,17 +1,17 @@
 # T031: Implement heartbeat receive and staleness detection
 
-| Field | Value |
-|---|---|
-| **ID** | T031 |
-| **Epic** | [E006: Lease Management & Heartbeats](../epics/E006-lease-management.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T030](./T030-lease-acquisition.md) |
-| **Blocks** | [T033](./T033-lease-reclaim.md) |
+| Field                     | Value                                                                    |
+| ------------------------- | ------------------------------------------------------------------------ |
+| **ID**                    | T031                                                                     |
+| **Epic**                  | [E006: Lease Management & Heartbeats](../epics/E006-lease-management.md) |
+| **Type**                  | feature                                                                  |
+| **Status**                | pending                                                                  |
+| **Priority**              | P0                                                                       |
+| **Owner**                 | backend-engineer                                                         |
+| **AI Executable**         | Yes                                                                      |
+| **Human Review Required** | Yes                                                                      |
+| **Dependencies**          | [T030](./T030-lease-acquisition.md)                                      |
+| **Blocks**                | [T033](./T033-lease-reclaim.md)                                          |
 
 ---
 
@@ -47,7 +47,7 @@ The implementing agent should read these files before starting:
 ## Implementation Guidance
 
 1. receiveHeartbeat: verify lease is active, update heartbeat_at and lease status if needed
-2. detectStaleLeases: query active leases WHERE heartbeat_at < now - (heartbeat_interval * missed_threshold + grace_period)
+2. detectStaleLeases: query active leases WHERE heartbeat_at < now - (heartbeat_interval \* missed_threshold + grace_period)
 3. Also detect leases past absolute TTL (expires_at < now)
 4. Use configurable thresholds from lease policy defaults (30s interval, 2 missed, 15s grace)
 

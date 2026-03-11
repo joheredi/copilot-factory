@@ -1,17 +1,17 @@
 # T005: Create CI pipeline with GitHub Actions
 
-| Field | Value |
-|---|---|
-| **ID** | T005 |
-| **Epic** | [E001: Repository & Platform Foundation](../epics/E001-platform-foundation.md) |
-| **Type** | infra |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | platform-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T003](./T003-eslint-prettier.md), [T004](./T004-vitest-setup.md) |
-| **Blocks** | None |
+| Field                     | Value                                                                          |
+| ------------------------- | ------------------------------------------------------------------------------ |
+| **ID**                    | T005                                                                           |
+| **Epic**                  | [E001: Repository & Platform Foundation](../epics/E001-platform-foundation.md) |
+| **Type**                  | infra                                                                          |
+| **Status**                | pending                                                                        |
+| **Priority**              | P0                                                                             |
+| **Owner**                 | platform-engineer                                                              |
+| **AI Executable**         | Yes                                                                            |
+| **Human Review Required** | Yes                                                                            |
+| **Dependencies**          | [T003](./T003-eslint-prettier.md), [T004](./T004-vitest-setup.md)              |
+| **Blocks**                | None                                                                           |
 
 ---
 

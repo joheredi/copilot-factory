@@ -1,17 +1,17 @@
 # T084: Implement Artifact and Review packet retrieval endpoints
 
-| Field | Value |
-|---|---|
-| **ID** | T084 |
-| **Epic** | [E017: REST API Layer](../epics/E017-rest-api.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P1 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T070](./T070-artifact-retrieval.md), [T080](./T080-nestjs-bootstrap.md) |
-| **Blocks** | [T089](./T089-react-spa-init.md) |
+| Field                     | Value                                                                    |
+| ------------------------- | ------------------------------------------------------------------------ |
+| **ID**                    | T084                                                                     |
+| **Epic**                  | [E017: REST API Layer](../epics/E017-rest-api.md)                        |
+| **Type**                  | feature                                                                  |
+| **Status**                | pending                                                                  |
+| **Priority**              | P1                                                                       |
+| **Owner**                 | backend-engineer                                                         |
+| **AI Executable**         | Yes                                                                      |
+| **Human Review Required** | Yes                                                                      |
+| **Dependencies**          | [T070](./T070-artifact-retrieval.md), [T080](./T080-nestjs-bootstrap.md) |
+| **Blocks**                | [T089](./T089-react-spa-init.md)                                         |
 
 ---
 

@@ -1,17 +1,17 @@
 # T056: Implement ValidationResultPacket emission
 
-| Field | Value |
-|---|---|
-| **ID** | T056 |
-| **Epic** | [E011: Validation Runner](../epics/E011-validation-runner.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T023](./T023-schemas-merge-validation.md), [T055](./T055-validation-command-exec.md) |
-| **Blocks** | [T057](./T057-validation-gates.md) |
+| Field                     | Value                                                                                 |
+| ------------------------- | ------------------------------------------------------------------------------------- |
+| **ID**                    | T056                                                                                  |
+| **Epic**                  | [E011: Validation Runner](../epics/E011-validation-runner.md)                         |
+| **Type**                  | feature                                                                               |
+| **Status**                | pending                                                                               |
+| **Priority**              | P0                                                                                    |
+| **Owner**                 | backend-engineer                                                                      |
+| **AI Executable**         | Yes                                                                                   |
+| **Human Review Required** | Yes                                                                                   |
+| **Dependencies**          | [T023](./T023-schemas-merge-validation.md), [T055](./T055-validation-command-exec.md) |
+| **Blocks**                | [T057](./T057-validation-gates.md)                                                    |
 
 ---
 

@@ -304,16 +304,12 @@ describe("DatabaseConnection.writeTransaction", () => {
     tempDirs.push(dir);
 
     const conn = createTracked({ filePath: dbPath });
-    conn.sqlite.exec(
-      "CREATE TABLE test_items (id INTEGER PRIMARY KEY, name TEXT)",
-    );
+    conn.sqlite.exec("CREATE TABLE test_items (id INTEGER PRIMARY KEY, name TEXT)");
 
     conn.writeTransaction(() => {
       // Use the raw sqlite driver inside the transaction — all statements
       // on the same connection share the active IMMEDIATE transaction.
-      conn.sqlite
-        .prepare("INSERT INTO test_items (name) VALUES (?)")
-        .run("alpha");
+      conn.sqlite.prepare("INSERT INTO test_items (name) VALUES (?)").run("alpha");
     });
 
     const rows = conn.sqlite.prepare("SELECT name FROM test_items").all() as {
@@ -333,18 +329,14 @@ describe("DatabaseConnection.writeTransaction", () => {
     tempDirs.push(dir);
 
     const conn = createTracked({ filePath: dbPath });
-    conn.sqlite.exec(
-      "CREATE TABLE test_items (id INTEGER PRIMARY KEY, name TEXT NOT NULL)",
-    );
+    conn.sqlite.exec("CREATE TABLE test_items (id INTEGER PRIMARY KEY, name TEXT NOT NULL)");
 
     // Insert a row before the failing transaction
     conn.sqlite.prepare("INSERT INTO test_items (name) VALUES (?)").run("before");
 
     expect(() => {
       conn.writeTransaction(() => {
-        conn.sqlite
-          .prepare("INSERT INTO test_items (name) VALUES (?)")
-          .run("inside-tx");
+        conn.sqlite.prepare("INSERT INTO test_items (name) VALUES (?)").run("inside-tx");
         // Force an error inside the transaction
         throw new Error("simulated failure");
       });
@@ -404,9 +396,7 @@ describe("DatabaseConnection.writeTransaction", () => {
 
       // While conn1 holds the write lock, conn2 should be able to READ
       // (WAL mode allows concurrent reads) but attempting a WRITE should fail
-      const readResult = conn2.sqlite
-        .prepare("SELECT val FROM counter")
-        .get() as { val: number };
+      const readResult = conn2.sqlite.prepare("SELECT val FROM counter").get() as { val: number };
       // WAL allows reading the pre-transaction state
       expect(readResult.val).toBe(0);
     });
@@ -415,9 +405,7 @@ describe("DatabaseConnection.writeTransaction", () => {
     expect(insideTx).toBe(true);
 
     // After commit, conn2 sees the update
-    const afterResult = conn2.sqlite
-      .prepare("SELECT val FROM counter")
-      .get() as { val: number };
+    const afterResult = conn2.sqlite.prepare("SELECT val FROM counter").get() as { val: number };
     expect(afterResult.val).toBe(1);
   });
 });

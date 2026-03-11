@@ -1,17 +1,17 @@
 # T092: Build app shell with navigation layout
 
-| Field | Value |
-|---|---|
-| **ID** | T092 |
-| **Epic** | [E019: Web UI Foundation](../epics/E019-web-ui-foundation.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P1 |
-| **Owner** | frontend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T089](./T089-react-spa-init.md) |
-| **Blocks** | [T093](./T093-ui-dashboard.md), [T094](./T094-ui-task-board.md), [T095](./T095-ui-task-detail.md), [T096](./T096-ui-worker-pools.md), [T097](./T097-ui-review-center.md), [T098](./T098-ui-merge-queue.md), [T099](./T099-ui-config-editor.md), [T100](./T100-ui-audit-explorer.md) |
+| Field                     | Value                                                                                                                                                                                                                                                                               |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T092                                                                                                                                                                                                                                                                                |
+| **Epic**                  | [E019: Web UI Foundation](../epics/E019-web-ui-foundation.md)                                                                                                                                                                                                                       |
+| **Type**                  | feature                                                                                                                                                                                                                                                                             |
+| **Status**                | pending                                                                                                                                                                                                                                                                             |
+| **Priority**              | P1                                                                                                                                                                                                                                                                                  |
+| **Owner**                 | frontend-engineer                                                                                                                                                                                                                                                                   |
+| **AI Executable**         | Yes                                                                                                                                                                                                                                                                                 |
+| **Human Review Required** | Yes                                                                                                                                                                                                                                                                                 |
+| **Dependencies**          | [T089](./T089-react-spa-init.md)                                                                                                                                                                                                                                                    |
+| **Blocks**                | [T093](./T093-ui-dashboard.md), [T094](./T094-ui-task-board.md), [T095](./T095-ui-task-detail.md), [T096](./T096-ui-worker-pools.md), [T097](./T097-ui-review-center.md), [T098](./T098-ui-merge-queue.md), [T099](./T099-ui-config-editor.md), [T100](./T100-ui-audit-explorer.md) |
 
 ---
 

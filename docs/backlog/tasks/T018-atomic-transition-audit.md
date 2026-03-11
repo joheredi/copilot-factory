@@ -1,17 +1,17 @@
 # T018: Implement atomic transition + audit persistence
 
-| Field | Value |
-|---|---|
-| **ID** | T018 |
-| **Epic** | [E003: State Machine & Transition Engine](../epics/E003-state-machine-transition.md) |
-| **Type** | foundation |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T017](./T017-transition-service.md) |
-| **Blocks** | [T073](./T073-audit-event-recording.md) |
+| Field                     | Value                                                                                |
+| ------------------------- | ------------------------------------------------------------------------------------ |
+| **ID**                    | T018                                                                                 |
+| **Epic**                  | [E003: State Machine & Transition Engine](../epics/E003-state-machine-transition.md) |
+| **Type**                  | foundation                                                                           |
+| **Status**                | pending                                                                              |
+| **Priority**              | P0                                                                                   |
+| **Owner**                 | backend-engineer                                                                     |
+| **AI Executable**         | Yes                                                                                  |
+| **Human Review Required** | Yes                                                                                  |
+| **Dependencies**          | [T017](./T017-transition-service.md)                                                 |
+| **Blocks**                | [T073](./T073-audit-event-recording.md)                                              |
 
 ---
 

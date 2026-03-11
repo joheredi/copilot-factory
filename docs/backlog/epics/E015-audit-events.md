@@ -38,11 +38,11 @@ Audit events must be written atomically with state transitions. Logging must not
 
 ## Tasks
 
-| ID | Title | Priority | Status |
-|---|---|---|---|
-| [T073](../tasks/T073-audit-event-recording.md) | Implement audit event recording on state transitions | P0 | pending |
-| [T074](../tasks/T074-audit-query-service.md) | Implement audit event query service | P1 | pending |
-| [T075](../tasks/T075-structured-logging.md) | Implement structured logging with correlation IDs | P1 | pending |
+| ID                                             | Title                                                | Priority | Status  |
+| ---------------------------------------------- | ---------------------------------------------------- | -------- | ------- |
+| [T073](../tasks/T073-audit-event-recording.md) | Implement audit event recording on state transitions | P0       | pending |
+| [T074](../tasks/T074-audit-query-service.md)   | Implement audit event query service                  | P1       | pending |
+| [T075](../tasks/T075-structured-logging.md)    | Implement structured logging with correlation IDs    | P1       | pending |
 
 ## Sequencing Notes
 

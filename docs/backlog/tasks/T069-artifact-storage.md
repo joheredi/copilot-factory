@@ -1,17 +1,17 @@
 # T069: Implement filesystem artifact storage
 
-| Field | Value |
-|---|---|
-| **ID** | T069 |
-| **Epic** | [E014: Artifact Service](../epics/E014-artifact-service.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T004](./T004-vitest-setup.md) |
-| **Blocks** | [T070](./T070-artifact-retrieval.md), [T071](./T071-retry-summarization.md), [T072](./T072-partial-work-snapshot.md), [T095](./T095-ui-task-detail.md) |
+| Field                     | Value                                                                                                                                                  |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **ID**                    | T069                                                                                                                                                   |
+| **Epic**                  | [E014: Artifact Service](../epics/E014-artifact-service.md)                                                                                            |
+| **Type**                  | feature                                                                                                                                                |
+| **Status**                | pending                                                                                                                                                |
+| **Priority**              | P0                                                                                                                                                     |
+| **Owner**                 | backend-engineer                                                                                                                                       |
+| **AI Executable**         | Yes                                                                                                                                                    |
+| **Human Review Required** | Yes                                                                                                                                                    |
+| **Dependencies**          | [T004](./T004-vitest-setup.md)                                                                                                                         |
+| **Blocks**                | [T070](./T070-artifact-retrieval.md), [T071](./T071-retry-summarization.md), [T072](./T072-partial-work-snapshot.md), [T095](./T095-ui-task-detail.md) |
 
 ---
 

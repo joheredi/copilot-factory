@@ -1,17 +1,17 @@
 # T048: Implement command policy model and enforcement
 
-| Field | Value |
-|---|---|
-| **ID** | T048 |
-| **Epic** | [E010: Policy & Configuration](../epics/E010-policy-configuration.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T013](./T013-migration-audit-policy.md), [T014](./T014-entity-repositories.md) |
-| **Blocks** | [T047](./T047-command-wrapper.md), [T053](./T053-policy-snapshot.md) |
+| Field                     | Value                                                                           |
+| ------------------------- | ------------------------------------------------------------------------------- |
+| **ID**                    | T048                                                                            |
+| **Epic**                  | [E010: Policy & Configuration](../epics/E010-policy-configuration.md)           |
+| **Type**                  | feature                                                                         |
+| **Status**                | pending                                                                         |
+| **Priority**              | P0                                                                              |
+| **Owner**                 | backend-engineer                                                                |
+| **AI Executable**         | Yes                                                                             |
+| **Human Review Required** | Yes                                                                             |
+| **Dependencies**          | [T013](./T013-migration-audit-policy.md), [T014](./T014-entity-repositories.md) |
+| **Blocks**                | [T047](./T047-command-wrapper.md), [T053](./T053-policy-snapshot.md)            |
 
 ---
 

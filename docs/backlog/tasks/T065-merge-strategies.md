@@ -1,17 +1,17 @@
 # T065: Implement squash and merge-commit strategies
 
-| Field | Value |
-|---|---|
-| **ID** | T065 |
-| **Epic** | [E013: Merge Pipeline](../epics/E013-merge-pipeline.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P1 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T064](./T064-rebase-merge-exec.md) |
-| **Blocks** | None |
+| Field                     | Value                                                   |
+| ------------------------- | ------------------------------------------------------- |
+| **ID**                    | T065                                                    |
+| **Epic**                  | [E013: Merge Pipeline](../epics/E013-merge-pipeline.md) |
+| **Type**                  | feature                                                 |
+| **Status**                | pending                                                 |
+| **Priority**              | P1                                                      |
+| **Owner**                 | backend-engineer                                        |
+| **AI Executable**         | Yes                                                     |
+| **Human Review Required** | Yes                                                     |
+| **Dependencies**          | [T064](./T064-rebase-merge-exec.md)                     |
+| **Blocks**                | None                                                    |
 
 ---
 

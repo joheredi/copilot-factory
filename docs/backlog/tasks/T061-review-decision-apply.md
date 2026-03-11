@@ -1,17 +1,17 @@
 # T061: Implement review decision application
 
-| Field | Value |
-|---|---|
-| **ID** | T061 |
-| **Epic** | [E012: Review Pipeline](../epics/E012-review-pipeline.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T022](./T022-schemas-review.md), [T060](./T060-lead-reviewer-dispatch.md), [T017](./T017-transition-service.md) |
-| **Blocks** | [T062](./T062-rework-loop.md) |
+| Field                     | Value                                                                                                            |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T061                                                                                                             |
+| **Epic**                  | [E012: Review Pipeline](../epics/E012-review-pipeline.md)                                                        |
+| **Type**                  | feature                                                                                                          |
+| **Status**                | pending                                                                                                          |
+| **Priority**              | P0                                                                                                               |
+| **Owner**                 | backend-engineer                                                                                                 |
+| **AI Executable**         | Yes                                                                                                              |
+| **Human Review Required** | Yes                                                                                                              |
+| **Dependencies**          | [T022](./T022-schemas-review.md), [T060](./T060-lead-reviewer-dispatch.md), [T017](./T017-transition-service.md) |
+| **Blocks**                | [T062](./T062-rework-loop.md)                                                                                    |
 
 ---
 
@@ -29,10 +29,10 @@ Translate lead reviewer decisions into task state transitions and follow-up acti
 
 - Parse and validate LeadReviewDecisionPacket
 - Apply decision to task state:
--   approved → APPROVED
--   approved_with_follow_up → APPROVED + create follow-up tasks
--   changes_requested → CHANGES_REQUESTED
--   escalated → ESCALATED
+- approved → APPROVED
+- approved_with_follow_up → APPROVED + create follow-up tasks
+- changes_requested → CHANGES_REQUESTED
+- escalated → ESCALATED
 - Persist LeadReviewDecision record
 - Close ReviewCycle with appropriate status
 

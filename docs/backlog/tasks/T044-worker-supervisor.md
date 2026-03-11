@@ -1,17 +1,17 @@
 # T044: Implement Worker Supervisor
 
-| Field | Value |
-|---|---|
-| **ID** | T044 |
-| **Epic** | [E009: Worker Runtime & Execution](../epics/E009-worker-runtime.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T030](./T030-lease-acquisition.md), [T039](./T039-worktree-creation.md), [T040](./T040-workspace-mounting.md), [T043](./T043-worker-runtime-interface.md) |
-| **Blocks** | [T045](./T045-copilot-cli-adapter.md), [T046](./T046-output-capture-validation.md), [T106](./T106-test-harness.md) |
+| Field                     | Value                                                                                                                                                      |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T044                                                                                                                                                       |
+| **Epic**                  | [E009: Worker Runtime & Execution](../epics/E009-worker-runtime.md)                                                                                        |
+| **Type**                  | feature                                                                                                                                                    |
+| **Status**                | pending                                                                                                                                                    |
+| **Priority**              | P0                                                                                                                                                         |
+| **Owner**                 | backend-engineer                                                                                                                                           |
+| **AI Executable**         | Yes                                                                                                                                                        |
+| **Human Review Required** | Yes                                                                                                                                                        |
+| **Dependencies**          | [T030](./T030-lease-acquisition.md), [T039](./T039-worktree-creation.md), [T040](./T040-workspace-mounting.md), [T043](./T043-worker-runtime-interface.md) |
+| **Blocks**                | [T045](./T045-copilot-cli-adapter.md), [T046](./T046-output-capture-validation.md), [T106](./T106-test-harness.md)                                         |
 
 ---
 

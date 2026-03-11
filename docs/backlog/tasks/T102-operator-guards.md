@@ -1,17 +1,17 @@
 # T102: Implement state transition guards for manual actions
 
-| Field | Value |
-|---|---|
-| **ID** | T102 |
-| **Epic** | [E021: Operator Actions & Overrides](../epics/E021-operator-actions.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P1 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T101](./T101-api-operator-actions.md) |
-| **Blocks** | [T103](./T103-escalation-resolution.md) |
+| Field                     | Value                                                                   |
+| ------------------------- | ----------------------------------------------------------------------- |
+| **ID**                    | T102                                                                    |
+| **Epic**                  | [E021: Operator Actions & Overrides](../epics/E021-operator-actions.md) |
+| **Type**                  | feature                                                                 |
+| **Status**                | pending                                                                 |
+| **Priority**              | P1                                                                      |
+| **Owner**                 | backend-engineer                                                        |
+| **AI Executable**         | Yes                                                                     |
+| **Human Review Required** | Yes                                                                     |
+| **Dependencies**          | [T101](./T101-api-operator-actions.md)                                  |
+| **Blocks**                | [T103](./T103-escalation-resolution.md)                                 |
 
 ---
 

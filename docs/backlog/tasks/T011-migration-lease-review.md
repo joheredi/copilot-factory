@@ -1,17 +1,17 @@
 # T011: Create migrations for TaskLease, ReviewCycle, ReviewPacket, LeadReviewDecision tables
 
-| Field | Value |
-|---|---|
-| **ID** | T011 |
-| **Epic** | [E002: Domain Model & Persistence](../epics/E002-domain-model-persistence.md) |
-| **Type** | foundation |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T006](./T006-sqlite-drizzle-setup.md), [T007](./T007-domain-enums-types.md), [T009](./T009-migration-task.md) |
-| **Blocks** | [T014](./T014-entity-repositories.md), [T030](./T030-lease-acquisition.md), [T058](./T058-review-router.md) |
+| Field                     | Value                                                                                                          |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T011                                                                                                           |
+| **Epic**                  | [E002: Domain Model & Persistence](../epics/E002-domain-model-persistence.md)                                  |
+| **Type**                  | foundation                                                                                                     |
+| **Status**                | pending                                                                                                        |
+| **Priority**              | P0                                                                                                             |
+| **Owner**                 | backend-engineer                                                                                               |
+| **AI Executable**         | Yes                                                                                                            |
+| **Human Review Required** | Yes                                                                                                            |
+| **Dependencies**          | [T006](./T006-sqlite-drizzle-setup.md), [T007](./T007-domain-enums-types.md), [T009](./T009-migration-task.md) |
+| **Blocks**                | [T014](./T014-entity-repositories.md), [T030](./T030-lease-acquisition.md), [T058](./T058-review-router.md)    |
 
 ---
 

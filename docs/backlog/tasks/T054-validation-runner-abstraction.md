@@ -1,17 +1,17 @@
 # T054: Implement validation runner abstraction
 
-| Field | Value |
-|---|---|
-| **ID** | T054 |
-| **Epic** | [E011: Validation Runner](../epics/E011-validation-runner.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T050](./T050-validation-policy.md) |
-| **Blocks** | [T055](./T055-validation-command-exec.md), [T057](./T057-validation-gates.md) |
+| Field                     | Value                                                                         |
+| ------------------------- | ----------------------------------------------------------------------------- |
+| **ID**                    | T054                                                                          |
+| **Epic**                  | [E011: Validation Runner](../epics/E011-validation-runner.md)                 |
+| **Type**                  | feature                                                                       |
+| **Status**                | pending                                                                       |
+| **Priority**              | P0                                                                            |
+| **Owner**                 | backend-engineer                                                              |
+| **AI Executable**         | Yes                                                                           |
+| **Human Review Required** | Yes                                                                           |
+| **Dependencies**          | [T050](./T050-validation-policy.md)                                           |
+| **Blocks**                | [T055](./T055-validation-command-exec.md), [T057](./T057-validation-gates.md) |
 
 ---
 

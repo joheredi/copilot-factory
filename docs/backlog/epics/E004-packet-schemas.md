@@ -41,13 +41,13 @@ Schemas must exactly match the spec. Cross-field rules are tricky to implement i
 
 ## Tasks
 
-| ID | Title | Priority | Status |
-|---|---|---|---|
-| [T020](../tasks/T020-shared-zod-types.md) | Define shared Zod types for packets | P0 | pending |
-| [T021](../tasks/T021-schemas-task-dev.md) | Define TaskPacket and DevResultPacket Zod schemas | P0 | pending |
-| [T022](../tasks/T022-schemas-review.md) | Define ReviewPacket and LeadReviewDecisionPacket schemas | P0 | pending |
-| [T023](../tasks/T023-schemas-merge-validation.md) | Define remaining packet schemas | P0 | pending |
-| [T024](../tasks/T024-schema-cross-validation.md) | Implement cross-field validation and schema versioning | P0 | pending |
+| ID                                                | Title                                                    | Priority | Status  |
+| ------------------------------------------------- | -------------------------------------------------------- | -------- | ------- |
+| [T020](../tasks/T020-shared-zod-types.md)         | Define shared Zod types for packets                      | P0       | pending |
+| [T021](../tasks/T021-schemas-task-dev.md)         | Define TaskPacket and DevResultPacket Zod schemas        | P0       | pending |
+| [T022](../tasks/T022-schemas-review.md)           | Define ReviewPacket and LeadReviewDecisionPacket schemas | P0       | pending |
+| [T023](../tasks/T023-schemas-merge-validation.md) | Define remaining packet schemas                          | P0       | pending |
+| [T024](../tasks/T024-schema-cross-validation.md)  | Implement cross-field validation and schema versioning   | P0       | pending |
 
 ## Sequencing Notes
 

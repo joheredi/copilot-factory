@@ -1,17 +1,17 @@
 # T039: Implement git worktree creation per task
 
-| Field | Value |
-|---|---|
-| **ID** | T039 |
-| **Epic** | [E008: Workspace Management](../epics/E008-workspace-management.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T006](./T006-sqlite-drizzle-setup.md) |
-| **Blocks** | [T040](./T040-workspace-mounting.md), [T041](./T041-workspace-cleanup.md), [T044](./T044-worker-supervisor.md) |
+| Field                     | Value                                                                                                          |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T039                                                                                                           |
+| **Epic**                  | [E008: Workspace Management](../epics/E008-workspace-management.md)                                            |
+| **Type**                  | feature                                                                                                        |
+| **Status**                | pending                                                                                                        |
+| **Priority**              | P0                                                                                                             |
+| **Owner**                 | backend-engineer                                                                                               |
+| **AI Executable**         | Yes                                                                                                            |
+| **Human Review Required** | Yes                                                                                                            |
+| **Dependencies**          | [T006](./T006-sqlite-drizzle-setup.md)                                                                         |
+| **Blocks**                | [T040](./T040-workspace-mounting.md), [T041](./T041-workspace-cleanup.md), [T044](./T044-worker-supervisor.md) |
 
 ---
 

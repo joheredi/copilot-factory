@@ -22,11 +22,20 @@ pnpm build            # Build all packages (delegates to workspace build scripts
 pnpm test             # Run all tests via vitest workspace mode (single process)
 pnpm test:watch       # Run tests in watch mode
 pnpm test:coverage    # Run tests with v8 coverage reporting
-pnpm lint             # Lint all packages (delegates to workspace lint scripts)
-pnpm format           # Format all packages (delegates to workspace format scripts)
+pnpm lint             # Run ESLint on the entire repo
+pnpm lint:fix         # Run ESLint with auto-fix
+pnpm format           # Format all files with Prettier
+pnpm format:check     # Check formatting without writing
 ```
 
-> **Note:** Individual workspace lint/format scripts are added by T003. Until that is complete, `pnpm lint` and `pnpm format` succeed vacuously.
+Workspace lint/format scripts are available in all 11 workspaces. Root-level scripts run ESLint and Prettier directly:
+
+- `pnpm lint` — Run ESLint on the entire repo
+- `pnpm lint:fix` — Run ESLint with auto-fix
+- `pnpm format` — Format all files with Prettier
+- `pnpm format:check` — Check formatting without writing
+
+The `eng/` directory is excluded from ESLint (utility scripts with Node.js globals).
 
 ## Testing
 

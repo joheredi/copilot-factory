@@ -1,17 +1,17 @@
 # T026: Implement job dependency and group coordination
 
-| Field | Value |
-|---|---|
-| **ID** | T026 |
-| **Epic** | [E005: Job Queue & Scheduling](../epics/E005-job-queue-scheduling.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T025](./T025-job-queue-core.md) |
-| **Blocks** | [T059](./T059-reviewer-dispatch.md), [T060](./T060-lead-reviewer-dispatch.md) |
+| Field                     | Value                                                                         |
+| ------------------------- | ----------------------------------------------------------------------------- |
+| **ID**                    | T026                                                                          |
+| **Epic**                  | [E005: Job Queue & Scheduling](../epics/E005-job-queue-scheduling.md)         |
+| **Type**                  | feature                                                                       |
+| **Status**                | pending                                                                       |
+| **Priority**              | P0                                                                            |
+| **Owner**                 | backend-engineer                                                              |
+| **AI Executable**         | Yes                                                                           |
+| **Human Review Required** | Yes                                                                           |
+| **Dependencies**          | [T025](./T025-job-queue-core.md)                                              |
+| **Blocks**                | [T059](./T059-reviewer-dispatch.md), [T060](./T060-lead-reviewer-dispatch.md) |
 
 ---
 

@@ -1,17 +1,17 @@
 # T103: Implement escalation resolution flow
 
-| Field | Value |
-|---|---|
-| **ID** | T103 |
-| **Epic** | [E021: Operator Actions & Overrides](../epics/E021-operator-actions.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P1 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T101](./T101-api-operator-actions.md), [T102](./T102-operator-guards.md) |
-| **Blocks** | [T104](./T104-ui-operator-task.md) |
+| Field                     | Value                                                                     |
+| ------------------------- | ------------------------------------------------------------------------- |
+| **ID**                    | T103                                                                      |
+| **Epic**                  | [E021: Operator Actions & Overrides](../epics/E021-operator-actions.md)   |
+| **Type**                  | feature                                                                   |
+| **Status**                | pending                                                                   |
+| **Priority**              | P1                                                                        |
+| **Owner**                 | backend-engineer                                                          |
+| **AI Executable**         | Yes                                                                       |
+| **Human Review Required** | Yes                                                                       |
+| **Dependencies**          | [T101](./T101-api-operator-actions.md), [T102](./T102-operator-guards.md) |
+| **Blocks**                | [T104](./T104-ui-operator-task.md)                                        |
 
 ---
 

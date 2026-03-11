@@ -40,13 +40,13 @@ Manual overrides must respect state machine invariants. Must prevent unsafe tran
 
 ## Tasks
 
-| ID | Title | Priority | Status |
-|---|---|---|---|
-| [T101](../tasks/T101-api-operator-actions.md) | Implement operator action API endpoints | P1 | pending |
-| [T102](../tasks/T102-operator-guards.md) | Implement state transition guards for manual actions | P1 | pending |
-| [T103](../tasks/T103-escalation-resolution.md) | Implement escalation resolution flow | P1 | pending |
-| [T104](../tasks/T104-ui-operator-task.md) | Integrate operator controls into task detail UI | P2 | pending |
-| [T105](../tasks/T105-ui-operator-pool-merge.md) | Integrate operator controls into pool and merge queue UI | P2 | pending |
+| ID                                              | Title                                                    | Priority | Status  |
+| ----------------------------------------------- | -------------------------------------------------------- | -------- | ------- |
+| [T101](../tasks/T101-api-operator-actions.md)   | Implement operator action API endpoints                  | P1       | pending |
+| [T102](../tasks/T102-operator-guards.md)        | Implement state transition guards for manual actions     | P1       | pending |
+| [T103](../tasks/T103-escalation-resolution.md)  | Implement escalation resolution flow                     | P1       | pending |
+| [T104](../tasks/T104-ui-operator-task.md)       | Integrate operator controls into task detail UI          | P2       | pending |
+| [T105](../tasks/T105-ui-operator-pool-merge.md) | Integrate operator controls into pool and merge queue UI | P2       | pending |
 
 ## Sequencing Notes
 

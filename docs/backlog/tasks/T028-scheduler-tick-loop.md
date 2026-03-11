@@ -1,17 +1,17 @@
 # T028: Implement scheduler tick loop
 
-| Field | Value |
-|---|---|
-| **ID** | T028 |
-| **Epic** | [E005: Job Queue & Scheduling](../epics/E005-job-queue-scheduling.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P1 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T027](./T027-scheduler-service.md), [T025](./T025-job-queue-core.md) |
-| **Blocks** | None |
+| Field                     | Value                                                                 |
+| ------------------------- | --------------------------------------------------------------------- |
+| **ID**                    | T028                                                                  |
+| **Epic**                  | [E005: Job Queue & Scheduling](../epics/E005-job-queue-scheduling.md) |
+| **Type**                  | feature                                                               |
+| **Status**                | pending                                                               |
+| **Priority**              | P1                                                                    |
+| **Owner**                 | backend-engineer                                                      |
+| **AI Executable**         | Yes                                                                   |
+| **Human Review Required** | Yes                                                                   |
+| **Dependencies**          | [T027](./T027-scheduler-service.md), [T025](./T025-job-queue-core.md) |
+| **Blocks**                | None                                                                  |
 
 ---
 

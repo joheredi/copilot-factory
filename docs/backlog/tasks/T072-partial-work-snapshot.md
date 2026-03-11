@@ -1,17 +1,17 @@
 # T072: Implement partial work snapshot on lease reclaim
 
-| Field | Value |
-|---|---|
-| **ID** | T072 |
-| **Epic** | [E014: Artifact Service](../epics/E014-artifact-service.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P1 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T069](./T069-artifact-storage.md), [T034](./T034-crash-recovery-artifacts.md) |
-| **Blocks** | None |
+| Field                     | Value                                                                          |
+| ------------------------- | ------------------------------------------------------------------------------ |
+| **ID**                    | T072                                                                           |
+| **Epic**                  | [E014: Artifact Service](../epics/E014-artifact-service.md)                    |
+| **Type**                  | feature                                                                        |
+| **Status**                | pending                                                                        |
+| **Priority**              | P1                                                                             |
+| **Owner**                 | backend-engineer                                                               |
+| **AI Executable**         | Yes                                                                            |
+| **Human Review Required** | Yes                                                                            |
+| **Dependencies**          | [T069](./T069-artifact-storage.md), [T034](./T034-crash-recovery-artifacts.md) |
+| **Blocks**                | None                                                                           |
 
 ---
 

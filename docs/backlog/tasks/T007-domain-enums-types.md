@@ -1,17 +1,17 @@
 # T007: Define core domain enums and value objects
 
-| Field | Value |
-|---|---|
-| **ID** | T007 |
-| **Epic** | [E002: Domain Model & Persistence](../epics/E002-domain-model-persistence.md) |
-| **Type** | foundation |
-| **Status** | done |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T002](./T002-typescript-config.md) |
-| **Blocks** | [T008](./T008-migration-project-repo.md), [T009](./T009-migration-task.md), [T010](./T010-migration-worker-pool.md), [T011](./T011-migration-lease-review.md), [T012](./T012-migration-merge-job.md), [T013](./T013-migration-audit-policy.md), [T015](./T015-task-state-machine.md), [T016](./T016-supporting-state-machines.md) |
+| Field                     | Value                                                                                                                                                                                                                                                                                                                             |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T007                                                                                                                                                                                                                                                                                                                              |
+| **Epic**                  | [E002: Domain Model & Persistence](../epics/E002-domain-model-persistence.md)                                                                                                                                                                                                                                                     |
+| **Type**                  | foundation                                                                                                                                                                                                                                                                                                                        |
+| **Status**                | done                                                                                                                                                                                                                                                                                                                              |
+| **Priority**              | P0                                                                                                                                                                                                                                                                                                                                |
+| **Owner**                 | backend-engineer                                                                                                                                                                                                                                                                                                                  |
+| **AI Executable**         | Yes                                                                                                                                                                                                                                                                                                                               |
+| **Human Review Required** | Yes                                                                                                                                                                                                                                                                                                                               |
+| **Dependencies**          | [T002](./T002-typescript-config.md)                                                                                                                                                                                                                                                                                               |
+| **Blocks**                | [T008](./T008-migration-project-repo.md), [T009](./T009-migration-task.md), [T010](./T010-migration-worker-pool.md), [T011](./T011-migration-lease-review.md), [T012](./T012-migration-merge-job.md), [T013](./T013-migration-audit-policy.md), [T015](./T015-task-state-machine.md), [T016](./T016-supporting-state-machines.md) |
 
 ---
 

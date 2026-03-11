@@ -41,12 +41,12 @@ Graph operations must be efficient. Reconciliation loop must be idempotent.
 
 ## Tasks
 
-| ID | Title | Priority | Status |
-|---|---|---|---|
-| [T035](../tasks/T035-dag-validation.md) | Implement DAG validation with circular dependency detection | P0 | pending |
-| [T036](../tasks/T036-readiness-computation.md) | Implement readiness computation | P0 | pending |
-| [T037](../tasks/T037-reverse-dep-recalc.md) | Implement reverse-dependency recalculation | P0 | pending |
-| [T038](../tasks/T038-dep-reconciliation.md) | Implement dependency reconciliation loop | P1 | pending |
+| ID                                             | Title                                                       | Priority | Status  |
+| ---------------------------------------------- | ----------------------------------------------------------- | -------- | ------- |
+| [T035](../tasks/T035-dag-validation.md)        | Implement DAG validation with circular dependency detection | P0       | pending |
+| [T036](../tasks/T036-readiness-computation.md) | Implement readiness computation                             | P0       | pending |
+| [T037](../tasks/T037-reverse-dep-recalc.md)    | Implement reverse-dependency recalculation                  | P0       | pending |
+| [T038](../tasks/T038-dep-reconciliation.md)    | Implement dependency reconciliation loop                    | P1       | pending |
 
 ## Sequencing Notes
 

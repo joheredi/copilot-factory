@@ -1,17 +1,17 @@
 # T096: Build worker pool monitoring panel
 
-| Field | Value |
-|---|---|
-| **ID** | T096 |
-| **Epic** | [E020: Web UI Feature Views](../epics/E020-web-ui-features.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P2 |
-| **Owner** | frontend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T090](./T090-api-client-tanstack.md), [T092](./T092-app-shell.md) |
-| **Blocks** | [T105](./T105-ui-operator-pool-merge.md) |
+| Field                     | Value                                                              |
+| ------------------------- | ------------------------------------------------------------------ |
+| **ID**                    | T096                                                               |
+| **Epic**                  | [E020: Web UI Feature Views](../epics/E020-web-ui-features.md)     |
+| **Type**                  | feature                                                            |
+| **Status**                | pending                                                            |
+| **Priority**              | P2                                                                 |
+| **Owner**                 | frontend-engineer                                                  |
+| **AI Executable**         | Yes                                                                |
+| **Human Review Required** | Yes                                                                |
+| **Dependencies**          | [T090](./T090-api-client-tanstack.md), [T092](./T092-app-shell.md) |
+| **Blocks**                | [T105](./T105-ui-operator-pool-merge.md)                           |
 
 ---
 

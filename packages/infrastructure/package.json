@@ -12,12 +12,16 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc --build",
     "test": "vitest run --project @factory/infrastructure",
     "test:watch": "vitest --project @factory/infrastructure",
     "test:coverage": "vitest run --project @factory/infrastructure --coverage",
-    "clean": "rm -rf dist tsconfig.tsbuildinfo"
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "lint": "eslint .",
+    "format": "prettier --write ."
   }
 }

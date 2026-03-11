@@ -43,13 +43,13 @@ Job queue must handle concurrent claims safely. Scheduler must respect all readi
 
 ## Tasks
 
-| ID | Title | Priority | Status |
-|---|---|---|---|
-| [T025](../tasks/T025-job-queue-core.md) | Implement DB-backed job queue | P0 | pending |
-| [T026](../tasks/T026-job-dependencies.md) | Implement job dependency and group coordination | P0 | pending |
-| [T027](../tasks/T027-scheduler-service.md) | Implement Scheduler service | P0 | pending |
-| [T028](../tasks/T028-scheduler-tick-loop.md) | Implement scheduler tick loop | P1 | pending |
-| [T029](../tasks/T029-reconciliation-sweep.md) | Implement reconciliation sweep job | P1 | pending |
+| ID                                            | Title                                           | Priority | Status  |
+| --------------------------------------------- | ----------------------------------------------- | -------- | ------- |
+| [T025](../tasks/T025-job-queue-core.md)       | Implement DB-backed job queue                   | P0       | pending |
+| [T026](../tasks/T026-job-dependencies.md)     | Implement job dependency and group coordination | P0       | pending |
+| [T027](../tasks/T027-scheduler-service.md)    | Implement Scheduler service                     | P0       | pending |
+| [T028](../tasks/T028-scheduler-tick-loop.md)  | Implement scheduler tick loop                   | P1       | pending |
+| [T029](../tasks/T029-reconciliation-sweep.md) | Implement reconciliation sweep job              | P1       | pending |
 
 ## Sequencing Notes
 

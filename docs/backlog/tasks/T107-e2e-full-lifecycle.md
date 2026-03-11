@@ -1,17 +1,17 @@
 # T107: Integration test: full task lifecycle BACKLOG to DONE
 
-| Field | Value |
-|---|---|
-| **ID** | T107 |
-| **Epic** | [E022: Integration Testing & E2E](../epics/E022-integration-testing.md) |
-| **Type** | test |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T106](./T106-test-harness.md), [T046](./T046-output-capture-validation.md), [T057](./T057-validation-gates.md), [T061](./T061-review-decision-apply.md), [T064](./T064-rebase-merge-exec.md) |
-| **Blocks** | None |
+| Field                     | Value                                                                                                                                                                                         |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T107                                                                                                                                                                                          |
+| **Epic**                  | [E022: Integration Testing & E2E](../epics/E022-integration-testing.md)                                                                                                                       |
+| **Type**                  | test                                                                                                                                                                                          |
+| **Status**                | pending                                                                                                                                                                                       |
+| **Priority**              | P0                                                                                                                                                                                            |
+| **Owner**                 | backend-engineer                                                                                                                                                                              |
+| **AI Executable**         | Yes                                                                                                                                                                                           |
+| **Human Review Required** | Yes                                                                                                                                                                                           |
+| **Dependencies**          | [T106](./T106-test-harness.md), [T046](./T046-output-capture-validation.md), [T057](./T057-validation-gates.md), [T061](./T061-review-decision-apply.md), [T064](./T064-rebase-merge-exec.md) |
+| **Blocks**                | None                                                                                                                                                                                          |
 
 ---
 
@@ -55,11 +55,11 @@ The implementing agent should read these files before starting:
 2. Configure FakeRunner to return a valid DevResultPacket on first run
 3. Configure FakeRunner to return approved ReviewPackets and LeadReviewDecisionPacket
 4. Step through each state transition and verify:
-5.   - Correct state after each transition
-6.   - Audit event created for each transition
-7.   - Packets created and stored as artifacts
-8.   - Lease acquired and released correctly
-9.   - Merge completes and branch is integrated
+5. - Correct state after each transition
+6. - Audit event created for each transition
+7. - Packets created and stored as artifacts
+8. - Lease acquired and released correctly
+9. - Merge completes and branch is integrated
 
 ## Acceptance Criteria
 

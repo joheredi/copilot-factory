@@ -1,17 +1,17 @@
 # T046: Implement structured output capture and validation
 
-| Field | Value |
-|---|---|
-| **ID** | T046 |
-| **Epic** | [E009: Worker Runtime & Execution](../epics/E009-worker-runtime.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T024](./T024-schema-cross-validation.md), [T032](./T032-graceful-completion.md), [T044](./T044-worker-supervisor.md) |
-| **Blocks** | [T107](./T107-e2e-full-lifecycle.md) |
+| Field                     | Value                                                                                                                 |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T046                                                                                                                  |
+| **Epic**                  | [E009: Worker Runtime & Execution](../epics/E009-worker-runtime.md)                                                   |
+| **Type**                  | feature                                                                                                               |
+| **Status**                | pending                                                                                                               |
+| **Priority**              | P0                                                                                                                    |
+| **Owner**                 | backend-engineer                                                                                                      |
+| **AI Executable**         | Yes                                                                                                                   |
+| **Human Review Required** | Yes                                                                                                                   |
+| **Dependencies**          | [T024](./T024-schema-cross-validation.md), [T032](./T032-graceful-completion.md), [T044](./T044-worker-supervisor.md) |
+| **Blocks**                | [T107](./T107-e2e-full-lifecycle.md)                                                                                  |
 
 ---
 

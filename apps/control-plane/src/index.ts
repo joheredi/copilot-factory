@@ -1,9 +1,6 @@
 /** @module @factory/control-plane — Backend orchestration service for state transitions, scheduling, leases, policies, API, and live events. */
 
-export {
-  createDatabaseConnection,
-  runMigrations,
-} from "./infrastructure/database/index.js";
+export { createDatabaseConnection, runMigrations } from "./infrastructure/database/index.js";
 
 export type {
   DatabaseConfig,

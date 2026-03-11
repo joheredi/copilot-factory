@@ -1,17 +1,17 @@
 # T014: Implement data access repositories for all entities
 
-| Field | Value |
-|---|---|
-| **ID** | T014 |
-| **Epic** | [E002: Domain Model & Persistence](../epics/E002-domain-model-persistence.md) |
-| **Type** | foundation |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T008](./T008-migration-project-repo.md), [T009](./T009-migration-task.md), [T010](./T010-migration-worker-pool.md), [T011](./T011-migration-lease-review.md), [T012](./T012-migration-merge-job.md), [T013](./T013-migration-audit-policy.md) |
-| **Blocks** | [T015](./T015-task-state-machine.md), [T025](./T025-job-queue-core.md), [T030](./T030-lease-acquisition.md), [T035](./T035-dag-validation.md), [T058](./T058-review-router.md), [T063](./T063-merge-queue.md), [T069](./T069-artifact-storage.md), [T073](./T073-audit-event-recording.md) |
+| Field                     | Value                                                                                                                                                                                                                                                                                      |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **ID**                    | T014                                                                                                                                                                                                                                                                                       |
+| **Epic**                  | [E002: Domain Model & Persistence](../epics/E002-domain-model-persistence.md)                                                                                                                                                                                                              |
+| **Type**                  | foundation                                                                                                                                                                                                                                                                                 |
+| **Status**                | pending                                                                                                                                                                                                                                                                                    |
+| **Priority**              | P0                                                                                                                                                                                                                                                                                         |
+| **Owner**                 | backend-engineer                                                                                                                                                                                                                                                                           |
+| **AI Executable**         | Yes                                                                                                                                                                                                                                                                                        |
+| **Human Review Required** | Yes                                                                                                                                                                                                                                                                                        |
+| **Dependencies**          | [T008](./T008-migration-project-repo.md), [T009](./T009-migration-task.md), [T010](./T010-migration-worker-pool.md), [T011](./T011-migration-lease-review.md), [T012](./T012-migration-merge-job.md), [T013](./T013-migration-audit-policy.md)                                             |
+| **Blocks**                | [T015](./T015-task-state-machine.md), [T025](./T025-job-queue-core.md), [T030](./T030-lease-acquisition.md), [T035](./T035-dag-validation.md), [T058](./T058-review-router.md), [T063](./T063-merge-queue.md), [T069](./T069-artifact-storage.md), [T073](./T073-audit-event-recording.md) |
 
 ---
 

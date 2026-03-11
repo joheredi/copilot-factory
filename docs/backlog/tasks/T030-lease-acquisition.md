@@ -1,17 +1,17 @@
 # T030: Implement lease acquisition with exclusivity
 
-| Field | Value |
-|---|---|
-| **ID** | T030 |
-| **Epic** | [E006: Lease Management & Heartbeats](../epics/E006-lease-management.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T011](./T011-migration-lease-review.md), [T014](./T014-entity-repositories.md), [T017](./T017-transition-service.md) |
-| **Blocks** | [T031](./T031-heartbeat-staleness.md), [T032](./T032-graceful-completion.md), [T033](./T033-lease-reclaim.md), [T044](./T044-worker-supervisor.md) |
+| Field                     | Value                                                                                                                                              |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T030                                                                                                                                               |
+| **Epic**                  | [E006: Lease Management & Heartbeats](../epics/E006-lease-management.md)                                                                           |
+| **Type**                  | feature                                                                                                                                            |
+| **Status**                | pending                                                                                                                                            |
+| **Priority**              | P0                                                                                                                                                 |
+| **Owner**                 | backend-engineer                                                                                                                                   |
+| **AI Executable**         | Yes                                                                                                                                                |
+| **Human Review Required** | Yes                                                                                                                                                |
+| **Dependencies**          | [T011](./T011-migration-lease-review.md), [T014](./T014-entity-repositories.md), [T017](./T017-transition-service.md)                              |
+| **Blocks**                | [T031](./T031-heartbeat-staleness.md), [T032](./T032-graceful-completion.md), [T033](./T033-lease-reclaim.md), [T044](./T044-worker-supervisor.md) |
 
 ---
 

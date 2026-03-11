@@ -1,17 +1,17 @@
 # T051: Implement retry and escalation policy evaluation
 
-| Field | Value |
-|---|---|
-| **ID** | T051 |
-| **Epic** | [E010: Policy & Configuration](../epics/E010-policy-configuration.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T013](./T013-migration-audit-policy.md), [T014](./T014-entity-repositories.md) |
-| **Blocks** | [T033](./T033-lease-reclaim.md), [T053](./T053-policy-snapshot.md) |
+| Field                     | Value                                                                           |
+| ------------------------- | ------------------------------------------------------------------------------- |
+| **ID**                    | T051                                                                            |
+| **Epic**                  | [E010: Policy & Configuration](../epics/E010-policy-configuration.md)           |
+| **Type**                  | feature                                                                         |
+| **Status**                | pending                                                                         |
+| **Priority**              | P0                                                                              |
+| **Owner**                 | backend-engineer                                                                |
+| **AI Executable**         | Yes                                                                             |
+| **Human Review Required** | Yes                                                                             |
+| **Dependencies**          | [T013](./T013-migration-audit-policy.md), [T014](./T014-entity-repositories.md) |
+| **Blocks**                | [T033](./T033-lease-reclaim.md), [T053](./T053-policy-snapshot.md)              |
 
 ---
 
@@ -49,7 +49,7 @@ The implementing agent should read these files before starting:
 
 1. Create packages/domain/src/policies/retry-policy.ts and escalation-policy.ts
 2. shouldRetry: check retry_count < max_attempts, calculate next backoff
-3. Backoff: initial * 2^(attempt-1), capped at max_backoff_seconds
+3. Backoff: initial \* 2^(attempt-1), capped at max_backoff_seconds
 4. shouldEscalate: check all triggers from §9.7.1 (max_retry, max_review_rounds, policy_violation, etc.)
 5. Return the escalation action: escalate, fail_then_escalate, etc.
 6. Default retry: max_attempts=2, exponential backoff 60s-900s

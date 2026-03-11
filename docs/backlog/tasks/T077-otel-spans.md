@@ -1,17 +1,17 @@
 # T077: Instrument core orchestration paths with spans
 
-| Field | Value |
-|---|---|
-| **ID** | T077 |
-| **Epic** | [E016: Observability](../epics/E016-observability.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P1 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T076](./T076-otel-init.md) |
-| **Blocks** | None |
+| Field                     | Value                                                 |
+| ------------------------- | ----------------------------------------------------- |
+| **ID**                    | T077                                                  |
+| **Epic**                  | [E016: Observability](../epics/E016-observability.md) |
+| **Type**                  | feature                                               |
+| **Status**                | pending                                               |
+| **Priority**              | P1                                                    |
+| **Owner**                 | backend-engineer                                      |
+| **AI Executable**         | Yes                                                   |
+| **Human Review Required** | Yes                                                   |
+| **Dependencies**          | [T076](./T076-otel-init.md)                           |
+| **Blocks**                | None                                                  |
 
 ---
 

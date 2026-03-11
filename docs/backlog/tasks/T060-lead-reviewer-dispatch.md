@@ -1,17 +1,17 @@
 # T060: Implement lead reviewer dispatch with dependencies
 
-| Field | Value |
-|---|---|
-| **ID** | T060 |
-| **Epic** | [E012: Review Pipeline](../epics/E012-review-pipeline.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T026](./T026-job-dependencies.md), [T059](./T059-reviewer-dispatch.md) |
-| **Blocks** | [T061](./T061-review-decision-apply.md) |
+| Field                     | Value                                                                   |
+| ------------------------- | ----------------------------------------------------------------------- |
+| **ID**                    | T060                                                                    |
+| **Epic**                  | [E012: Review Pipeline](../epics/E012-review-pipeline.md)               |
+| **Type**                  | feature                                                                 |
+| **Status**                | pending                                                                 |
+| **Priority**              | P0                                                                      |
+| **Owner**                 | backend-engineer                                                        |
+| **AI Executable**         | Yes                                                                     |
+| **Human Review Required** | Yes                                                                     |
+| **Dependencies**          | [T026](./T026-job-dependencies.md), [T059](./T059-reviewer-dispatch.md) |
+| **Blocks**                | [T061](./T061-review-decision-apply.md)                                 |
 
 ---
 

@@ -1,17 +1,17 @@
 # T073: Implement audit event recording on state transitions
 
-| Field | Value |
-|---|---|
-| **ID** | T073 |
-| **Epic** | [E015: Audit & Event System](../epics/E015-audit-events.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T013](./T013-migration-audit-policy.md), [T014](./T014-entity-repositories.md), [T018](./T018-atomic-transition-audit.md) |
-| **Blocks** | [T074](./T074-audit-query-service.md), [T100](./T100-ui-audit-explorer.md) |
+| Field                     | Value                                                                                                                      |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T073                                                                                                                       |
+| **Epic**                  | [E015: Audit & Event System](../epics/E015-audit-events.md)                                                                |
+| **Type**                  | feature                                                                                                                    |
+| **Status**                | pending                                                                                                                    |
+| **Priority**              | P0                                                                                                                         |
+| **Owner**                 | backend-engineer                                                                                                           |
+| **AI Executable**         | Yes                                                                                                                        |
+| **Human Review Required** | Yes                                                                                                                        |
+| **Dependencies**          | [T013](./T013-migration-audit-policy.md), [T014](./T014-entity-repositories.md), [T018](./T018-atomic-transition-audit.md) |
+| **Blocks**                | [T074](./T074-audit-query-service.md), [T100](./T100-ui-audit-explorer.md)                                                 |
 
 ---
 

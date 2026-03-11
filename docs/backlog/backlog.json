@@ -22,27 +22,11 @@
         "CI pipeline",
         "Database tooling"
       ],
-      "out_scope": [
-        "Domain logic",
-        "API endpoints",
-        "UI code"
-      ],
+      "out_scope": ["Domain logic", "API endpoints", "UI code"],
       "deps": [],
-      "enables": [
-        "E002",
-        "E003",
-        "E004",
-        "E005"
-      ],
+      "enables": ["E002", "E003", "E004", "E005"],
       "risks": "Stack choices (NestJS vs Fastify, Drizzle vs Kysely) must be finalized before starting. PRD recommends NestJS + Drizzle/Kysely.",
-      "tasks": [
-        "T001",
-        "T002",
-        "T003",
-        "T004",
-        "T005",
-        "T006"
-      ],
+      "tasks": ["T001", "T002", "T003", "T004", "T005", "T006"],
       "completion": "All workspace packages build, lint, and pass an empty test suite. CI pipeline runs green."
     },
     {
@@ -66,29 +50,10 @@
         "API endpoints (E017)",
         "Business orchestration logic"
       ],
-      "deps": [
-        "E001"
-      ],
-      "enables": [
-        "E003",
-        "E004",
-        "E005",
-        "E006",
-        "E007",
-        "E014",
-        "E015"
-      ],
+      "deps": ["E001"],
+      "enables": ["E003", "E004", "E005", "E006", "E007", "E014", "E015"],
       "risks": "Schema must precisely match the data model spec. Changes later require migrations.",
-      "tasks": [
-        "T007",
-        "T008",
-        "T009",
-        "T010",
-        "T011",
-        "T012",
-        "T013",
-        "T014"
-      ],
+      "tasks": ["T007", "T008", "T009", "T010", "T011", "T012", "T013", "T014"],
       "completion": "All migrations run cleanly. All repositories pass CRUD tests. Domain types compile."
     },
     {
@@ -109,29 +74,11 @@
         "Concurrency control",
         "Audit event emission on transition"
       ],
-      "out_scope": [
-        "Scheduling logic",
-        "Worker execution",
-        "Review routing"
-      ],
-      "deps": [
-        "E002"
-      ],
-      "enables": [
-        "E005",
-        "E006",
-        "E007",
-        "E012",
-        "E013"
-      ],
+      "out_scope": ["Scheduling logic", "Worker execution", "Review routing"],
+      "deps": ["E002"],
+      "enables": ["E005", "E006", "E007", "E012", "E013"],
       "risks": "State machine must exactly match docs/prd/002-data-model.md. Transition preconditions are complex.",
-      "tasks": [
-        "T015",
-        "T016",
-        "T017",
-        "T018",
-        "T019"
-      ],
+      "tasks": ["T015", "T016", "T017", "T018", "T019"],
       "completion": "All state machine transitions are validated. Integration tests cover every valid and invalid transition path."
     },
     {
@@ -151,28 +98,11 @@
         "Policy snapshot schema",
         "Schema version validation"
       ],
-      "out_scope": [
-        "JSON Schema export",
-        "Schema migration tooling"
-      ],
-      "deps": [
-        "E001"
-      ],
-      "enables": [
-        "E009",
-        "E011",
-        "E012",
-        "E013",
-        "E014"
-      ],
+      "out_scope": ["JSON Schema export", "Schema migration tooling"],
+      "deps": ["E001"],
+      "enables": ["E009", "E011", "E012", "E013", "E014"],
       "risks": "Schemas must exactly match the spec. Cross-field rules are tricky to implement in Zod.",
-      "tasks": [
-        "T020",
-        "T021",
-        "T022",
-        "T023",
-        "T024"
-      ],
+      "tasks": ["T020", "T021", "T022", "T023", "T024"],
       "completion": "All packet schemas validate correctly against spec examples. Cross-field rules enforced. 100% test coverage on schemas."
     },
     {
@@ -194,28 +124,11 @@
         "Pool compatibility matching",
         "Scheduler tick as recurring job"
       ],
-      "out_scope": [
-        "Worker execution (E009)",
-        "Lease management (E006)"
-      ],
-      "deps": [
-        "E002",
-        "E003"
-      ],
-      "enables": [
-        "E006",
-        "E009",
-        "E012",
-        "E013"
-      ],
+      "out_scope": ["Worker execution (E009)", "Lease management (E006)"],
+      "deps": ["E002", "E003"],
+      "enables": ["E006", "E009", "E012", "E013"],
       "risks": "Job queue must handle concurrent claims safely. Scheduler must respect all readiness constraints.",
-      "tasks": [
-        "T025",
-        "T026",
-        "T027",
-        "T028",
-        "T029"
-      ],
+      "tasks": ["T025", "T026", "T027", "T028", "T029"],
       "completion": "Jobs can be created, claimed, completed, and failed. Scheduler selects correct tasks and matches to pools."
     },
     {
@@ -236,26 +149,11 @@
         "Terminal heartbeat handling",
         "Partial work snapshot"
       ],
-      "out_scope": [
-        "Worker process management (E009)",
-        "Bidirectional heartbeats (future)"
-      ],
-      "deps": [
-        "E002",
-        "E003",
-        "E005"
-      ],
-      "enables": [
-        "E009"
-      ],
+      "out_scope": ["Worker process management (E009)", "Bidirectional heartbeats (future)"],
+      "deps": ["E002", "E003", "E005"],
+      "enables": ["E009"],
       "risks": "Race conditions between heartbeat timeout and result submission. Grace period logic is subtle.",
-      "tasks": [
-        "T030",
-        "T031",
-        "T032",
-        "T033",
-        "T034"
-      ],
+      "tasks": ["T030", "T031", "T032", "T033", "T034"],
       "completion": "Leases enforce exclusivity. Heartbeat timeouts correctly reclaim work. Grace period prevents result loss."
     },
     {
@@ -275,24 +173,11 @@
         "Reverse-dependency unblocks",
         "Hard vs soft dependency semantics"
       ],
-      "out_scope": [
-        "Cross-repo dependencies (future)",
-        "Automatic task decomposition"
-      ],
-      "deps": [
-        "E002",
-        "E003"
-      ],
-      "enables": [
-        "E005"
-      ],
+      "out_scope": ["Cross-repo dependencies (future)", "Automatic task decomposition"],
+      "deps": ["E002", "E003"],
+      "enables": ["E005"],
       "risks": "Graph operations must be efficient. Reconciliation loop must be idempotent.",
-      "tasks": [
-        "T035",
-        "T036",
-        "T037",
-        "T038"
-      ],
+      "tasks": ["T035", "T036", "T037", "T038"],
       "completion": "Dependencies are validated as a DAG. Task readiness correctly reflects dependency status. Reconciliation catches missed updates."
     },
     {
@@ -311,24 +196,11 @@
         "Branch naming per docs/prd/010-integration-contracts.md \u00a710.9",
         "Cleanup and retention rules"
       ],
-      "out_scope": [
-        "Container-based isolation (future)",
-        "Warm worktree cache"
-      ],
-      "deps": [
-        "E001",
-        "E002"
-      ],
-      "enables": [
-        "E009"
-      ],
+      "out_scope": ["Container-based isolation (future)", "Warm worktree cache"],
+      "deps": ["E001", "E002"],
+      "enables": ["E009"],
       "risks": "Git worktree operations can fail if the repo state is unexpected. Cleanup must handle edge cases.",
-      "tasks": [
-        "T039",
-        "T040",
-        "T041",
-        "T042"
-      ],
+      "tasks": ["T039", "T040", "T041", "T042"],
       "completion": "Worktrees created and cleaned up correctly. Packets mounted into workspace. Reconciliation removes expired workspaces."
     },
     {
@@ -349,30 +221,11 @@
         "stdout/stderr capture",
         "Result packet validation"
       ],
-      "out_scope": [
-        "Local LLM adapter (future)",
-        "Remote API adapter (future)"
-      ],
-      "deps": [
-        "E004",
-        "E005",
-        "E006",
-        "E008",
-        "E010"
-      ],
-      "enables": [
-        "E012",
-        "E013",
-        "E022"
-      ],
+      "out_scope": ["Local LLM adapter (future)", "Remote API adapter (future)"],
+      "deps": ["E004", "E005", "E006", "E008", "E010"],
+      "enables": ["E012", "E013", "E022"],
       "risks": "Copilot CLI integration details may require experimentation. Command wrapper must be comprehensive.",
-      "tasks": [
-        "T043",
-        "T044",
-        "T045",
-        "T046",
-        "T047"
-      ],
+      "tasks": ["T043", "T044", "T045", "T046", "T047"],
       "completion": "Worker Supervisor can spawn, monitor, and teardown worker processes. Copilot CLI adapter executes tasks and captures structured output."
     },
     {
@@ -393,29 +246,11 @@
         "Configuration precedence from \u00a79.12",
         "Policy snapshot structure"
       ],
-      "out_scope": [
-        "UI-based policy editing (E020)",
-        "Runtime policy hot-reload"
-      ],
-      "deps": [
-        "E002",
-        "E004"
-      ],
-      "enables": [
-        "E009",
-        "E011",
-        "E012",
-        "E013"
-      ],
+      "out_scope": ["UI-based policy editing (E020)", "Runtime policy hot-reload"],
+      "deps": ["E002", "E004"],
+      "enables": ["E009", "E011", "E012", "E013"],
       "risks": "Policy resolution precedence must exactly match the spec. Edge cases in file scope overlap require careful testing.",
-      "tasks": [
-        "T048",
-        "T049",
-        "T050",
-        "T051",
-        "T052",
-        "T053"
-      ],
+      "tasks": ["T048", "T049", "T050", "T051", "T052", "T053"],
       "completion": "All policy types enforce correctly. Config resolution follows precedence order. Snapshots are persisted per run."
     },
     {
@@ -434,25 +269,11 @@
         "Required vs optional checks",
         "Profile selection algorithm"
       ],
-      "out_scope": [
-        "Custom validator plugins",
-        "Parallel validation execution"
-      ],
-      "deps": [
-        "E004",
-        "E010"
-      ],
-      "enables": [
-        "E009",
-        "E013"
-      ],
+      "out_scope": ["Custom validator plugins", "Parallel validation execution"],
+      "deps": ["E004", "E010"],
+      "enables": ["E009", "E013"],
       "risks": "Validation commands may fail for environment-specific reasons. Must handle timeouts and partial results.",
-      "tasks": [
-        "T054",
-        "T055",
-        "T056",
-        "T057"
-      ],
+      "tasks": ["T054", "T055", "T056", "T057"],
       "completion": "Validation runner executes checks per profile. Results emitted as valid packets. Gates block invalid transitions."
     },
     {
@@ -472,28 +293,11 @@
         "Lead consolidation rules from \u00a710.7",
         "ReviewCycle lifecycle"
       ],
-      "out_scope": [
-        "AI-suggested reviewers (optional enhancement)",
-        "Custom review rubrics"
-      ],
-      "deps": [
-        "E003",
-        "E004",
-        "E005",
-        "E009",
-        "E010"
-      ],
-      "enables": [
-        "E013"
-      ],
+      "out_scope": ["AI-suggested reviewers (optional enhancement)", "Custom review rubrics"],
+      "deps": ["E003", "E004", "E005", "E009", "E010"],
+      "enables": ["E013"],
       "risks": "Review fan-out coordination is complex. Must handle partial reviewer failures.",
-      "tasks": [
-        "T058",
-        "T059",
-        "T060",
-        "T061",
-        "T062"
-      ],
+      "tasks": ["T058", "T059", "T060", "T061", "T062"],
       "completion": "Reviews route correctly by file/tag/risk. Lead reviewer consolidates and emits decisions. Rework loop feeds rejection context."
     },
     {
@@ -515,28 +319,11 @@
         "Conflict classification from \u00a710.10.2",
         "Post-merge failure policy from docs/prd/009-policy-and-enforcement-spec.md \u00a79.11"
       ],
-      "out_scope": [
-        "Merge assist AI agent (optional V1)",
-        "Batched merges (future)"
-      ],
-      "deps": [
-        "E003",
-        "E005",
-        "E008",
-        "E011"
-      ],
-      "enables": [
-        "E022"
-      ],
+      "out_scope": ["Merge assist AI agent (optional V1)", "Batched merges (future)"],
+      "deps": ["E003", "E005", "E008", "E011"],
+      "enables": ["E022"],
       "risks": "Git merge operations are inherently complex. Post-merge validation failures require careful handling.",
-      "tasks": [
-        "T063",
-        "T064",
-        "T065",
-        "T066",
-        "T067",
-        "T068"
-      ],
+      "tasks": ["T063", "T064", "T065", "T066", "T067", "T068"],
       "completion": "Merge queue processes items in correct order. Merges execute with chosen strategy. Conflicts classified correctly. Post-merge failures handled per policy."
     },
     {
@@ -555,25 +342,11 @@
         "Packet storage and retrieval",
         "Log and output storage"
       ],
-      "out_scope": [
-        "Object storage backend (future)",
-        "Content-addressable storage"
-      ],
-      "deps": [
-        "E002",
-        "E004"
-      ],
-      "enables": [
-        "E009",
-        "E017"
-      ],
+      "out_scope": ["Object storage backend (future)", "Content-addressable storage"],
+      "deps": ["E002", "E004"],
+      "enables": ["E009", "E017"],
       "risks": "Filesystem operations are not transactional. Must handle concurrent writes carefully.",
-      "tasks": [
-        "T069",
-        "T070",
-        "T071",
-        "T072"
-      ],
+      "tasks": ["T069", "T070", "T071", "T072"],
       "completion": "Artifacts stored in correct directory structure. References resolve correctly. Summaries generated for retries."
     },
     {
@@ -590,24 +363,11 @@
         "AuditEvent entity from docs/prd/002-data-model.md",
         "Structured log fields from docs/prd/007-technical-architecture.md \u00a77.14"
       ],
-      "out_scope": [
-        "Search indexing (future)",
-        "Log aggregation service"
-      ],
-      "deps": [
-        "E002",
-        "E003"
-      ],
-      "enables": [
-        "E016",
-        "E017"
-      ],
+      "out_scope": ["Search indexing (future)", "Log aggregation service"],
+      "deps": ["E002", "E003"],
+      "enables": ["E016", "E017"],
       "risks": "Audit events must be written atomically with state transitions. Logging must not impact performance.",
-      "tasks": [
-        "T073",
-        "T074",
-        "T075"
-      ],
+      "tasks": ["T073", "T074", "T075"],
       "completion": "Every state transition produces an audit event. Events queryable by entity and time range. Logs are structured and correlated."
     },
     {
@@ -627,25 +387,11 @@
         "Metric names from \u00a710.13.3",
         "Label rules from \u00a710.13.4"
       ],
-      "out_scope": [
-        "Grafana dashboards",
-        "Alerting rules",
-        "Log-to-trace correlation"
-      ],
-      "deps": [
-        "E001",
-        "E015"
-      ],
-      "enables": [
-        "E022"
-      ],
+      "out_scope": ["Grafana dashboards", "Alerting rules", "Log-to-trace correlation"],
+      "deps": ["E001", "E015"],
+      "enables": ["E022"],
       "risks": "Instrumentation adds overhead. Must keep cardinality low per label rules.",
-      "tasks": [
-        "T076",
-        "T077",
-        "T078",
-        "T079"
-      ],
+      "tasks": ["T076", "T077", "T078", "T079"],
       "completion": "Traces cover task lifecycle. Metrics endpoint returns expected counters/histograms/gauges."
     },
     {
@@ -666,30 +412,11 @@
         "Error handling",
         "OpenAPI documentation"
       ],
-      "out_scope": [
-        "WebSocket events (E018)",
-        "UI-specific BFF endpoints"
-      ],
-      "deps": [
-        "E002",
-        "E003",
-        "E014",
-        "E015"
-      ],
-      "enables": [
-        "E018",
-        "E019",
-        "E021"
-      ],
+      "out_scope": ["WebSocket events (E018)", "UI-specific BFF endpoints"],
+      "deps": ["E002", "E003", "E014", "E015"],
+      "enables": ["E018", "E019", "E021"],
       "risks": "API design must be stable early since UI depends on it. Versioning strategy needed.",
-      "tasks": [
-        "T080",
-        "T081",
-        "T082",
-        "T083",
-        "T084",
-        "T085"
-      ],
+      "tasks": ["T080", "T081", "T082", "T083", "T084", "T085"],
       "completion": "All entity CRUD operations available via REST. Endpoints validated and documented."
     },
     {
@@ -707,22 +434,11 @@
         "Connection management",
         "Event serialization"
       ],
-      "out_scope": [
-        "Client reconnection logic (UI responsibility)",
-        "Event persistence"
-      ],
-      "deps": [
-        "E017"
-      ],
-      "enables": [
-        "E019"
-      ],
+      "out_scope": ["Client reconnection logic (UI responsibility)", "Event persistence"],
+      "deps": ["E017"],
+      "enables": ["E019"],
       "risks": "WebSocket connections need lifecycle management. Must handle disconnects gracefully.",
-      "tasks": [
-        "T086",
-        "T087",
-        "T088"
-      ],
+      "tasks": ["T086", "T087", "T088"],
       "completion": "Clients receive real-time updates for state changes, heartbeats, and queue movements."
     },
     {
@@ -742,25 +458,11 @@
         "Live update infrastructure",
         "Navigation layout"
       ],
-      "out_scope": [
-        "Feature-specific views (E020)",
-        "Operator action controls (E021)"
-      ],
-      "deps": [
-        "E017",
-        "E018"
-      ],
-      "enables": [
-        "E020",
-        "E021"
-      ],
+      "out_scope": ["Feature-specific views (E020)", "Operator action controls (E021)"],
+      "deps": ["E017", "E018"],
+      "enables": ["E020", "E021"],
       "risks": "UI framework choices are hard to change later. Component library selection matters.",
-      "tasks": [
-        "T089",
-        "T090",
-        "T091",
-        "T092"
-      ],
+      "tasks": ["T089", "T090", "T091", "T092"],
       "completion": "SPA loads with navigation shell. API calls work. WebSocket connects and receives events."
     },
     {
@@ -783,28 +485,11 @@
         "Real-time updates in all views",
         "Pagination and filtering"
       ],
-      "out_scope": [
-        "Operator action controls (E021)",
-        "Advanced analytics",
-        "Simulation mode"
-      ],
-      "deps": [
-        "E019"
-      ],
-      "enables": [
-        "E021"
-      ],
+      "out_scope": ["Operator action controls (E021)", "Advanced analytics", "Simulation mode"],
+      "deps": ["E019"],
+      "enables": ["E021"],
       "risks": "UI complexity is high. Must prioritize views that enable operational oversight.",
-      "tasks": [
-        "T093",
-        "T094",
-        "T095",
-        "T096",
-        "T097",
-        "T098",
-        "T099",
-        "T100"
-      ],
+      "tasks": ["T093", "T094", "T095", "T096", "T097", "T098", "T099", "T100"],
       "completion": "All primary views render correctly with real and empty data states."
     },
     {
@@ -823,26 +508,11 @@
         "Audit trail for operator actions",
         "Authorization policy for sensitive actions"
       ],
-      "out_scope": [
-        "RBAC (future)",
-        "Approval workflows between operators"
-      ],
-      "deps": [
-        "E003",
-        "E017",
-        "E020"
-      ],
-      "enables": [
-        "E022"
-      ],
+      "out_scope": ["RBAC (future)", "Approval workflows between operators"],
+      "deps": ["E003", "E017", "E020"],
+      "enables": ["E022"],
       "risks": "Manual overrides must respect state machine invariants. Must prevent unsafe transitions.",
-      "tasks": [
-        "T101",
-        "T102",
-        "T103",
-        "T104",
-        "T105"
-      ],
+      "tasks": ["T101", "T102", "T103", "T104", "T105"],
       "completion": "All operator actions available via API and UI. Actions audited. Guards prevent invalid transitions."
     },
     {
@@ -863,27 +533,11 @@
         "Happy path and failure scenarios",
         "V1 milestone verification tests"
       ],
-      "out_scope": [
-        "Performance testing",
-        "Load testing",
-        "UI end-to-end tests"
-      ],
-      "deps": [
-        "E009",
-        "E012",
-        "E013",
-        "E021"
-      ],
+      "out_scope": ["Performance testing", "Load testing", "UI end-to-end tests"],
+      "deps": ["E009", "E012", "E013", "E021"],
       "enables": [],
       "risks": "Integration tests are brittle if not designed carefully. Must use proper test doubles.",
-      "tasks": [
-        "T106",
-        "T107",
-        "T108",
-        "T109",
-        "T110",
-        "T111"
-      ],
+      "tasks": ["T106", "T107", "T108", "T109", "T110", "T111"],
       "completion": "All critical paths tested end-to-end. Tests pass reliably. Milestone acceptance criteria verified."
     }
   ],
@@ -898,13 +552,7 @@
       "ai_exec": "Yes",
       "human_review": "Yes",
       "deps": [],
-      "blocks": [
-        "T002",
-        "T003",
-        "T004",
-        "T005",
-        "T006"
-      ],
+      "blocks": ["T002", "T003", "T004", "T005", "T006"],
       "desc": "Create the root pnpm monorepo with workspace definitions for apps/control-plane, apps/web-ui, apps/worker-runner, and shared packages (domain, application, infrastructure, schemas, config, observability, ui-components, testing). Establishes the project layout described in docs/prd/007-technical-architecture.md \u00a77.4.",
       "goal": "Establish the foundational monorepo structure so all subsequent packages can be developed in parallel.",
       "in_scope": [
@@ -921,9 +569,7 @@
         "Test framework (T004)",
         "CI pipeline (T005)"
       ],
-      "context": [
-        "docs/prd/007-technical-architecture.md"
-      ],
+      "context": ["docs/prd/007-technical-architecture.md"],
       "criteria": [
         "pnpm install succeeds with no errors",
         "pnpm ls --recursive shows all workspace packages",
@@ -942,18 +588,8 @@
       "owner": "platform-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T001"
-      ],
-      "blocks": [
-        "T007",
-        "T008",
-        "T009",
-        "T010",
-        "T011",
-        "T012",
-        "T013"
-      ],
+      "deps": ["T001"],
+      "blocks": ["T007", "T008", "T009", "T010", "T011", "T012", "T013"],
       "desc": "Set up TypeScript configuration with a root tsconfig.json base and per-package tsconfig.json files. Configure path aliases, strict mode, and project references for incremental builds.",
       "goal": "Enable TypeScript compilation across all workspace packages with consistent settings.",
       "in_scope": [
@@ -963,13 +599,8 @@
         "TypeScript as devDependency in root",
         "Build scripts in each package.json"
       ],
-      "out_scope": [
-        "NestJS-specific config (T080)",
-        "React/Vite-specific config (T089)"
-      ],
-      "context": [
-        "docs/prd/007-technical-architecture.md"
-      ],
+      "out_scope": ["NestJS-specific config (T080)", "React/Vite-specific config (T089)"],
+      "context": ["docs/prd/007-technical-architecture.md"],
       "criteria": [
         "pnpm --recursive run build succeeds (even if output is empty)",
         "TypeScript strict mode enabled globally",
@@ -987,13 +618,8 @@
       "owner": "platform-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T001",
-        "T002"
-      ],
-      "blocks": [
-        "T005"
-      ],
+      "deps": ["T001", "T002"],
+      "blocks": ["T005"],
       "desc": "Configure ESLint with TypeScript support and Prettier for consistent code formatting across the monorepo.",
       "goal": "Enforce consistent code style and catch common errors across all packages.",
       "in_scope": [
@@ -1003,13 +629,8 @@
         "lint and format scripts in root package.json",
         "lint-staged with husky for pre-commit"
       ],
-      "out_scope": [
-        "Custom lint rules",
-        "React-specific ESLint config (added in T089)"
-      ],
-      "context": [
-        "docs/prd/007-technical-architecture.md"
-      ],
+      "out_scope": ["Custom lint rules", "React-specific ESLint config (added in T089)"],
+      "context": ["docs/prd/007-technical-architecture.md"],
       "criteria": [
         "pnpm lint runs without errors on existing code",
         "pnpm format:check passes",
@@ -1027,15 +648,8 @@
       "owner": "platform-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T001",
-        "T002"
-      ],
-      "blocks": [
-        "T005",
-        "T015",
-        "T020"
-      ],
+      "deps": ["T001", "T002"],
+      "blocks": ["T005", "T015", "T020"],
       "desc": "Configure Vitest as the test runner for the monorepo with workspace support, coverage reporting, and test path aliases.",
       "goal": "Provide a fast, TypeScript-native test framework for all packages.",
       "in_scope": [
@@ -1045,13 +659,8 @@
         "Test scripts in root and per-package",
         "Shared test utilities in packages/testing"
       ],
-      "out_scope": [
-        "E2E test framework (T106)",
-        "UI component tests (added in T089)"
-      ],
-      "context": [
-        "docs/prd/007-technical-architecture.md"
-      ],
+      "out_scope": ["E2E test framework (T106)", "UI component tests (added in T089)"],
+      "context": ["docs/prd/007-technical-architecture.md"],
       "criteria": [
         "pnpm test runs successfully (even with 0 tests initially)",
         "pnpm test:coverage generates coverage report",
@@ -1069,10 +678,7 @@
       "owner": "platform-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T003",
-        "T004"
-      ],
+      "deps": ["T003", "T004"],
       "blocks": [],
       "desc": "Create a GitHub Actions CI workflow that runs lint, typecheck, and tests on every push and pull request.",
       "goal": "Catch errors early and maintain code quality through automated CI.",
@@ -1082,14 +688,8 @@
         "pnpm caching",
         "Node.js 20+ matrix"
       ],
-      "out_scope": [
-        "Deployment pipelines",
-        "Release automation",
-        "Docker builds"
-      ],
-      "context": [
-        "docs/prd/007-technical-architecture.md"
-      ],
+      "out_scope": ["Deployment pipelines", "Release automation", "Docker builds"],
+      "context": ["docs/prd/007-technical-architecture.md"],
       "criteria": [
         "CI workflow file exists and is valid YAML",
         "Workflow runs lint, typecheck, and test steps",
@@ -1107,18 +707,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T001",
-        "T002"
-      ],
-      "blocks": [
-        "T008",
-        "T009",
-        "T010",
-        "T011",
-        "T012",
-        "T013"
-      ],
+      "deps": ["T001", "T002"],
+      "blocks": ["T008", "T009", "T010", "T011", "T012", "T013"],
       "desc": "Configure SQLite with WAL mode and Drizzle ORM in the control-plane app. Set up the migration system and database connection management.",
       "goal": "Establish the persistence foundation so domain entities can be stored and queried.",
       "in_scope": [
@@ -1128,10 +718,7 @@
         "Database connection factory with WAL and BEGIN IMMEDIATE",
         "db:migrate, db:generate, db:studio scripts"
       ],
-      "out_scope": [
-        "Actual entity schemas (E002)",
-        "Postgres support (future)"
-      ],
+      "out_scope": ["Actual entity schemas (E002)", "Postgres support (future)"],
       "context": [
         "docs/prd/007-technical-architecture.md",
         "docs/prd/010-integration-contracts.md"
@@ -1154,19 +741,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T002"
-      ],
-      "blocks": [
-        "T008",
-        "T009",
-        "T010",
-        "T011",
-        "T012",
-        "T013",
-        "T015",
-        "T016"
-      ],
+      "deps": ["T002"],
+      "blocks": ["T008", "T009", "T010", "T011", "T012", "T013", "T015", "T016"],
       "desc": "Create TypeScript enums and types for all domain concepts: task states, worker lease states, review cycle states, merge queue item states, job types/statuses, dependency types, validation run scopes, and all other enumerated values from the data model.",
       "goal": "Establish the type-safe vocabulary for the entire domain.",
       "in_scope": [
@@ -1182,14 +758,8 @@
         "Lead review decisions",
         "All enums from docs/prd/002-data-model.md"
       ],
-      "out_scope": [
-        "Entity interfaces (defined with migrations)",
-        "Business logic"
-      ],
-      "context": [
-        "docs/prd/002-data-model.md",
-        "docs/prd/008-packet-and-schema-spec.md"
-      ],
+      "out_scope": ["Entity interfaces (defined with migrations)", "Business logic"],
+      "context": ["docs/prd/002-data-model.md", "docs/prd/008-packet-and-schema-spec.md"],
       "criteria": [
         "All domain enums from docs/prd/002-data-model.md are defined",
         "TypeScript compilation succeeds with strict mode",
@@ -1207,14 +777,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T006",
-        "T007"
-      ],
-      "blocks": [
-        "T014",
-        "T081"
-      ],
+      "deps": ["T006", "T007"],
+      "blocks": ["T014", "T081"],
       "desc": "Create the Drizzle schema definitions and migration for Project, Repository, and WorkflowTemplate tables as specified in docs/prd/002-data-model.md \u00a72.3.",
       "goal": "Persist project and repository metadata so tasks can be scoped to repositories.",
       "in_scope": [
@@ -1225,13 +789,8 @@
         "Indexes on commonly queried fields",
         "created_at/updated_at with defaults"
       ],
-      "out_scope": [
-        "Repository data access layer (T014)",
-        "API endpoints (T081)"
-      ],
-      "context": [
-        "docs/prd/002-data-model.md"
-      ],
+      "out_scope": ["Repository data access layer (T014)", "API endpoints (T081)"],
+      "context": ["docs/prd/002-data-model.md"],
       "criteria": [
         "Migration creates all three tables with correct columns and types",
         "Foreign key from Repository to Project is enforced",
@@ -1249,16 +808,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T006",
-        "T007",
-        "T008"
-      ],
-      "blocks": [
-        "T014",
-        "T015",
-        "T082"
-      ],
+      "deps": ["T006", "T007", "T008"],
+      "blocks": ["T014", "T015", "T082"],
       "desc": "Create Drizzle schema and migration for the Task and TaskDependency tables with all fields from docs/prd/002-data-model.md \u00a72.3, including the version column for optimistic concurrency.",
       "goal": "Enable task persistence with full lifecycle metadata and dependency tracking.",
       "in_scope": [
@@ -1267,13 +818,8 @@
         "Indexes on status, repository_id, priority",
         "Unique constraint considerations"
       ],
-      "out_scope": [
-        "Task state machine logic (T015)",
-        "Dependency graph operations (T035)"
-      ],
-      "context": [
-        "docs/prd/002-data-model.md"
-      ],
+      "out_scope": ["Task state machine logic (T015)", "Dependency graph operations (T035)"],
+      "context": ["docs/prd/002-data-model.md"],
       "criteria": [
         "Task table has all fields from docs/prd/002-data-model.md",
         "version column exists with default 1",
@@ -1292,14 +838,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T006",
-        "T007"
-      ],
-      "blocks": [
-        "T014",
-        "T083"
-      ],
+      "deps": ["T006", "T007"],
+      "blocks": ["T014", "T083"],
       "desc": "Create Drizzle schema and migration for WorkerPool, Worker, AgentProfile, and PromptTemplate tables from docs/prd/002-data-model.md \u00a72.3.",
       "goal": "Enable worker pool management and agent profile configuration persistence.",
       "in_scope": [
@@ -1309,14 +849,8 @@
         "PromptTemplate with template_text and schemas as JSON",
         "Foreign keys between Worker->WorkerPool and AgentProfile->WorkerPool"
       ],
-      "out_scope": [
-        "Worker runtime logic (E009)",
-        "Pool management API (T083)"
-      ],
-      "context": [
-        "docs/prd/002-data-model.md",
-        "docs/prd/010-integration-contracts.md"
-      ],
+      "out_scope": ["Worker runtime logic (E009)", "Pool management API (T083)"],
+      "context": ["docs/prd/002-data-model.md", "docs/prd/010-integration-contracts.md"],
       "criteria": [
         "All four tables created with correct schemas",
         "Foreign key relationships enforced",
@@ -1334,16 +868,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T006",
-        "T007",
-        "T009"
-      ],
-      "blocks": [
-        "T014",
-        "T030",
-        "T058"
-      ],
+      "deps": ["T006", "T007", "T009"],
+      "blocks": ["T014", "T030", "T058"],
       "desc": "Create Drizzle schema and migration for TaskLease, ReviewCycle, ReviewPacket, and LeadReviewDecision tables.",
       "goal": "Enable lease tracking, review cycle management, and review decision persistence.",
       "in_scope": [
@@ -1353,13 +879,8 @@
         "LeadReviewDecision with follow_up_task_refs as JSON",
         "Foreign keys to Task"
       ],
-      "out_scope": [
-        "Lease management logic (E006)",
-        "Review pipeline logic (E012)"
-      ],
-      "context": [
-        "docs/prd/002-data-model.md"
-      ],
+      "out_scope": ["Lease management logic (E006)", "Review pipeline logic (E012)"],
+      "context": ["docs/prd/002-data-model.md"],
       "criteria": [
         "All four tables created with correct schemas",
         "Foreign keys reference Task table correctly",
@@ -1377,16 +898,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T006",
-        "T007",
-        "T009"
-      ],
-      "blocks": [
-        "T014",
-        "T025",
-        "T063"
-      ],
+      "deps": ["T006", "T007", "T009"],
+      "blocks": ["T014", "T025", "T063"],
       "desc": "Create Drizzle schema and migration for MergeQueueItem, ValidationRun, and Job tables.",
       "goal": "Enable merge queue tracking, validation result storage, and job queue persistence.",
       "in_scope": [
@@ -1395,14 +908,8 @@
         "Job with all fields including parent_job_id, job_group_id, depends_on_job_ids as JSON",
         "Indexes on Job.status and Job.run_after for queue polling"
       ],
-      "out_scope": [
-        "Merge queue logic (E013)",
-        "Job queue logic (E005)"
-      ],
-      "context": [
-        "docs/prd/002-data-model.md",
-        "docs/prd/007-technical-architecture.md"
-      ],
+      "out_scope": ["Merge queue logic (E013)", "Job queue logic (E005)"],
+      "context": ["docs/prd/002-data-model.md", "docs/prd/007-technical-architecture.md"],
       "criteria": [
         "All three tables created with correct schemas",
         "Job table supports dependency and group coordination fields",
@@ -1420,15 +927,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T006",
-        "T007"
-      ],
-      "blocks": [
-        "T014",
-        "T073",
-        "T048"
-      ],
+      "deps": ["T006", "T007"],
+      "blocks": ["T014", "T073", "T048"],
       "desc": "Create Drizzle schema and migration for AuditEvent and PolicySet tables.",
       "goal": "Enable audit trail persistence and policy set storage.",
       "in_scope": [
@@ -1436,13 +936,8 @@
         "PolicySet with all policy JSON columns",
         "Indexes on AuditEvent(entity_type, entity_id) and (created_at)"
       ],
-      "out_scope": [
-        "Audit query service (T074)",
-        "Policy resolution logic (T052)"
-      ],
-      "context": [
-        "docs/prd/002-data-model.md"
-      ],
+      "out_scope": ["Audit query service (T074)", "Policy resolution logic (T052)"],
+      "context": ["docs/prd/002-data-model.md"],
       "criteria": [
         "Both tables created with correct schemas",
         "AuditEvent indexes support entity and time range queries",
@@ -1460,24 +955,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T008",
-        "T009",
-        "T010",
-        "T011",
-        "T012",
-        "T013"
-      ],
-      "blocks": [
-        "T015",
-        "T025",
-        "T030",
-        "T035",
-        "T058",
-        "T063",
-        "T069",
-        "T073"
-      ],
+      "deps": ["T008", "T009", "T010", "T011", "T012", "T013"],
+      "blocks": ["T015", "T025", "T030", "T035", "T058", "T063", "T069", "T073"],
       "desc": "Implement the data access (repository) layer for all entities using Drizzle ORM. Each repository provides typed CRUD operations, query methods, and transaction support. The Task repository must include optimistic concurrency via the version column.",
       "goal": "Provide a clean, tested data access layer that all application services build upon.",
       "in_scope": [
@@ -1487,14 +966,8 @@
         "Transaction helper for atomic operations",
         "Task.version increment on update"
       ],
-      "out_scope": [
-        "Business logic in repositories",
-        "Complex query optimization"
-      ],
-      "context": [
-        "docs/prd/002-data-model.md",
-        "docs/prd/010-integration-contracts.md"
-      ],
+      "out_scope": ["Business logic in repositories", "Complex query optimization"],
+      "context": ["docs/prd/002-data-model.md", "docs/prd/010-integration-contracts.md"],
       "criteria": [
         "Repository exists for every entity in the data model",
         "Task repository enforces optimistic concurrency",
@@ -1513,14 +986,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T007",
-        "T014"
-      ],
-      "blocks": [
-        "T017",
-        "T018"
-      ],
+      "deps": ["T007", "T014"],
+      "blocks": ["T017", "T018"],
       "desc": "Implement the Task state machine as a pure domain module. Define all valid transitions, preconditions for each transition, and transition validation logic. This is the core correctness mechanism of the system.",
       "goal": "Ensure only valid state transitions can occur, matching the spec in docs/prd/002-data-model.md \u00a72.1 exactly.",
       "in_scope": [
@@ -1530,15 +997,8 @@
         "Validation that current state allows target state",
         "Guard clause functions per transition"
       ],
-      "out_scope": [
-        "Persistence (T018)",
-        "Audit events (T073)",
-        "Scheduling triggers"
-      ],
-      "context": [
-        "docs/prd/002-data-model.md",
-        "docs/prd/010-integration-contracts.md"
-      ],
+      "out_scope": ["Persistence (T018)", "Audit events (T073)", "Scheduling triggers"],
+      "context": ["docs/prd/002-data-model.md", "docs/prd/010-integration-contracts.md"],
       "criteria": [
         "All valid transitions from \u00a72.1 are allowed",
         "All invalid transitions are rejected with descriptive reasons",
@@ -1557,12 +1017,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T007"
-      ],
-      "blocks": [
-        "T017"
-      ],
+      "deps": ["T007"],
+      "blocks": ["T017"],
       "desc": "Implement state machines for Worker Lease (\u00a72.2), Review Cycle (\u00a72.2), and Merge Queue Item (\u00a72.2) with transition validation.",
       "goal": "Provide validated state management for all supporting lifecycle entities.",
       "in_scope": [
@@ -1571,13 +1027,8 @@
         "Merge Queue Item states: ENQUEUED through FAILED",
         "Transition validation for each"
       ],
-      "out_scope": [
-        "Integration with main Task state machine",
-        "Persistence layer"
-      ],
-      "context": [
-        "docs/prd/002-data-model.md"
-      ],
+      "out_scope": ["Integration with main Task state machine", "Persistence layer"],
+      "context": ["docs/prd/002-data-model.md"],
       "criteria": [
         "All three state machines implemented with correct transitions",
         "Invalid transitions rejected",
@@ -1595,20 +1046,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T015",
-        "T016",
-        "T014"
-      ],
-      "blocks": [
-        "T018",
-        "T019",
-        "T027",
-        "T030",
-        "T058",
-        "T061",
-        "T063"
-      ],
+      "deps": ["T015", "T016", "T014"],
+      "blocks": ["T018", "T019", "T027", "T030", "T058", "T061", "T063"],
       "desc": "Create the centralized State Transition Service that is the single authority for committing state changes. All modules must call this service rather than updating state directly.",
       "goal": "Centralize state mutation to enforce invariants, emit events, and maintain audit trail atomically.",
       "in_scope": [
@@ -1622,10 +1061,7 @@
         "Specific transition triggers (those belong in application services)",
         "API endpoints"
       ],
-      "context": [
-        "docs/prd/010-integration-contracts.md",
-        "docs/prd/002-data-model.md"
-      ],
+      "context": ["docs/prd/010-integration-contracts.md", "docs/prd/002-data-model.md"],
       "criteria": [
         "All state transitions go through this service",
         "Optimistic concurrency rejects stale updates",
@@ -1644,12 +1080,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T017"
-      ],
-      "blocks": [
-        "T073"
-      ],
+      "deps": ["T017"],
+      "blocks": ["T073"],
       "desc": "Ensure that state transitions and their corresponding audit events are persisted atomically in a single database transaction using BEGIN IMMEDIATE.",
       "goal": "Guarantee that no state change can occur without an audit record, and no audit record exists without a committed state change.",
       "in_scope": [
@@ -1658,13 +1090,8 @@
         "Integration test proving atomicity",
         "Error handling for transaction conflicts"
       ],
-      "out_scope": [
-        "Audit query service (T074)",
-        "Metrics emission"
-      ],
-      "context": [
-        "docs/prd/010-integration-contracts.md"
-      ],
+      "out_scope": ["Audit query service (T074)", "Metrics emission"],
+      "context": ["docs/prd/010-integration-contracts.md"],
       "criteria": [
         "State change and audit event are in the same transaction",
         "Failed transitions leave no partial state",
@@ -1682,9 +1109,7 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T017"
-      ],
+      "deps": ["T017"],
       "blocks": [],
       "desc": "Implement and thoroughly test the optimistic concurrency control mechanism on Task entities. Every state transition must check Task.version matches expected value and increment it atomically.",
       "goal": "Prevent race conditions where two actors attempt to transition the same task simultaneously.",
@@ -1694,13 +1119,8 @@
         "Conflict detection and rejection",
         "Conflict resolution priority rules from \u00a710.2.3"
       ],
-      "out_scope": [
-        "Pessimistic locking",
-        "Distributed locking"
-      ],
-      "context": [
-        "docs/prd/010-integration-contracts.md"
-      ],
+      "out_scope": ["Pessimistic locking", "Distributed locking"],
+      "context": ["docs/prd/010-integration-contracts.md"],
       "criteria": [
         "Concurrent transitions to the same task are safely handled",
         "Only one transition succeeds when two race",
@@ -1719,15 +1139,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T004"
-      ],
-      "blocks": [
-        "T021",
-        "T022",
-        "T023",
-        "T024"
-      ],
+      "deps": ["T004"],
+      "blocks": ["T021", "T022", "T023", "T024"],
       "desc": "Create the shared Zod type definitions used across all packet schemas: FileChangeSummary, Issue, ValidationCheckResult, and common enums.",
       "goal": "Establish reusable schema building blocks for all packet types.",
       "in_scope": [
@@ -1736,13 +1149,8 @@
         "ValidationCheckResult schema from \u00a78.3.3",
         "Common enums (status, severity, verdict, decision, confidence)"
       ],
-      "out_scope": [
-        "Full packet schemas (T021-T023)",
-        "Schema versioning (T024)"
-      ],
-      "context": [
-        "docs/prd/008-packet-and-schema-spec.md"
-      ],
+      "out_scope": ["Full packet schemas (T021-T023)", "Schema versioning (T024)"],
+      "context": ["docs/prd/008-packet-and-schema-spec.md"],
       "criteria": [
         "All three shared types defined with Zod",
         "Example data from \u00a78.3 validates correctly",
@@ -1761,13 +1169,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T020"
-      ],
-      "blocks": [
-        "T024",
-        "T046"
-      ],
+      "deps": ["T020"],
+      "blocks": ["T024", "T046"],
       "desc": "Create Zod schemas for TaskPacket (\u00a78.4) and DevResultPacket (\u00a78.5) with all required fields and nested structures.",
       "goal": "Machine-validate the primary input and output contracts for developer workers.",
       "in_scope": [
@@ -1776,13 +1179,8 @@
         "Nested structures (task, repository, workspace, context, policies, validation_requirements)",
         "RejectionContext schema from \u00a78.12"
       ],
-      "out_scope": [
-        "Cross-field validation (T024)",
-        "Schema versioning (T024)"
-      ],
-      "context": [
-        "docs/prd/008-packet-and-schema-spec.md"
-      ],
+      "out_scope": ["Cross-field validation (T024)", "Schema versioning (T024)"],
+      "context": ["docs/prd/008-packet-and-schema-spec.md"],
       "criteria": [
         "Spec example data validates successfully",
         "Missing required fields are rejected",
@@ -1801,13 +1199,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T020"
-      ],
-      "blocks": [
-        "T024",
-        "T061"
-      ],
+      "deps": ["T020"],
+      "blocks": ["T024", "T061"],
       "desc": "Create Zod schemas for ReviewPacket (\u00a78.6) and LeadReviewDecisionPacket (\u00a78.7).",
       "goal": "Machine-validate review and lead review decision outputs.",
       "in_scope": [
@@ -1815,12 +1208,8 @@
         "LeadReviewDecisionPacket with decision, deduplication notes, follow-up refs",
         "Verdict and decision enum validation"
       ],
-      "out_scope": [
-        "Cross-field validation rules (T024)"
-      ],
-      "context": [
-        "docs/prd/008-packet-and-schema-spec.md"
-      ],
+      "out_scope": ["Cross-field validation rules (T024)"],
+      "context": ["docs/prd/008-packet-and-schema-spec.md"],
       "criteria": [
         "Spec examples validate correctly",
         "Verdict and decision enums enforced",
@@ -1838,15 +1227,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T020"
-      ],
-      "blocks": [
-        "T024",
-        "T056",
-        "T064",
-        "T067"
-      ],
+      "deps": ["T020"],
+      "blocks": ["T024", "T056", "T064", "T067"],
       "desc": "Create Zod schemas for MergePacket (\u00a78.8), MergeAssistPacket (\u00a78.9), ValidationResultPacket (\u00a78.10), PostMergeAnalysisPacket (\u00a78.11), and the PolicySnapshot schema.",
       "goal": "Complete the packet schema library covering all artifact types.",
       "in_scope": [
@@ -1856,9 +1238,7 @@
         "PostMergeAnalysisPacket with recommendation and attribution",
         "PolicySnapshot schema from docs/prd/009-policy-and-enforcement-spec.md \u00a79.2"
       ],
-      "out_scope": [
-        "Cross-field validation (T024)"
-      ],
+      "out_scope": ["Cross-field validation (T024)"],
       "context": [
         "docs/prd/008-packet-and-schema-spec.md",
         "docs/prd/009-policy-and-enforcement-spec.md"
@@ -1880,14 +1260,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T021",
-        "T022",
-        "T023"
-      ],
-      "blocks": [
-        "T046"
-      ],
+      "deps": ["T021", "T022", "T023"],
+      "blocks": ["T046"],
       "desc": "Add cross-field validation rules from \u00a78.13 to all packet schemas and implement schema version validation with multi-version support from \u00a78.15.",
       "goal": "Ensure packet schemas enforce business rules that span multiple fields and support version evolution.",
       "in_scope": [
@@ -1896,13 +1270,8 @@
         "Major version family acceptance",
         "Version compatibility checking"
       ],
-      "out_scope": [
-        "Schema migration tooling",
-        "JSON Schema export"
-      ],
-      "context": [
-        "docs/prd/008-packet-and-schema-spec.md"
-      ],
+      "out_scope": ["Schema migration tooling", "JSON Schema export"],
+      "context": ["docs/prd/008-packet-and-schema-spec.md"],
       "criteria": [
         "All cross-field rules from \u00a78.13 are enforced",
         "Invalid cross-field combinations rejected with descriptive errors",
@@ -1921,16 +1290,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T012",
-        "T014"
-      ],
-      "blocks": [
-        "T026",
-        "T027",
-        "T028",
-        "T029"
-      ],
+      "deps": ["T012", "T014"],
+      "blocks": ["T026", "T027", "T028", "T029"],
       "desc": "Implement the core DB-backed job queue with create, claim, complete, and fail operations using the Job table. Claims must be atomic and prevent duplicate processing.",
       "goal": "Provide a reliable job processing mechanism backed by SQLite.",
       "in_scope": [
@@ -1942,14 +1303,8 @@
         "run_after respect for delayed jobs",
         "attempt_count increment on claim"
       ],
-      "out_scope": [
-        "Job dependencies (T026)",
-        "Specific job type handlers"
-      ],
-      "context": [
-        "docs/prd/007-technical-architecture.md",
-        "docs/prd/002-data-model.md"
-      ],
+      "out_scope": ["Job dependencies (T026)", "Specific job type handlers"],
+      "context": ["docs/prd/007-technical-architecture.md", "docs/prd/002-data-model.md"],
       "criteria": [
         "Jobs can be created and claimed atomically",
         "No two workers can claim the same job",
@@ -1968,13 +1323,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T025"
-      ],
-      "blocks": [
-        "T059",
-        "T060"
-      ],
+      "deps": ["T025"],
+      "blocks": ["T059", "T060"],
       "desc": "Extend the job queue to support depends_on_job_ids and job_group_id coordination. A job with dependencies cannot be claimed until all dependency jobs reach terminal status.",
       "goal": "Enable review fan-out where specialist reviewer jobs run in parallel and the lead reviewer job waits for all to complete.",
       "in_scope": [
@@ -1983,14 +1333,8 @@
         "Terminal status detection for dependency jobs (completed or failed)",
         "Automatic dependency resolution on job completion"
       ],
-      "out_scope": [
-        "Job cancellation cascading",
-        "Job priority within groups"
-      ],
-      "context": [
-        "docs/prd/002-data-model.md",
-        "docs/prd/007-technical-architecture.md"
-      ],
+      "out_scope": ["Job cancellation cascading", "Job priority within groups"],
+      "context": ["docs/prd/002-data-model.md", "docs/prd/007-technical-architecture.md"],
       "criteria": [
         "Jobs with unmet dependencies cannot be claimed",
         "Jobs become claimable when all dependencies reach terminal status",
@@ -2009,14 +1353,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T014",
-        "T017",
-        "T025"
-      ],
-      "blocks": [
-        "T028"
-      ],
+      "deps": ["T014", "T017", "T025"],
+      "blocks": ["T028"],
       "desc": "Build the Scheduler that selects the next ready task, matches it to a compatible worker pool, and triggers lease acquisition.",
       "goal": "Automate task-to-worker assignment based on readiness, priority, and pool compatibility.",
       "in_scope": [
@@ -2026,14 +1364,8 @@
         "Lease request via Lease Module",
         "Duplicate assignment prevention"
       ],
-      "out_scope": [
-        "Pool management CRUD (T083)",
-        "Worker process spawning (T044)"
-      ],
-      "context": [
-        "docs/prd/001-architecture.md",
-        "docs/prd/007-technical-architecture.md"
-      ],
+      "out_scope": ["Pool management CRUD (T083)", "Worker process spawning (T044)"],
+      "context": ["docs/prd/001-architecture.md", "docs/prd/007-technical-architecture.md"],
       "criteria": [
         "Scheduler selects highest-priority ready task",
         "Pool matching respects capabilities and concurrency limits",
@@ -2052,10 +1384,7 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T027",
-        "T025"
-      ],
+      "deps": ["T027", "T025"],
       "blocks": [],
       "desc": "Create the scheduler tick as a recurring background job that periodically invokes the Scheduler service to process ready tasks.",
       "goal": "Make scheduling automatic rather than requiring manual triggers.",
@@ -2065,13 +1394,8 @@
         "Tick handler calls scheduler.processReadyTasks()",
         "Self-rescheduling after completion"
       ],
-      "out_scope": [
-        "External job broker",
-        "Multi-instance scheduling coordination"
-      ],
-      "context": [
-        "docs/prd/007-technical-architecture.md"
-      ],
+      "out_scope": ["External job broker", "Multi-instance scheduling coordination"],
+      "context": ["docs/prd/007-technical-architecture.md"],
       "criteria": [
         "Scheduler runs periodically without manual intervention",
         "Tick interval is configurable",
@@ -2089,10 +1413,7 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T025",
-        "T027"
-      ],
+      "deps": ["T025", "T027"],
       "blocks": [],
       "desc": "Create the reconciliation sweep as a recurring background job that detects and fixes inconsistent state: stale leases, orphaned jobs, tasks stuck in transitional states, and dependency recalculation.",
       "goal": "Ensure the system self-heals from transient failures and missed events.",
@@ -2103,14 +1424,8 @@
         "Dependency readiness recalculation",
         "Configurable sweep interval (default: 60s)"
       ],
-      "out_scope": [
-        "Workspace cleanup (T042)",
-        "Branch cleanup"
-      ],
-      "context": [
-        "docs/prd/007-technical-architecture.md",
-        "docs/prd/002-data-model.md"
-      ],
+      "out_scope": ["Workspace cleanup (T042)", "Branch cleanup"],
+      "context": ["docs/prd/007-technical-architecture.md", "docs/prd/002-data-model.md"],
       "criteria": [
         "Stale leases are detected and reclaimed",
         "Stuck tasks are recovered",
@@ -2129,17 +1444,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T011",
-        "T014",
-        "T017"
-      ],
-      "blocks": [
-        "T031",
-        "T032",
-        "T033",
-        "T044"
-      ],
+      "deps": ["T011", "T014", "T017"],
+      "blocks": ["T031", "T032", "T033", "T044"],
       "desc": "Implement lease acquisition that enforces the one-active-lease-per-task invariant. Use atomic DB operations to prevent duplicate leases.",
       "goal": "Guarantee that exactly one worker can be assigned to a task at any time.",
       "in_scope": [
@@ -2149,14 +1455,8 @@
         "Update Task.current_lease_id",
         "Reject if task not in READY state"
       ],
-      "out_scope": [
-        "Heartbeat processing (T031)",
-        "Lease reclaim (T033)"
-      ],
-      "context": [
-        "docs/prd/002-data-model.md",
-        "docs/prd/009-policy-and-enforcement-spec.md"
-      ],
+      "out_scope": ["Heartbeat processing (T031)", "Lease reclaim (T033)"],
+      "context": ["docs/prd/002-data-model.md", "docs/prd/009-policy-and-enforcement-spec.md"],
       "criteria": [
         "Only one active lease per task at any time",
         "Concurrent acquisition attempts: exactly one succeeds",
@@ -2175,12 +1475,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T030"
-      ],
-      "blocks": [
-        "T033"
-      ],
+      "deps": ["T030"],
+      "blocks": ["T033"],
       "desc": "Implement heartbeat reception from workers and staleness detection based on missed heartbeat thresholds.",
       "goal": "Enable the control plane to detect unresponsive workers and trigger recovery.",
       "in_scope": [
@@ -2189,14 +1485,8 @@
         "Staleness calculation: missed > threshold + grace",
         "detectStaleLeases() query for background reconciliation"
       ],
-      "out_scope": [
-        "Worker-side heartbeat sending (T044)",
-        "Reclaim logic (T033)"
-      ],
-      "context": [
-        "docs/prd/009-policy-and-enforcement-spec.md",
-        "docs/prd/002-data-model.md"
-      ],
+      "out_scope": ["Worker-side heartbeat sending (T044)", "Reclaim logic (T033)"],
+      "context": ["docs/prd/009-policy-and-enforcement-spec.md", "docs/prd/002-data-model.md"],
       "criteria": [
         "Heartbeats update lease timestamp",
         "Stale leases detected after missed threshold + grace",
@@ -2215,12 +1505,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T031"
-      ],
-      "blocks": [
-        "T046"
-      ],
+      "deps": ["T031"],
+      "blocks": ["T046"],
       "desc": "Implement the terminal heartbeat protocol: workers send completing:true before emitting results, and the lease manager extends the grace window.",
       "goal": "Prevent race conditions where a result is submitted just as a lease is being reclaimed.",
       "in_scope": [
@@ -2229,14 +1515,8 @@
         "Result acceptance within grace period after stale marking",
         "Lease status transition to COMPLETING"
       ],
-      "out_scope": [
-        "Result packet validation (T046)",
-        "Worker-side implementation (T044)"
-      ],
-      "context": [
-        "docs/prd/009-policy-and-enforcement-spec.md",
-        "docs/prd/002-data-model.md"
-      ],
+      "out_scope": ["Result packet validation (T046)", "Worker-side implementation (T044)"],
+      "context": ["docs/prd/009-policy-and-enforcement-spec.md", "docs/prd/002-data-model.md"],
       "criteria": [
         "Terminal heartbeat transitions lease to COMPLETING",
         "Grace period extended after terminal heartbeat",
@@ -2255,13 +1535,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T031",
-        "T051"
-      ],
-      "blocks": [
-        "T034"
-      ],
+      "deps": ["T031", "T051"],
+      "blocks": ["T034"],
       "desc": "Implement the lease reclaim flow: when a lease is detected as stale, reclaim the workspace, snapshot partial work, and apply retry or escalation policy.",
       "goal": "Recover from worker failures while preserving partial work for context.",
       "in_scope": [
@@ -2272,14 +1547,8 @@
         "Escalation when max retries exceeded",
         "Audit event for reclaim"
       ],
-      "out_scope": [
-        "Partial artifact capture (T034)",
-        "Worker process killing (T044)"
-      ],
-      "context": [
-        "docs/prd/002-data-model.md",
-        "docs/prd/009-policy-and-enforcement-spec.md"
-      ],
+      "out_scope": ["Partial artifact capture (T034)", "Worker process killing (T044)"],
+      "context": ["docs/prd/002-data-model.md", "docs/prd/009-policy-and-enforcement-spec.md"],
       "criteria": [
         "Stale leases are reclaimed with correct terminal state",
         "Retry-eligible tasks re-enter READY",
@@ -2299,10 +1568,7 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T033",
-        "T069"
-      ],
+      "deps": ["T033", "T069"],
       "blocks": [],
       "desc": "When a lease is reclaimed, capture partial work artifacts from the workspace for context in retry attempts.",
       "goal": "Preserve partial work so retry attempts have context about what was already done.",
@@ -2312,14 +1578,8 @@
         "Include partial artifacts in next TaskPacket via context.prior_partial_work",
         "Network partition handling: check workspace for filesystem-persisted result packet"
       ],
-      "out_scope": [
-        "Full workspace archiving",
-        "Automatic continuation from partial work"
-      ],
-      "context": [
-        "docs/prd/009-policy-and-enforcement-spec.md",
-        "docs/prd/002-data-model.md"
-      ],
+      "out_scope": ["Full workspace archiving", "Automatic continuation from partial work"],
+      "context": ["docs/prd/009-policy-and-enforcement-spec.md", "docs/prd/002-data-model.md"],
       "criteria": [
         "Partial artifacts captured on reclaim when no valid result found",
         "Filesystem-persisted results are checked before reclaim",
@@ -2337,13 +1597,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T014"
-      ],
-      "blocks": [
-        "T036",
-        "T037"
-      ],
+      "deps": ["T014"],
+      "blocks": ["T036", "T037"],
       "desc": "Implement circular dependency detection when adding task dependencies. The dependency graph must be validated as a DAG on every insert.",
       "goal": "Prevent circular dependencies that would make tasks permanently blocked.",
       "in_scope": [
@@ -2352,13 +1607,8 @@
         "Rejection with descriptive error on cycle detection",
         "Support for all dependency types: blocks, relates_to, parent_child"
       ],
-      "out_scope": [
-        "Cross-repo dependencies",
-        "Automatic cycle resolution"
-      ],
-      "context": [
-        "docs/prd/002-data-model.md"
-      ],
+      "out_scope": ["Cross-repo dependencies", "Automatic cycle resolution"],
+      "context": ["docs/prd/002-data-model.md"],
       "criteria": [
         "Circular dependencies are detected and rejected",
         "Valid DAG structures are accepted",
@@ -2377,13 +1627,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T035"
-      ],
-      "blocks": [
-        "T037",
-        "T027"
-      ],
+      "deps": ["T035"],
+      "blocks": ["T037", "T027"],
       "desc": "Implement the readiness computation that determines whether a task should be READY or BLOCKED based on its hard-block dependencies.",
       "goal": "Ensure tasks only become READY when all hard-block prerequisites are DONE.",
       "in_scope": [
@@ -2393,13 +1638,8 @@
         "relates_to: no effect on readiness",
         "parent_child: parent blocks until all children DONE/CANCELLED"
       ],
-      "out_scope": [
-        "Policy blockers (future)",
-        "Risk-based blocking"
-      ],
-      "context": [
-        "docs/prd/002-data-model.md"
-      ],
+      "out_scope": ["Policy blockers (future)", "Risk-based blocking"],
+      "context": ["docs/prd/002-data-model.md"],
       "criteria": [
         "Tasks with unsatisfied hard-block deps are BLOCKED",
         "Tasks with all hard-block deps DONE are READY",
@@ -2418,12 +1658,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T036"
-      ],
-      "blocks": [
-        "T038"
-      ],
+      "deps": ["T036"],
+      "blocks": ["T038"],
       "desc": "When a task transitions to DONE, automatically recalculate readiness for all reverse-dependent tasks and transition them from BLOCKED to READY as appropriate.",
       "goal": "Automatically unblock downstream tasks when their prerequisites complete.",
       "in_scope": [
@@ -2432,12 +1668,8 @@
         "Transition BLOCKED->READY for newly eligible tasks",
         "Handle FAILED/CANCELLED: hard-blocked dependents remain BLOCKED"
       ],
-      "out_scope": [
-        "Notification to operators about newly ready tasks"
-      ],
-      "context": [
-        "docs/prd/002-data-model.md"
-      ],
+      "out_scope": ["Notification to operators about newly ready tasks"],
+      "context": ["docs/prd/002-data-model.md"],
       "criteria": [
         "Completing a task unblocks ready dependents automatically",
         "Only hard-block dependencies are considered",
@@ -2456,10 +1688,7 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T037",
-        "T029"
-      ],
+      "deps": ["T037", "T029"],
       "blocks": [],
       "desc": "Add dependency readiness recalculation to the reconciliation sweep to catch any missed recalculations.",
       "goal": "Ensure no task stays incorrectly BLOCKED due to a missed event.",
@@ -2469,12 +1698,8 @@
         "Transition BLOCKED->READY if dependencies now satisfied",
         "Include in reconciliation sweep job"
       ],
-      "out_scope": [
-        "Performance optimization for large task sets"
-      ],
-      "context": [
-        "docs/prd/002-data-model.md"
-      ],
+      "out_scope": ["Performance optimization for large task sets"],
+      "context": ["docs/prd/002-data-model.md"],
       "criteria": [
         "Reconciliation catches incorrectly BLOCKED tasks",
         "Tasks are transitioned to READY when eligible",
@@ -2492,14 +1717,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T006"
-      ],
-      "blocks": [
-        "T040",
-        "T041",
-        "T044"
-      ],
+      "deps": ["T006"],
+      "blocks": ["T040", "T041", "T044"],
       "desc": "Implement workspace provisioning using git worktrees. Each task gets an isolated worktree with a dedicated branch following the factory/{task_id} naming convention.",
       "goal": "Provide isolated workspaces so workers cannot interfere with each other.",
       "in_scope": [
@@ -2509,11 +1728,7 @@
         "Workspace directory structure from \u00a77.10",
         "Workspace reuse for retries if available"
       ],
-      "out_scope": [
-        "Packet mounting (T040)",
-        "Cleanup (T041)",
-        "Container isolation"
-      ],
+      "out_scope": ["Packet mounting (T040)", "Cleanup (T041)", "Container isolation"],
       "context": [
         "docs/prd/007-technical-architecture.md",
         "docs/prd/010-integration-contracts.md"
@@ -2537,12 +1752,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T039"
-      ],
-      "blocks": [
-        "T044"
-      ],
+      "deps": ["T039"],
+      "blocks": ["T044"],
       "desc": "Mount the task packet JSON, run config, and effective policy snapshot into the workspace directory before worker execution.",
       "goal": "Ensure the worker has all necessary context files when it starts.",
       "in_scope": [
@@ -2551,13 +1762,8 @@
         "Write effective-policy-snapshot.json with resolved policies",
         "Validate all files are valid JSON before mounting"
       ],
-      "out_scope": [
-        "Credentials/secrets mounting (deferred)",
-        "Tool configuration"
-      ],
-      "context": [
-        "docs/prd/007-technical-architecture.md"
-      ],
+      "out_scope": ["Credentials/secrets mounting (deferred)", "Tool configuration"],
+      "context": ["docs/prd/007-technical-architecture.md"],
       "criteria": [
         "Task packet, run config, and policy snapshot written to workspace",
         "Files are valid, readable JSON",
@@ -2575,12 +1781,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T039"
-      ],
-      "blocks": [
-        "T042"
-      ],
+      "deps": ["T039"],
+      "blocks": ["T042"],
       "desc": "Implement workspace cleanup that removes worktrees and branches for tasks in terminal states (DONE, FAILED, CANCELLED) after the retention period.",
       "goal": "Prevent disk space exhaustion from accumulated workspaces.",
       "in_scope": [
@@ -2589,10 +1791,7 @@
         "Retain ESCALATED workspaces until resolution",
         "Retain FAILED workspaces per retain_failed_workspaces policy"
       ],
-      "out_scope": [
-        "Automated scheduling (T042)",
-        "Artifact cleanup"
-      ],
+      "out_scope": ["Automated scheduling (T042)", "Artifact cleanup"],
       "context": [
         "docs/prd/007-technical-architecture.md",
         "docs/prd/009-policy-and-enforcement-spec.md"
@@ -2615,10 +1814,7 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T041",
-        "T029"
-      ],
+      "deps": ["T041", "T029"],
       "blocks": [],
       "desc": "Create a scheduled job that periodically scans for expired workspaces and cleans them up.",
       "goal": "Automate workspace cleanup so operators don't need to manage disk space manually.",
@@ -2628,14 +1824,8 @@
         "Delete expired workspaces and branches",
         "Log all cleanup actions"
       ],
-      "out_scope": [
-        "Artifact cleanup",
-        "Disk space monitoring"
-      ],
-      "context": [
-        "docs/prd/002-data-model.md",
-        "docs/prd/007-technical-architecture.md"
-      ],
+      "out_scope": ["Artifact cleanup", "Disk space monitoring"],
+      "context": ["docs/prd/002-data-model.md", "docs/prd/007-technical-architecture.md"],
       "criteria": [
         "Expired workspaces cleaned up automatically",
         "Orphaned workspaces detected and removed",
@@ -2653,13 +1843,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T004"
-      ],
-      "blocks": [
-        "T044",
-        "T045"
-      ],
+      "deps": ["T004"],
+      "blocks": ["T044", "T045"],
       "desc": "Define the TypeScript interface for worker runtime adapters: prepareRun, startRun, streamRun, cancelRun, collectArtifacts, finalizeRun.",
       "goal": "Establish a stable, pluggable contract so execution backends can be swapped without changing orchestration.",
       "in_scope": [
@@ -2668,10 +1853,7 @@
         "RunResult type (status, artifacts, structured output)",
         "Runtime registration mechanism"
       ],
-      "out_scope": [
-        "Concrete adapter implementations (T045)",
-        "Worker Supervisor (T044)"
-      ],
+      "out_scope": ["Concrete adapter implementations (T045)", "Worker Supervisor (T044)"],
       "context": [
         "docs/prd/010-integration-contracts.md",
         "docs/prd/007-technical-architecture.md"
@@ -2693,17 +1875,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T030",
-        "T039",
-        "T040",
-        "T043"
-      ],
-      "blocks": [
-        "T045",
-        "T046",
-        "T106"
-      ],
+      "deps": ["T030", "T039", "T040", "T043"],
+      "blocks": ["T045", "T046", "T106"],
       "desc": "Build the Worker Supervisor that spawns worker processes, monitors their lifecycle, tracks heartbeats, mediates workspace access, and handles process termination.",
       "goal": "Manage the full lifecycle of worker processes from spawn to cleanup.",
       "in_scope": [
@@ -2714,10 +1887,7 @@
         "Process termination on cancel/timeout",
         "Worker entity creation and status updates"
       ],
-      "out_scope": [
-        "Specific adapter logic (T045)",
-        "Remote worker management"
-      ],
+      "out_scope": ["Specific adapter logic (T045)", "Remote worker management"],
       "context": [
         "docs/prd/007-technical-architecture.md",
         "docs/prd/010-integration-contracts.md"
@@ -2741,13 +1911,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T043",
-        "T047"
-      ],
-      "blocks": [
-        "T107"
-      ],
+      "deps": ["T043", "T047"],
+      "blocks": ["T107"],
       "desc": "Implement the Copilot CLI adapter that translates the worker runtime interface into Copilot CLI invocations with proper prompt injection, output capture, and policy enforcement.",
       "goal": "Enable AI worker execution via GitHub Copilot CLI as the primary V1 execution backend.",
       "in_scope": [
@@ -2758,14 +1923,8 @@
         "Policy-aware command execution via wrapper",
         "Schema validation of final output packet"
       ],
-      "out_scope": [
-        "Other execution backends",
-        "Model selection logic"
-      ],
-      "context": [
-        "docs/prd/010-integration-contracts.md",
-        "docs/prd/004-agent-contracts.md"
-      ],
+      "out_scope": ["Other execution backends", "Model selection logic"],
+      "context": ["docs/prd/010-integration-contracts.md", "docs/prd/004-agent-contracts.md"],
       "criteria": [
         "Copilot CLI process spawned with correct arguments",
         "Prompt includes role, task context, and output schema expectations",
@@ -2784,14 +1943,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T024",
-        "T032",
-        "T044"
-      ],
-      "blocks": [
-        "T107"
-      ],
+      "deps": ["T024", "T032", "T044"],
+      "blocks": ["T107"],
       "desc": "Implement the result packet extraction, schema validation, and acceptance logic that runs after a worker completes. Enforce the rule that no result is accepted without valid schema.",
       "goal": "Ensure all worker outputs meet the schema contract before being accepted into the system.",
       "in_scope": [
@@ -2802,14 +1955,8 @@
         "Schema repair attempt for minor violations",
         "Rejection and failure handling for invalid output"
       ],
-      "out_scope": [
-        "Worker-side output formatting",
-        "Schema migration"
-      ],
-      "context": [
-        "docs/prd/008-packet-and-schema-spec.md",
-        "docs/prd/004-agent-contracts.md"
-      ],
+      "out_scope": ["Worker-side output formatting", "Schema migration"],
+      "context": ["docs/prd/008-packet-and-schema-spec.md", "docs/prd/004-agent-contracts.md"],
       "criteria": [
         "Valid packets accepted correctly",
         "Invalid JSON rejected as fatal",
@@ -2829,13 +1976,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T048"
-      ],
-      "blocks": [
-        "T045",
-        "T055"
-      ],
+      "deps": ["T048"],
+      "blocks": ["T045", "T055"],
       "desc": "Build the command execution wrapper that enforces command policy (allowlist, denied patterns, forbidden args) before executing any shell command on behalf of a worker.",
       "goal": "Prevent workers from executing unauthorized or dangerous commands.",
       "in_scope": [
@@ -2846,13 +1988,8 @@
         "Shell compound command and subshell blocking",
         "Policy violation artifact emission on denied command"
       ],
-      "out_scope": [
-        "Network policy enforcement",
-        "File system monitoring"
-      ],
-      "context": [
-        "docs/prd/009-policy-and-enforcement-spec.md"
-      ],
+      "out_scope": ["Network policy enforcement", "File system monitoring"],
+      "context": ["docs/prd/009-policy-and-enforcement-spec.md"],
       "criteria": [
         "Allowed commands execute successfully",
         "Denied commands are blocked with clear error",
@@ -2872,14 +2009,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T013",
-        "T014"
-      ],
-      "blocks": [
-        "T047",
-        "T053"
-      ],
+      "deps": ["T013", "T014"],
+      "blocks": ["T047", "T053"],
       "desc": "Define the command policy data model and enforcement logic from docs/prd/009-policy-and-enforcement-spec.md \u00a79.3.",
       "goal": "Establish command execution governance that workers must respect.",
       "in_scope": [
@@ -2888,13 +2019,8 @@
         "Policy resolution for a given run",
         "Default V1 command policy with reasonable allowlist"
       ],
-      "out_scope": [
-        "Command wrapper implementation (T047, depends on this)",
-        "Network policy"
-      ],
-      "context": [
-        "docs/prd/009-policy-and-enforcement-spec.md"
-      ],
+      "out_scope": ["Command wrapper implementation (T047, depends on this)", "Network policy"],
+      "context": ["docs/prd/009-policy-and-enforcement-spec.md"],
       "criteria": [
         "Command policy type matches spec \u00a79.3.2",
         "Default policy provides reasonable V1 allowlist",
@@ -2912,13 +2038,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T013",
-        "T014"
-      ],
-      "blocks": [
-        "T053"
-      ],
+      "deps": ["T013", "T014"],
+      "blocks": ["T053"],
       "desc": "Define the file scope policy data model and enforcement from \u00a79.4, including read/write roots, deny roots, and precedence rules.",
       "goal": "Control which files workers can read and write to prevent unauthorized modifications.",
       "in_scope": [
@@ -2928,13 +2049,8 @@
         "Default V1 policy",
         "Post-run diff validation (check modified files against write_roots)"
       ],
-      "out_scope": [
-        "Runtime filesystem monitoring",
-        "Sandboxing"
-      ],
-      "context": [
-        "docs/prd/009-policy-and-enforcement-spec.md"
-      ],
+      "out_scope": ["Runtime filesystem monitoring", "Sandboxing"],
+      "context": ["docs/prd/009-policy-and-enforcement-spec.md"],
       "criteria": [
         "Path access checks follow precedence rules exactly",
         "Deny roots always block access",
@@ -2953,14 +2069,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T013",
-        "T014"
-      ],
-      "blocks": [
-        "T053",
-        "T054"
-      ],
+      "deps": ["T013", "T014"],
+      "blocks": ["T053", "T054"],
       "desc": "Implement validation policy and the profile selection algorithm from \u00a79.5.",
       "goal": "Determine which validation checks are required at each stage transition.",
       "in_scope": [
@@ -2970,13 +2080,8 @@
         "Default profiles: default-dev and merge-gate",
         "Missing profile error handling"
       ],
-      "out_scope": [
-        "Validation execution (T055)",
-        "Custom profiles via UI"
-      ],
-      "context": [
-        "docs/prd/009-policy-and-enforcement-spec.md"
-      ],
+      "out_scope": ["Validation execution (T055)", "Custom profiles via UI"],
+      "context": ["docs/prd/009-policy-and-enforcement-spec.md"],
       "criteria": [
         "Profile selection follows \u00a79.5.3 precedence exactly",
         "Default profiles match spec",
@@ -2995,14 +2100,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T013",
-        "T014"
-      ],
-      "blocks": [
-        "T033",
-        "T053"
-      ],
+      "deps": ["T013", "T014"],
+      "blocks": ["T033", "T053"],
       "desc": "Implement retry policy and escalation policy evaluation from \u00a79.6 and \u00a79.7. Determine whether a failed task should retry, escalate, or fail permanently.",
       "goal": "Automate failure recovery decisions based on configurable thresholds.",
       "in_scope": [
@@ -3013,13 +2112,8 @@
         "Backoff calculation (exponential with max)",
         "Default V1 policies"
       ],
-      "out_scope": [
-        "Actual retry execution (T033)",
-        "Escalation UI (T103)"
-      ],
-      "context": [
-        "docs/prd/009-policy-and-enforcement-spec.md"
-      ],
+      "out_scope": ["Actual retry execution (T033)", "Escalation UI (T103)"],
+      "context": ["docs/prd/009-policy-and-enforcement-spec.md"],
       "criteria": [
         "Retry eligibility determined correctly",
         "Backoff calculated with exponential formula and cap",
@@ -3038,13 +2132,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T013",
-        "T014"
-      ],
-      "blocks": [
-        "T053"
-      ],
+      "deps": ["T013", "T014"],
+      "blocks": ["T053"],
       "desc": "Implement the 8-layer hierarchical configuration resolution from \u00a79.12: system defaults through operator emergency override.",
       "goal": "Enable flexible configuration where any level can override lower-level defaults.",
       "in_scope": [
@@ -3053,10 +2142,7 @@
         "Each resolved value records which layer supplied it",
         "Config loading from code defaults and DB"
       ],
-      "out_scope": [
-        "UI config editor (T099)",
-        "Hot-reload of config changes"
-      ],
+      "out_scope": ["UI config editor (T099)", "Hot-reload of config changes"],
       "context": [
         "docs/prd/009-policy-and-enforcement-spec.md",
         "docs/prd/007-technical-architecture.md"
@@ -3079,17 +2165,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T048",
-        "T049",
-        "T050",
-        "T051",
-        "T052"
-      ],
-      "blocks": [
-        "T040",
-        "T045"
-      ],
+      "deps": ["T048", "T049", "T050", "T051", "T052"],
+      "blocks": ["T040", "T045"],
       "desc": "Implement the generation and persistence of effective policy snapshots that capture the resolved configuration for each worker run.",
       "goal": "Ensure every worker run has an immutable, reproducible policy snapshot.",
       "in_scope": [
@@ -3098,13 +2175,8 @@
         "Persist snapshot as artifact",
         "Snapshot is immutable for life of run"
       ],
-      "out_scope": [
-        "Snapshot comparison tools",
-        "Policy drift detection"
-      ],
-      "context": [
-        "docs/prd/009-policy-and-enforcement-spec.md"
-      ],
+      "out_scope": ["Snapshot comparison tools", "Policy drift detection"],
+      "context": ["docs/prd/009-policy-and-enforcement-spec.md"],
       "criteria": [
         "Snapshot includes all policy sections",
         "Snapshot validates against schema",
@@ -3123,13 +2195,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T050"
-      ],
-      "blocks": [
-        "T055",
-        "T057"
-      ],
+      "deps": ["T050"],
+      "blocks": ["T055", "T057"],
       "desc": "Create the validation runner abstraction that manages validation profiles, selects checks, and orchestrates their execution.",
       "goal": "Provide a single entry point for running validation checks against any validation profile.",
       "in_scope": [
@@ -3139,13 +2206,8 @@
         "Aggregate result computation",
         "Skipped check handling per fail_on_skipped_required_check"
       ],
-      "out_scope": [
-        "Actual command execution (T055)",
-        "Parallel check execution"
-      ],
-      "context": [
-        "docs/prd/009-policy-and-enforcement-spec.md"
-      ],
+      "out_scope": ["Actual command execution (T055)", "Parallel check execution"],
+      "context": ["docs/prd/009-policy-and-enforcement-spec.md"],
       "criteria": [
         "Validation runs all checks in profile",
         "Required check failure makes overall result fail",
@@ -3164,13 +2226,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T054",
-        "T047"
-      ],
-      "blocks": [
-        "T056"
-      ],
+      "deps": ["T054", "T047"],
+      "blocks": ["T056"],
       "desc": "Implement the actual command execution for validation checks (test, lint, build, typecheck, security scan) within a workspace, using the policy-aware command wrapper.",
       "goal": "Execute validation commands and capture their results in a structured format.",
       "in_scope": [
@@ -3207,13 +2264,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T023",
-        "T055"
-      ],
-      "blocks": [
-        "T057"
-      ],
+      "deps": ["T023", "T055"],
+      "blocks": ["T057"],
       "desc": "After validation checks complete, emit a schema-valid ValidationResultPacket and persist it as an artifact.",
       "goal": "Produce machine-readable validation results for the orchestrator and audit trail.",
       "in_scope": [
@@ -3222,12 +2274,8 @@
         "Persist packet as artifact",
         "Include run_scope in packet"
       ],
-      "out_scope": [
-        "Validation result interpretation by orchestrator"
-      ],
-      "context": [
-        "docs/prd/008-packet-and-schema-spec.md"
-      ],
+      "out_scope": ["Validation result interpretation by orchestrator"],
+      "context": ["docs/prd/008-packet-and-schema-spec.md"],
       "criteria": [
         "Emitted packet validates against schema",
         "All check results included",
@@ -3246,14 +2294,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T054",
-        "T056",
-        "T017"
-      ],
-      "blocks": [
-        "T107"
-      ],
+      "deps": ["T054", "T056", "T017"],
+      "blocks": ["T107"],
       "desc": "Integrate validation gates into the state transition service. Block transitions when required validation checks have not passed.",
       "goal": "Enforce quality gates at every stage transition that requires validation.",
       "in_scope": [
@@ -3262,13 +2304,8 @@
         "POST_MERGE_VALIDATION \u2192 DONE requires merge-gate checks pass",
         "Failed required validations block transition with validation_result_packet"
       ],
-      "out_scope": [
-        "APPROVED \u2192 QUEUED_FOR_MERGE does NOT re-validate (per spec)"
-      ],
-      "context": [
-        "docs/prd/002-data-model.md",
-        "docs/prd/009-policy-and-enforcement-spec.md"
-      ],
+      "out_scope": ["APPROVED \u2192 QUEUED_FOR_MERGE does NOT re-validate (per spec)"],
+      "context": ["docs/prd/002-data-model.md", "docs/prd/009-policy-and-enforcement-spec.md"],
       "criteria": [
         "Gated transitions blocked without passing validation",
         "Correct profile required at each gate",
@@ -3287,15 +2324,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T011",
-        "T014",
-        "T017"
-      ],
-      "blocks": [
-        "T059",
-        "T060"
-      ],
+      "deps": ["T011", "T014", "T017"],
+      "blocks": ["T059", "T060"],
       "desc": "Build the Review Router that determines which specialist reviewers should review a task based on changed files, tags, risk level, and repository settings.",
       "goal": "Automatically route reviews to the right specialists based on deterministic rules.",
       "in_scope": [
@@ -3305,10 +2335,7 @@
         "Review routing rule configuration (JSON structure from \u00a710.6.3)",
         "Routing rationale output"
       ],
-      "out_scope": [
-        "AI-suggested reviewers (optional enhancement)",
-        "Custom review rubrics"
-      ],
+      "out_scope": ["AI-suggested reviewers (optional enhancement)", "Custom review rubrics"],
       "context": [
         "docs/prd/010-integration-contracts.md",
         "docs/prd/009-policy-and-enforcement-spec.md"
@@ -3331,13 +2358,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T026",
-        "T058"
-      ],
-      "blocks": [
-        "T060"
-      ],
+      "deps": ["T026", "T058"],
+      "blocks": ["T060"],
       "desc": "After review routing, create reviewer_dispatch jobs for each specialist reviewer, all sharing the same job_group_id for coordination.",
       "goal": "Fan out review work to specialist reviewers in parallel via the job queue.",
       "in_scope": [
@@ -3347,14 +2369,8 @@
         "Task transition DEV_COMPLETE \u2192 IN_REVIEW",
         "TaskPacket assembly for reviewer role"
       ],
-      "out_scope": [
-        "Lead reviewer dispatch (T060)",
-        "Reviewer execution"
-      ],
-      "context": [
-        "docs/prd/002-data-model.md",
-        "docs/prd/010-integration-contracts.md"
-      ],
+      "out_scope": ["Lead reviewer dispatch (T060)", "Reviewer execution"],
+      "context": ["docs/prd/002-data-model.md", "docs/prd/010-integration-contracts.md"],
       "criteria": [
         "ReviewCycle created with correct reviewers",
         "One job per specialist reviewer with shared group ID",
@@ -3373,13 +2389,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T026",
-        "T059"
-      ],
-      "blocks": [
-        "T061"
-      ],
+      "deps": ["T026", "T059"],
+      "blocks": ["T061"],
       "desc": "Create the lead_review_consolidation job that depends on all specialist reviewer jobs, so it only executes after all specialists have completed.",
       "goal": "Ensure lead reviewer sees all specialist reviews before making a decision.",
       "in_scope": [
@@ -3387,14 +2398,8 @@
         "Job only claimable when all dependencies are terminal",
         "Lead reviewer TaskPacket includes all specialist review packets"
       ],
-      "out_scope": [
-        "Lead reviewer execution logic",
-        "Lead consolidation rules (T061)"
-      ],
-      "context": [
-        "docs/prd/002-data-model.md",
-        "docs/prd/007-technical-architecture.md"
-      ],
+      "out_scope": ["Lead reviewer execution logic", "Lead consolidation rules (T061)"],
+      "context": ["docs/prd/002-data-model.md", "docs/prd/007-technical-architecture.md"],
       "criteria": [
         "Lead review job created with correct dependencies",
         "Job not claimable until all specialist jobs complete",
@@ -3413,14 +2418,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T022",
-        "T060",
-        "T017"
-      ],
-      "blocks": [
-        "T062"
-      ],
+      "deps": ["T022", "T060", "T017"],
+      "blocks": ["T062"],
       "desc": "Process the LeadReviewDecisionPacket and apply the decision: approved, approved_with_follow_up, changes_requested, or escalated.",
       "goal": "Translate lead reviewer decisions into task state transitions and follow-up actions.",
       "in_scope": [
@@ -3433,14 +2432,8 @@
         "Persist LeadReviewDecision record",
         "Close ReviewCycle with appropriate status"
       ],
-      "out_scope": [
-        "Rework loop (T062)",
-        "Follow-up task creation details"
-      ],
-      "context": [
-        "docs/prd/008-packet-and-schema-spec.md",
-        "docs/prd/002-data-model.md"
-      ],
+      "out_scope": ["Rework loop (T062)", "Follow-up task creation details"],
+      "context": ["docs/prd/008-packet-and-schema-spec.md", "docs/prd/002-data-model.md"],
       "criteria": [
         "All four decision types handled correctly",
         "Task state transitions match decision",
@@ -3460,9 +2453,7 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T061"
-      ],
+      "deps": ["T061"],
       "blocks": [],
       "desc": "Implement the CHANGES_REQUESTED \u2192 ASSIGNED rework loop. When rework is scheduled, the new TaskPacket includes rejection context with blocking issues and lead decision summary.",
       "goal": "Give reworking developers clear context about what needs to change.",
@@ -3472,13 +2463,8 @@
         "Task re-enters scheduling flow (CHANGES_REQUESTED \u2192 ASSIGNED via scheduler)",
         "RejectionContext from \u00a78.12"
       ],
-      "out_scope": [
-        "Automatic rework execution",
-        "Partial rework (redo only failing parts)"
-      ],
-      "context": [
-        "docs/prd/008-packet-and-schema-spec.md"
-      ],
+      "out_scope": ["Automatic rework execution", "Partial rework (redo only failing parts)"],
+      "context": ["docs/prd/008-packet-and-schema-spec.md"],
       "criteria": [
         "RejectionContext correctly assembled from review decision",
         "Next TaskPacket includes rejection_context",
@@ -3497,16 +2483,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T012",
-        "T014",
-        "T017"
-      ],
-      "blocks": [
-        "T064",
-        "T065",
-        "T066"
-      ],
+      "deps": ["T012", "T014", "T017"],
+      "blocks": ["T064", "T065", "T066"],
       "desc": "Implement the merge queue that accepts approved tasks, maintains ordering per \u00a710.10, and dispatches merge work.",
       "goal": "Serialize merge operations to prevent integration conflicts.",
       "in_scope": [
@@ -3516,13 +2494,8 @@
         "Position recalculation",
         "Task transition APPROVED \u2192 QUEUED_FOR_MERGE"
       ],
-      "out_scope": [
-        "Merge execution (T064)",
-        "Batching (future)"
-      ],
-      "context": [
-        "docs/prd/010-integration-contracts.md"
-      ],
+      "out_scope": ["Merge execution (T064)", "Batching (future)"],
+      "context": ["docs/prd/010-integration-contracts.md"],
       "criteria": [
         "Items enqueued with correct ordering",
         "dequeueNext returns correct next item",
@@ -3541,16 +2514,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T023",
-        "T063",
-        "T039"
-      ],
-      "blocks": [
-        "T065",
-        "T066",
-        "T067"
-      ],
+      "deps": ["T023", "T063", "T039"],
+      "blocks": ["T065", "T066", "T067"],
       "desc": "Implement the rebase-and-merge strategy: rebase the task branch on latest main, run merge-gate validation, and merge if successful.",
       "goal": "Execute the default merge strategy reliably and capture results.",
       "in_scope": [
@@ -3566,9 +2531,7 @@
         "Merge assist AI",
         "Post-merge failure handling (T067)"
       ],
-      "context": [
-        "docs/prd/010-integration-contracts.md"
-      ],
+      "context": ["docs/prd/010-integration-contracts.md"],
       "criteria": [
         "Rebase executes on latest target branch",
         "Validation runs after successful rebase",
@@ -3587,9 +2550,7 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T064"
-      ],
+      "deps": ["T064"],
       "blocks": [],
       "desc": "Add squash and merge-commit strategies alongside the default rebase-and-merge.",
       "goal": "Support all three merge strategies specified in the architecture.",
@@ -3599,13 +2560,8 @@
         "Strategy selection from effective policy",
         "MergePacket records chosen strategy"
       ],
-      "out_scope": [
-        "Strategy recommendation logic",
-        "Custom merge messages"
-      ],
-      "context": [
-        "docs/prd/010-integration-contracts.md"
-      ],
+      "out_scope": ["Strategy recommendation logic", "Custom merge messages"],
+      "context": ["docs/prd/010-integration-contracts.md"],
       "criteria": [
         "All three strategies execute correctly",
         "Strategy selection follows policy precedence",
@@ -3623,12 +2579,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T064"
-      ],
-      "blocks": [
-        "T067"
-      ],
+      "deps": ["T064"],
+      "blocks": ["T067"],
       "desc": "Implement the conflict classification logic from \u00a710.10.2 that determines whether a merge conflict is reworkable or non-reworkable.",
       "goal": "Automatically classify merge failures to determine the correct recovery action.",
       "in_scope": [
@@ -3638,10 +2590,7 @@
         "Reworkable \u2192 CHANGES_REQUESTED, non-reworkable \u2192 FAILED",
         "Configurable thresholds from merge_policy"
       ],
-      "out_scope": [
-        "Merge assist AI agent",
-        "Automatic conflict resolution"
-      ],
+      "out_scope": ["Merge assist AI agent", "Automatic conflict resolution"],
       "context": [
         "docs/prd/010-integration-contracts.md",
         "docs/prd/009-policy-and-enforcement-spec.md"
@@ -3664,14 +2613,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T056",
-        "T064",
-        "T066"
-      ],
-      "blocks": [
-        "T068"
-      ],
+      "deps": ["T056", "T064", "T066"],
+      "blocks": ["T068"],
       "desc": "Implement post-merge validation triggering and the severity-based failure policy from \u00a79.11 for handling post-merge failures.",
       "goal": "Detect and respond to regressions after merge.",
       "in_scope": [
@@ -3682,13 +2625,8 @@
         "Merge queue pause on critical failures",
         "Default post-merge failure policy from \u00a79.11.4"
       ],
-      "out_scope": [
-        "Post-merge analysis AI agent (optional)",
-        "Automatic revert execution"
-      ],
-      "context": [
-        "docs/prd/009-policy-and-enforcement-spec.md"
-      ],
+      "out_scope": ["Post-merge analysis AI agent (optional)", "Automatic revert execution"],
+      "context": ["docs/prd/009-policy-and-enforcement-spec.md"],
       "criteria": [
         "Post-merge validation runs after merge",
         "Success \u2192 DONE transition",
@@ -3709,10 +2647,7 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T067",
-        "T061"
-      ],
+      "deps": ["T067", "T061"],
       "blocks": [],
       "desc": "Implement creation of follow-up tasks from approved_with_follow_up decisions, post-merge revert tasks, and diagnostic tasks.",
       "goal": "Automatically create follow-up work items so nothing is lost.",
@@ -3723,10 +2658,7 @@
         "Hotfix tasks from analysis agent recommendations",
         "Auto-set dependencies: follow-up depends on original task"
       ],
-      "out_scope": [
-        "Automatic priority assignment for follow-ups",
-        "Follow-up grouping"
-      ],
+      "out_scope": ["Automatic priority assignment for follow-ups", "Follow-up grouping"],
       "context": [
         "docs/prd/008-packet-and-schema-spec.md",
         "docs/prd/009-policy-and-enforcement-spec.md"
@@ -3749,15 +2681,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T004"
-      ],
-      "blocks": [
-        "T070",
-        "T071",
-        "T072",
-        "T095"
-      ],
+      "deps": ["T004"],
+      "blocks": ["T070", "T071", "T072", "T095"],
       "desc": "Implement the filesystem-based artifact storage service with the structured directory layout from \u00a77.11.",
       "goal": "Provide reliable artifact persistence that can be upgraded to object storage later.",
       "in_scope": [
@@ -3766,13 +2691,8 @@
         "storeArtifact(path, content) and storeJSON(path, object)",
         "Atomic write (write to temp, rename)"
       ],
-      "out_scope": [
-        "Content-addressable storage",
-        "Object storage backend"
-      ],
-      "context": [
-        "docs/prd/007-technical-architecture.md"
-      ],
+      "out_scope": ["Content-addressable storage", "Object storage backend"],
+      "context": ["docs/prd/007-technical-architecture.md"],
       "criteria": [
         "Artifacts stored in correct directory structure",
         "Writes are atomic (no partial files on crash)",
@@ -3791,12 +2711,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T069"
-      ],
-      "blocks": [
-        "T084"
-      ],
+      "deps": ["T069"],
+      "blocks": ["T084"],
       "desc": "Implement artifact retrieval by reference path and by entity query (all artifacts for a task, run, review cycle, etc.).",
       "goal": "Make artifacts easily retrievable for the UI, API, and internal services.",
       "in_scope": [
@@ -3805,13 +2721,8 @@
         "listRunArtifacts(repoId, taskId, runId) -> artifact list",
         "JSON artifact deserialization with schema version handling"
       ],
-      "out_scope": [
-        "Artifact search/indexing",
-        "Artifact streaming"
-      ],
-      "context": [
-        "docs/prd/007-technical-architecture.md"
-      ],
+      "out_scope": ["Artifact search/indexing", "Artifact streaming"],
+      "context": ["docs/prd/007-technical-architecture.md"],
       "criteria": [
         "Artifacts retrievable by ref path",
         "Listing returns correct artifact tree",
@@ -3830,10 +2741,7 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T069",
-        "T034"
-      ],
+      "deps": ["T069", "T034"],
       "blocks": [],
       "desc": "Generate summarization packets that condense failed-run artifacts into bounded context for the next retry attempt.",
       "goal": "Give retry workers useful context about prior failures without overwhelming them with full logs.",
@@ -3843,13 +2751,8 @@
         "Include in TaskPacket.context.prior_partial_work",
         "Reference full artifacts for detailed inspection"
       ],
-      "out_scope": [
-        "AI-generated summaries (use structured extraction)",
-        "Cross-run analysis"
-      ],
-      "context": [
-        "docs/prd/007-technical-architecture.md"
-      ],
+      "out_scope": ["AI-generated summaries (use structured extraction)", "Cross-run analysis"],
+      "context": ["docs/prd/007-technical-architecture.md"],
       "criteria": [
         "Summary captures key failure information",
         "Summary is bounded in size",
@@ -3867,10 +2770,7 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T069",
-        "T034"
-      ],
+      "deps": ["T069", "T034"],
       "blocks": [],
       "desc": "When a lease is reclaimed, capture the workspace state as partial artifacts for crash recovery context.",
       "goal": "Preserve whatever work was done before a crash for potential use in retries.",
@@ -3880,14 +2780,8 @@
         "Store as partial_result_artifact_refs",
         "Handle missing/corrupted workspace gracefully"
       ],
-      "out_scope": [
-        "Full workspace archiving",
-        "Binary artifact capture"
-      ],
-      "context": [
-        "docs/prd/002-data-model.md",
-        "docs/prd/009-policy-and-enforcement-spec.md"
-      ],
+      "out_scope": ["Full workspace archiving", "Binary artifact capture"],
+      "context": ["docs/prd/002-data-model.md", "docs/prd/009-policy-and-enforcement-spec.md"],
       "criteria": [
         "Partial artifacts captured when workspace is available",
         "Missing workspace handled gracefully",
@@ -3905,15 +2799,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T013",
-        "T014",
-        "T018"
-      ],
-      "blocks": [
-        "T074",
-        "T100"
-      ],
+      "deps": ["T013", "T014", "T018"],
+      "blocks": ["T074", "T100"],
       "desc": "Ensure every state transition creates an AuditEvent record atomically within the same transaction. Record entity type, old/new state, actor, and metadata.",
       "goal": "Maintain a complete, tamper-evident audit trail of all state changes.",
       "in_scope": [
@@ -3922,13 +2809,8 @@
         "Metadata capturing transition context (trigger reason, policy applied, etc.)",
         "Actor types: system, scheduler, worker, operator, policy"
       ],
-      "out_scope": [
-        "Audit query API (T074)",
-        "Audit retention policy"
-      ],
-      "context": [
-        "docs/prd/002-data-model.md"
-      ],
+      "out_scope": ["Audit query API (T074)", "Audit retention policy"],
+      "context": ["docs/prd/002-data-model.md"],
       "criteria": [
         "Every state transition has an audit event",
         "Audit events have correct actor and metadata",
@@ -3947,13 +2829,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T073"
-      ],
-      "blocks": [
-        "T085",
-        "T100"
-      ],
+      "deps": ["T073"],
+      "blocks": ["T085", "T100"],
       "desc": "Build the query service for audit events supporting filtering by entity, time range, actor, and event type.",
       "goal": "Enable operators to reconstruct what happened for any task or entity.",
       "in_scope": [
@@ -3964,13 +2841,8 @@
         "Pagination support",
         "Ordering by created_at"
       ],
-      "out_scope": [
-        "Full-text search on metadata",
-        "Audit analytics"
-      ],
-      "context": [
-        "docs/prd/002-data-model.md"
-      ],
+      "out_scope": ["Full-text search on metadata", "Audit analytics"],
+      "context": ["docs/prd/002-data-model.md"],
       "criteria": [
         "Entity timeline returns all events in order",
         "Filters work correctly in combination",
@@ -3989,12 +2861,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T004"
-      ],
-      "blocks": [
-        "T076"
-      ],
+      "deps": ["T004"],
+      "blocks": ["T076"],
       "desc": "Set up structured JSON logging with correlation fields (taskId, runId, workerId, reviewCycleId, etc.) throughout the application.",
       "goal": "Enable log-based debugging and tracing across all system components.",
       "in_scope": [
@@ -4004,13 +2872,8 @@
         "Log levels per module",
         "Log output to stdout (containerization-friendly)"
       ],
-      "out_scope": [
-        "Log aggregation service",
-        "Log-to-trace correlation"
-      ],
-      "context": [
-        "docs/prd/007-technical-architecture.md"
-      ],
+      "out_scope": ["Log aggregation service", "Log-to-trace correlation"],
+      "context": ["docs/prd/007-technical-architecture.md"],
       "criteria": [
         "All logs are structured JSON",
         "Correlation fields present when available",
@@ -4029,12 +2892,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T075"
-      ],
-      "blocks": [
-        "T077"
-      ],
+      "deps": ["T075"],
+      "blocks": ["T077"],
       "desc": "Set up the OpenTelemetry SDK with TracerProvider, span exporters, and context propagation for the control plane service.",
       "goal": "Establish the tracing foundation for observability across orchestration steps.",
       "in_scope": [
@@ -4045,11 +2904,7 @@
         "W3C trace context propagation",
         "Automatic HTTP instrumentation"
       ],
-      "out_scope": [
-        "Custom spans (T077)",
-        "Metrics (T078)",
-        "Grafana/Jaeger setup"
-      ],
+      "out_scope": ["Custom spans (T077)", "Metrics (T078)", "Grafana/Jaeger setup"],
       "context": [
         "docs/prd/010-integration-contracts.md",
         "docs/prd/007-technical-architecture.md"
@@ -4072,9 +2927,7 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T076"
-      ],
+      "deps": ["T076"],
       "blocks": [],
       "desc": "Add OpenTelemetry spans for the starter span tree from \u00a710.13.2: task.assign, task.transition, worker.prepare, worker.run, validation.run, review.route, review.lead_decision, merge.prepare, merge.execute.",
       "goal": "Enable operators to trace a task's journey through all orchestration steps.",
@@ -4084,13 +2937,8 @@
         "Parent-child span relationships matching \u00a710.13.5 example",
         "Span status on success/failure"
       ],
-      "out_scope": [
-        "Database operation spans",
-        "Detailed sub-spans"
-      ],
-      "context": [
-        "docs/prd/010-integration-contracts.md"
-      ],
+      "out_scope": ["Database operation spans", "Detailed sub-spans"],
+      "context": ["docs/prd/010-integration-contracts.md"],
       "criteria": [
         "All starter spans created at correct points",
         "Spans include required attributes",
@@ -4109,12 +2957,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T080"
-      ],
-      "blocks": [
-        "T079"
-      ],
+      "deps": ["T080"],
+      "blocks": ["T079"],
       "desc": "Create a /metrics endpoint that exposes Prometheus-compatible metrics.",
       "goal": "Enable metrics scraping for monitoring and alerting.",
       "in_scope": [
@@ -4123,13 +2967,8 @@
         "Default metrics (process, nodejs)",
         "Custom metric registry"
       ],
-      "out_scope": [
-        "Custom business metrics (T079)",
-        "Grafana dashboards"
-      ],
-      "context": [
-        "docs/prd/010-integration-contracts.md"
-      ],
+      "out_scope": ["Custom business metrics (T079)", "Grafana dashboards"],
+      "context": ["docs/prd/010-integration-contracts.md"],
       "criteria": [
         "/metrics endpoint returns valid Prometheus format",
         "Default Node.js metrics included",
@@ -4147,9 +2986,7 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T078"
-      ],
+      "deps": ["T078"],
       "blocks": [],
       "desc": "Implement the starter metrics from \u00a710.13.3: task transitions, worker runs, heartbeat timeouts, review cycles, merge attempts, validation runs, queue depth.",
       "goal": "Provide operators with key operational metrics from day one.",
@@ -4159,13 +2996,8 @@
         "Low-cardinality labels from \u00a710.13.4",
         "Metric emission at correct instrumentation points"
       ],
-      "out_scope": [
-        "Custom dashboards",
-        "Alerting rules"
-      ],
-      "context": [
-        "docs/prd/010-integration-contracts.md"
-      ],
+      "out_scope": ["Custom dashboards", "Alerting rules"],
+      "context": ["docs/prd/010-integration-contracts.md"],
       "criteria": [
         "All starter metrics from \u00a710.13.3 implemented",
         "Correct metric types used",
@@ -4184,19 +3016,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T002",
-        "T006"
-      ],
-      "blocks": [
-        "T078",
-        "T081",
-        "T082",
-        "T083",
-        "T084",
-        "T085",
-        "T086"
-      ],
+      "deps": ["T002", "T006"],
+      "blocks": ["T078", "T081", "T082", "T083", "T084", "T085", "T086"],
       "desc": "Bootstrap the NestJS application in apps/control-plane with module structure matching the domain modules, global error handling, request validation, and OpenAPI documentation.",
       "goal": "Establish the API framework so endpoint implementation can proceed in parallel.",
       "in_scope": [
@@ -4212,9 +3033,7 @@
         "Specific CRUD endpoints (T081-T085)",
         "Authentication (deferred for V1 local mode)"
       ],
-      "context": [
-        "docs/prd/007-technical-architecture.md"
-      ],
+      "context": ["docs/prd/007-technical-architecture.md"],
       "criteria": [
         "NestJS app starts successfully",
         "GET /health returns 200",
@@ -4234,14 +3053,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T008",
-        "T014",
-        "T080"
-      ],
-      "blocks": [
-        "T089"
-      ],
+      "deps": ["T008", "T014", "T080"],
+      "blocks": ["T089"],
       "desc": "Create REST endpoints for Project and Repository CRUD operations.",
       "goal": "Enable project and repository management through the API.",
       "in_scope": [
@@ -4251,14 +3064,8 @@
         "Request/response DTOs with validation",
         "Pagination for list endpoints"
       ],
-      "out_scope": [
-        "Repository cloning/sync operations",
-        "Credential management"
-      ],
-      "context": [
-        "docs/prd/002-data-model.md",
-        "docs/prd/007-technical-architecture.md"
-      ],
+      "out_scope": ["Repository cloning/sync operations", "Credential management"],
+      "context": ["docs/prd/002-data-model.md", "docs/prd/007-technical-architecture.md"],
       "criteria": [
         "All CRUD operations work for Projects and Repositories",
         "Validation rejects invalid input",
@@ -4277,14 +3084,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T009",
-        "T014",
-        "T080"
-      ],
-      "blocks": [
-        "T089"
-      ],
+      "deps": ["T009", "T014", "T080"],
+      "blocks": ["T089"],
       "desc": "Create REST endpoints for Task CRUD, status queries, and filtering.",
       "goal": "Enable task management and visibility through the API.",
       "in_scope": [
@@ -4295,13 +3096,8 @@
         "Filtering: by status, repository, priority, task_type",
         "Include dependency information in detail response"
       ],
-      "out_scope": [
-        "Operator state transitions (T101)",
-        "Task import from external sources"
-      ],
-      "context": [
-        "docs/prd/002-data-model.md"
-      ],
+      "out_scope": ["Operator state transitions (T101)", "Task import from external sources"],
+      "context": ["docs/prd/002-data-model.md"],
       "criteria": [
         "All Task CRUD operations work",
         "Filtering works for all supported fields",
@@ -4320,14 +3116,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T010",
-        "T014",
-        "T080"
-      ],
-      "blocks": [
-        "T089"
-      ],
+      "deps": ["T010", "T014", "T080"],
+      "blocks": ["T089"],
       "desc": "Create REST endpoints for WorkerPool and AgentProfile management.",
       "goal": "Enable pool configuration through the API.",
       "in_scope": [
@@ -4337,14 +3127,8 @@
         "Pool enable/disable",
         "Concurrency limit management"
       ],
-      "out_scope": [
-        "Worker process management",
-        "Pool performance metrics"
-      ],
-      "context": [
-        "docs/prd/002-data-model.md",
-        "docs/prd/006-additional-refinements.md"
-      ],
+      "out_scope": ["Worker process management", "Pool performance metrics"],
+      "context": ["docs/prd/002-data-model.md", "docs/prd/006-additional-refinements.md"],
       "criteria": [
         "Pool CRUD works correctly",
         "Profile CRUD linked to pool",
@@ -4363,13 +3147,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T070",
-        "T080"
-      ],
-      "blocks": [
-        "T089"
-      ],
+      "deps": ["T070", "T080"],
+      "blocks": ["T089"],
       "desc": "Create REST endpoints for retrieving artifacts, packets, and review decisions.",
       "goal": "Enable the UI to display task artifacts, review details, and merge results.",
       "in_scope": [
@@ -4379,13 +3158,8 @@
         "GET /api/tasks/:id/reviews/:cycleId/packets",
         "GET /api/tasks/:id/merge (merge details)"
       ],
-      "out_scope": [
-        "Artifact upload",
-        "Artifact deletion"
-      ],
-      "context": [
-        "docs/prd/007-technical-architecture.md"
-      ],
+      "out_scope": ["Artifact upload", "Artifact deletion"],
+      "context": ["docs/prd/007-technical-architecture.md"],
       "criteria": [
         "Artifact tree correctly organized",
         "Packets returned as parsed JSON",
@@ -4404,14 +3178,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T074",
-        "T052",
-        "T080"
-      ],
-      "blocks": [
-        "T089"
-      ],
+      "deps": ["T074", "T052", "T080"],
+      "blocks": ["T089"],
       "desc": "Create REST endpoints for audit event queries, policy management, and configuration inspection.",
       "goal": "Expose audit trail, policy configuration, and system config through the API.",
       "in_scope": [
@@ -4420,13 +3188,8 @@
         "GET/PUT /api/policies/:id",
         "GET /api/config/effective?context="
       ],
-      "out_scope": [
-        "Policy versioning UI",
-        "Config import/export"
-      ],
-      "context": [
-        "docs/prd/002-data-model.md"
-      ],
+      "out_scope": ["Policy versioning UI", "Config import/export"],
+      "context": ["docs/prd/002-data-model.md"],
       "criteria": [
         "Audit queries work with all filter combinations",
         "Task timeline shows complete history",
@@ -4445,14 +3208,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T080"
-      ],
-      "blocks": [
-        "T087",
-        "T088",
-        "T091"
-      ],
+      "deps": ["T080"],
+      "blocks": ["T087", "T088", "T091"],
       "desc": "Create a WebSocket gateway using NestJS @WebSocketGateway for real-time event delivery to UI clients.",
       "goal": "Enable live UI updates without polling.",
       "in_scope": [
@@ -4462,14 +3219,8 @@
         "Event serialization",
         "Connection auth (simple token for V1 local mode)"
       ],
-      "out_scope": [
-        "SSE fallback (optional)",
-        "Event persistence",
-        "External pub/sub"
-      ],
-      "context": [
-        "docs/prd/007-technical-architecture.md"
-      ],
+      "out_scope": ["SSE fallback (optional)", "Event persistence", "External pub/sub"],
+      "context": ["docs/prd/007-technical-architecture.md"],
       "criteria": [
         "WebSocket connections accepted",
         "Events delivered to connected clients",
@@ -4488,10 +3239,7 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T086",
-        "T017"
-      ],
+      "deps": ["T086", "T017"],
       "blocks": [],
       "desc": "Broadcast task state change events via WebSocket when the transition service commits transitions.",
       "goal": "Keep the UI in sync with task state changes in real time.",
@@ -4500,13 +3248,8 @@
         "Broadcast task state changes to /tasks namespace",
         "Event payload: taskId, oldState, newState, timestamp, actor"
       ],
-      "out_scope": [
-        "Worker log streaming",
-        "Detailed packet change events"
-      ],
-      "context": [
-        "docs/prd/007-technical-architecture.md"
-      ],
+      "out_scope": ["Worker log streaming", "Detailed packet change events"],
+      "context": ["docs/prd/007-technical-architecture.md"],
       "criteria": [
         "State changes broadcast within milliseconds of commit",
         "Events include all required fields",
@@ -4524,9 +3267,7 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T086"
-      ],
+      "deps": ["T086"],
       "blocks": [],
       "desc": "Broadcast worker pool status updates and merge queue changes via WebSocket.",
       "goal": "Keep the UI pool and queue views updated in real time.",
@@ -4536,13 +3277,8 @@
         "Merge queue position changes",
         "Job queue depth updates"
       ],
-      "out_scope": [
-        "Log streaming",
-        "Detailed worker telemetry"
-      ],
-      "context": [
-        "docs/prd/007-technical-architecture.md"
-      ],
+      "out_scope": ["Log streaming", "Detailed worker telemetry"],
+      "context": ["docs/prd/007-technical-architecture.md"],
       "criteria": [
         "Worker status changes broadcast",
         "Queue changes broadcast",
@@ -4561,15 +3297,8 @@
       "owner": "frontend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T001",
-        "T081"
-      ],
-      "blocks": [
-        "T090",
-        "T091",
-        "T092"
-      ],
+      "deps": ["T001", "T081"],
+      "blocks": ["T090", "T091", "T092"],
       "desc": "Bootstrap the React SPA in apps/web-ui with Vite, TypeScript, Tailwind CSS, and shadcn/ui component library.",
       "goal": "Establish the frontend application foundation.",
       "in_scope": [
@@ -4580,14 +3309,8 @@
         "React Router for navigation",
         "Environment variable handling"
       ],
-      "out_scope": [
-        "API integration (T090)",
-        "WebSocket client (T091)",
-        "Feature views (E020)"
-      ],
-      "context": [
-        "docs/prd/007-technical-architecture.md"
-      ],
+      "out_scope": ["API integration (T090)", "WebSocket client (T091)", "Feature views (E020)"],
+      "context": ["docs/prd/007-technical-architecture.md"],
       "criteria": [
         "App builds and runs via pnpm dev",
         "Tailwind classes apply correctly",
@@ -4606,19 +3329,8 @@
       "owner": "frontend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T089"
-      ],
-      "blocks": [
-        "T093",
-        "T094",
-        "T095",
-        "T096",
-        "T097",
-        "T098",
-        "T099",
-        "T100"
-      ],
+      "deps": ["T089"],
+      "blocks": ["T093", "T094", "T095", "T096", "T097", "T098", "T099", "T100"],
       "desc": "Create the API client layer using TanStack Query for data fetching, caching, and mutation with typed API functions.",
       "goal": "Provide a robust data fetching layer for all UI views.",
       "in_scope": [
@@ -4629,13 +3341,8 @@
         "Error handling and retry logic",
         "Loading and error states"
       ],
-      "out_scope": [
-        "WebSocket integration (T091)",
-        "Specific view implementations"
-      ],
-      "context": [
-        "docs/prd/007-technical-architecture.md"
-      ],
+      "out_scope": ["WebSocket integration (T091)", "Specific view implementations"],
+      "context": ["docs/prd/007-technical-architecture.md"],
       "criteria": [
         "TanStack Query provider wraps the app",
         "All major entity queries have hooks",
@@ -4654,14 +3361,8 @@
       "owner": "frontend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T086",
-        "T089"
-      ],
-      "blocks": [
-        "T093",
-        "T094"
-      ],
+      "deps": ["T086", "T089"],
+      "blocks": ["T093", "T094"],
       "desc": "Create a WebSocket client that connects to the backend event gateway and invalidates TanStack Query caches on real-time events.",
       "goal": "Make the UI reactive to backend state changes without manual refresh.",
       "in_scope": [
@@ -4670,13 +3371,8 @@
         "TanStack Query cache invalidation on events",
         "Connection status indicator"
       ],
-      "out_scope": [
-        "Event history/replay",
-        "Offline support"
-      ],
-      "context": [
-        "docs/prd/007-technical-architecture.md"
-      ],
+      "out_scope": ["Event history/replay", "Offline support"],
+      "context": ["docs/prd/007-technical-architecture.md"],
       "criteria": [
         "WebSocket connects on app start",
         "Events trigger cache invalidation",
@@ -4695,19 +3391,8 @@
       "owner": "frontend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T089"
-      ],
-      "blocks": [
-        "T093",
-        "T094",
-        "T095",
-        "T096",
-        "T097",
-        "T098",
-        "T099",
-        "T100"
-      ],
+      "deps": ["T089"],
+      "blocks": ["T093", "T094", "T095", "T096", "T097", "T098", "T099", "T100"],
       "desc": "Build the application shell with sidebar navigation, breadcrumbs, and content area layout.",
       "goal": "Provide consistent navigation and layout for all feature views.",
       "in_scope": [
@@ -4717,13 +3402,8 @@
         "Content area with responsive layout",
         "WebSocket connection indicator"
       ],
-      "out_scope": [
-        "Individual view implementations (E020)",
-        "Authentication"
-      ],
-      "context": [
-        "docs/prd/001-architecture.md"
-      ],
+      "out_scope": ["Individual view implementations (E020)", "Authentication"],
+      "context": ["docs/prd/001-architecture.md"],
       "criteria": [
         "Navigation between all views works",
         "Active route highlighted",
@@ -4742,11 +3422,7 @@
       "owner": "frontend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T090",
-        "T091",
-        "T092"
-      ],
+      "deps": ["T090", "T091", "T092"],
       "blocks": [],
       "desc": "Build the dashboard view showing system health: task state summary, queue depths, worker pool status, and recent activity.",
       "goal": "Give operators an at-a-glance view of system status.",
@@ -4758,13 +3434,8 @@
         "Live updates via WebSocket",
         "Empty state handling"
       ],
-      "out_scope": [
-        "Metrics charts (future)",
-        "Historical trends"
-      ],
-      "context": [
-        "docs/prd/001-architecture.md"
-      ],
+      "out_scope": ["Metrics charts (future)", "Historical trends"],
+      "context": ["docs/prd/001-architecture.md"],
       "criteria": [
         "Dashboard shows task counts by state",
         "Worker pool status visible",
@@ -4783,13 +3454,8 @@
       "owner": "frontend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T090",
-        "T092"
-      ],
-      "blocks": [
-        "T104"
-      ],
+      "deps": ["T090", "T092"],
+      "blocks": ["T104"],
       "desc": "Build the task board view with table display, status filtering, priority sorting, and pagination.",
       "goal": "Enable operators to browse and manage all tasks.",
       "in_scope": [
@@ -4802,13 +3468,8 @@
         "Click-through to task detail",
         "Status badges with color coding"
       ],
-      "out_scope": [
-        "Task creation form (can use API directly)",
-        "Kanban view (future)"
-      ],
-      "context": [
-        "docs/prd/001-architecture.md"
-      ],
+      "out_scope": ["Task creation form (can use API directly)", "Kanban view (future)"],
+      "context": ["docs/prd/001-architecture.md"],
       "criteria": [
         "Task table displays correctly",
         "Filtering works for all supported fields",
@@ -4828,13 +3489,8 @@
       "owner": "frontend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T090",
-        "T092"
-      ],
-      "blocks": [
-        "T104"
-      ],
+      "deps": ["T090", "T092"],
+      "blocks": ["T104"],
       "desc": "Build the task detail view showing complete task information, audit timeline, packets, and artifacts.",
       "goal": "Enable operators to inspect any task and reconstruct what happened.",
       "in_scope": [
@@ -4845,13 +3501,8 @@
         "Dependency display",
         "Current state with visual indicator"
       ],
-      "out_scope": [
-        "Operator action controls (T104)",
-        "Diff viewer"
-      ],
-      "context": [
-        "docs/prd/001-architecture.md"
-      ],
+      "out_scope": ["Operator action controls (T104)", "Diff viewer"],
+      "context": ["docs/prd/001-architecture.md"],
       "criteria": [
         "All task metadata displayed",
         "Timeline shows complete history",
@@ -4871,13 +3522,8 @@
       "owner": "frontend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T090",
-        "T092"
-      ],
-      "blocks": [
-        "T105"
-      ],
+      "deps": ["T090", "T092"],
+      "blocks": ["T105"],
       "desc": "Build the worker pool monitoring view showing pool status, active workers, and configuration.",
       "goal": "Give operators visibility into worker pool health and utilization.",
       "in_scope": [
@@ -4886,13 +3532,8 @@
         "Worker status indicators",
         "Profile list per pool"
       ],
-      "out_scope": [
-        "Pool configuration editing (T099)",
-        "Performance metrics"
-      ],
-      "context": [
-        "docs/prd/001-architecture.md"
-      ],
+      "out_scope": ["Pool configuration editing (T099)", "Performance metrics"],
+      "context": ["docs/prd/001-architecture.md"],
       "criteria": [
         "All pools displayed with correct status",
         "Active worker count accurate",
@@ -4910,10 +3551,7 @@
       "owner": "frontend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T090",
-        "T092"
-      ],
+      "deps": ["T090", "T092"],
       "blocks": [],
       "desc": "Build the review center showing tasks in review, review decisions, blocking issues, and review cycle history.",
       "goal": "Enable operators to monitor review quality and identify bottlenecks.",
@@ -4924,13 +3562,8 @@
         "Lead review decisions",
         "Review round count and escalation warnings"
       ],
-      "out_scope": [
-        "Review assignment controls",
-        "Review quality analytics"
-      ],
-      "context": [
-        "docs/prd/001-architecture.md"
-      ],
+      "out_scope": ["Review assignment controls", "Review quality analytics"],
+      "context": ["docs/prd/001-architecture.md"],
       "criteria": [
         "Tasks in review displayed correctly",
         "Review packets readable",
@@ -4949,13 +3582,8 @@
       "owner": "frontend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T090",
-        "T092"
-      ],
-      "blocks": [
-        "T105"
-      ],
+      "deps": ["T090", "T092"],
+      "blocks": ["T105"],
       "desc": "Build the merge queue view showing queued items, their position, and merge execution status.",
       "goal": "Enable operators to monitor the merge pipeline.",
       "in_scope": [
@@ -4964,13 +3592,8 @@
         "Merge result display (success, conflict, failure)",
         "Queue pause indicator for critical failures"
       ],
-      "out_scope": [
-        "Merge ordering controls (T105)",
-        "Merge history analytics"
-      ],
-      "context": [
-        "docs/prd/001-architecture.md"
-      ],
+      "out_scope": ["Merge ordering controls (T105)", "Merge history analytics"],
+      "context": ["docs/prd/001-architecture.md"],
       "criteria": [
         "Queue items in correct order",
         "Active merge visible",
@@ -4989,10 +3612,7 @@
       "owner": "frontend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T090",
-        "T092"
-      ],
+      "deps": ["T090", "T092"],
       "blocks": [],
       "desc": "Build the configuration editor for viewing and modifying pool configurations, policy sets, prompt templates, and routing rules.",
       "goal": "Enable operators to tune system behavior through the UI.",
@@ -5003,13 +3623,8 @@
         "Review routing rule display",
         "JSON editor for complex config objects"
       ],
-      "out_scope": [
-        "Config versioning/history",
-        "Config import/export"
-      ],
-      "context": [
-        "docs/prd/006-additional-refinements.md"
-      ],
+      "out_scope": ["Config versioning/history", "Config import/export"],
+      "context": ["docs/prd/006-additional-refinements.md"],
       "criteria": [
         "Configuration viewable for all config types",
         "Editable config saves correctly",
@@ -5028,11 +3643,7 @@
       "owner": "frontend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T074",
-        "T090",
-        "T092"
-      ],
+      "deps": ["T074", "T090", "T092"],
       "blocks": [],
       "desc": "Build the audit explorer for searching and browsing audit events across the system.",
       "goal": "Enable operators to investigate and reconstruct system behavior.",
@@ -5042,13 +3653,8 @@
         "Event detail expansion",
         "Quick link from task detail to task-specific audit trail"
       ],
-      "out_scope": [
-        "Audit analytics",
-        "Audit export"
-      ],
-      "context": [
-        "docs/prd/001-architecture.md"
-      ],
+      "out_scope": ["Audit analytics", "Audit export"],
+      "context": ["docs/prd/001-architecture.md"],
       "criteria": [
         "Search filters work correctly",
         "Results ordered chronologically",
@@ -5067,15 +3673,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T017",
-        "T080"
-      ],
-      "blocks": [
-        "T102",
-        "T103",
-        "T104"
-      ],
+      "deps": ["T017", "T080"],
+      "blocks": ["T102", "T103", "T104"],
       "desc": "Create API endpoints for all operator actions from \u00a76.2: pause/resume, requeue, force unblock, change priority, reassign pool, rerun reviewer, override merge order, reopen task.",
       "goal": "Give operators programmatic control over the automated workflow.",
       "in_scope": [
@@ -5084,13 +3683,8 @@
         "Action audit trail",
         "All actions from docs/prd/006-additional-refinements.md \u00a76.2"
       ],
-      "out_scope": [
-        "UI controls (T104, T105)",
-        "Bulk actions"
-      ],
-      "context": [
-        "docs/prd/006-additional-refinements.md"
-      ],
+      "out_scope": ["UI controls (T104, T105)", "Bulk actions"],
+      "context": ["docs/prd/006-additional-refinements.md"],
       "criteria": [
         "All operator actions from \u00a76.2 have endpoints",
         "Actions validate preconditions",
@@ -5109,12 +3703,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T101"
-      ],
-      "blocks": [
-        "T103"
-      ],
+      "deps": ["T101"],
+      "blocks": ["T103"],
       "desc": "Add safety guards for operator actions that ensure manual overrides respect state machine invariants and system safety constraints.",
       "goal": "Prevent operators from putting the system in an inconsistent state.",
       "in_scope": [
@@ -5124,14 +3714,8 @@
         "Validate cancel doesn't lose in-progress work without confirmation",
         "Authorization checks for sensitive actions"
       ],
-      "out_scope": [
-        "RBAC (future)",
-        "Multi-operator approval"
-      ],
-      "context": [
-        "docs/prd/006-additional-refinements.md",
-        "docs/prd/002-data-model.md"
-      ],
+      "out_scope": ["RBAC (future)", "Multi-operator approval"],
+      "context": ["docs/prd/006-additional-refinements.md", "docs/prd/002-data-model.md"],
       "criteria": [
         "Guards prevent invalid manual actions",
         "Descriptive error messages for guard failures",
@@ -5149,13 +3733,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T101",
-        "T102"
-      ],
-      "blocks": [
-        "T104"
-      ],
+      "deps": ["T101", "T102"],
+      "blocks": ["T104"],
       "desc": "Implement the escalation resolution flow: operators can retry, cancel, or mark as externally completed for ESCALATED tasks.",
       "goal": "Provide a clear path for operators to resolve tasks that require human judgment.",
       "in_scope": [
@@ -5165,13 +3744,8 @@
         "Cancel: preserve escalation context in audit",
         "Mark done: require reason/evidence for external completion"
       ],
-      "out_scope": [
-        "Escalation notification system",
-        "Escalation SLA tracking"
-      ],
-      "context": [
-        "docs/prd/002-data-model.md"
-      ],
+      "out_scope": ["Escalation notification system", "Escalation SLA tracking"],
+      "context": ["docs/prd/002-data-model.md"],
       "criteria": [
         "All three resolution types work correctly",
         "State transitions are valid",
@@ -5190,11 +3764,7 @@
       "owner": "frontend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T095",
-        "T101",
-        "T103"
-      ],
+      "deps": ["T095", "T101", "T103"],
       "blocks": [],
       "desc": "Add operator action controls to the task detail view: state-dependent action buttons, confirmation dialogs, and result feedback.",
       "goal": "Enable operators to take actions directly from the task inspection view.",
@@ -5205,13 +3775,8 @@
         "Escalation resolution UI",
         "Priority change dropdown"
       ],
-      "out_scope": [
-        "Bulk task actions",
-        "Keyboard shortcuts"
-      ],
-      "context": [
-        "docs/prd/006-additional-refinements.md"
-      ],
+      "out_scope": ["Bulk task actions", "Keyboard shortcuts"],
+      "context": ["docs/prd/006-additional-refinements.md"],
       "criteria": [
         "Only valid actions shown per state",
         "Confirmation required for destructive actions",
@@ -5230,11 +3795,7 @@
       "owner": "frontend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T096",
-        "T098",
-        "T101"
-      ],
+      "deps": ["T096", "T098", "T101"],
       "blocks": [],
       "desc": "Add operator controls to pool management and merge queue views.",
       "goal": "Enable operators to manage pools and merge queue from the UI.",
@@ -5245,13 +3806,8 @@
         "Merge queue: reorder items",
         "Confirmation dialogs for all actions"
       ],
-      "out_scope": [
-        "Pool creation wizard",
-        "Merge queue batch operations"
-      ],
-      "context": [
-        "docs/prd/006-additional-refinements.md"
-      ],
+      "out_scope": ["Pool creation wizard", "Merge queue batch operations"],
+      "context": ["docs/prd/006-additional-refinements.md"],
       "criteria": [
         "Pool toggle works",
         "Queue resume works",
@@ -5270,17 +3826,8 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T044",
-        "T039"
-      ],
-      "blocks": [
-        "T107",
-        "T108",
-        "T109",
-        "T110",
-        "T111"
-      ],
+      "deps": ["T044", "T039"],
+      "blocks": ["T107", "T108", "T109", "T110", "T111"],
       "desc": "Build the integration test harness with fake runner adapter, fake workspace manager, fake clock, and test database setup/teardown.",
       "goal": "Enable reliable, deterministic integration testing of the full system.",
       "in_scope": [
@@ -5291,13 +3838,8 @@
         "Test fixture factories for all entities",
         "Test helper: runTaskToState(targetState) for common test setup"
       ],
-      "out_scope": [
-        "UI tests",
-        "Performance test harness"
-      ],
-      "context": [
-        "docs/prd/007-technical-architecture.md"
-      ],
+      "out_scope": ["UI tests", "Performance test harness"],
+      "context": ["docs/prd/007-technical-architecture.md"],
       "criteria": [
         "All test doubles work correctly",
         "Test DB setup/teardown is fast",
@@ -5316,13 +3858,7 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T106",
-        "T046",
-        "T057",
-        "T061",
-        "T064"
-      ],
+      "deps": ["T106", "T046", "T057", "T061", "T064"],
       "blocks": [],
       "desc": "Build an integration test that drives a task through the complete happy path: BACKLOG \u2192 READY \u2192 ASSIGNED \u2192 IN_DEVELOPMENT \u2192 DEV_COMPLETE \u2192 IN_REVIEW \u2192 APPROVED \u2192 QUEUED_FOR_MERGE \u2192 MERGING \u2192 POST_MERGE_VALIDATION \u2192 DONE.",
       "goal": "Verify that the entire orchestration pipeline works end-to-end. This corresponds to V1 Milestone 1.",
@@ -5338,13 +3874,8 @@
         "Task reaches DONE",
         "Audit trail complete"
       ],
-      "out_scope": [
-        "Failure paths (separate tests)",
-        "UI verification"
-      ],
-      "context": [
-        "docs/prd/003-v1-implementation-plan.md"
-      ],
+      "out_scope": ["Failure paths (separate tests)", "UI verification"],
+      "context": ["docs/prd/003-v1-implementation-plan.md"],
       "criteria": [
         "Task completes full lifecycle to DONE",
         "Every state transition produces an audit event",
@@ -5364,10 +3895,7 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T106",
-        "T062"
-      ],
+      "deps": ["T106", "T062"],
       "blocks": [],
       "desc": "Test the review rejection path: developer submits, reviewer rejects with blocking issues, task re-enters ASSIGNED with rejection context, developer fixes, reviewer approves.",
       "goal": "Verify the rework loop works correctly with rejection context propagation.",
@@ -5379,13 +3907,8 @@
         "Review: approve",
         "Verify review_round_count incremented"
       ],
-      "out_scope": [
-        "Multiple rejection rounds",
-        "Escalation from max rounds"
-      ],
-      "context": [
-        "docs/prd/003-v1-implementation-plan.md"
-      ],
+      "out_scope": ["Multiple rejection rounds", "Escalation from max rounds"],
+      "context": ["docs/prd/003-v1-implementation-plan.md"],
       "criteria": [
         "Rejection transitions task to CHANGES_REQUESTED",
         "Rework TaskPacket includes rejection context with blocking issues",
@@ -5404,11 +3927,7 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T106",
-        "T066",
-        "T067"
-      ],
+      "deps": ["T106", "T066", "T067"],
       "blocks": [],
       "desc": "Test merge failure scenarios: reworkable conflict (\u2192 CHANGES_REQUESTED), non-reworkable conflict (\u2192 FAILED), and post-merge validation failure.",
       "goal": "Verify merge failure handling per the conflict classification and post-merge failure policies.",
@@ -5418,10 +3937,7 @@
         "Post-merge validation failure: severity classification and response",
         "Revert task generation for critical failures"
       ],
-      "out_scope": [
-        "Merge assist AI agent",
-        "Actual git conflicts (use fake workspace)"
-      ],
+      "out_scope": ["Merge assist AI agent", "Actual git conflicts (use fake workspace)"],
       "context": [
         "docs/prd/010-integration-contracts.md",
         "docs/prd/009-policy-and-enforcement-spec.md"
@@ -5444,11 +3960,7 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T106",
-        "T033",
-        "T034"
-      ],
+      "deps": ["T106", "T033", "T034"],
       "blocks": [],
       "desc": "Test worker failure scenarios: heartbeat timeout, process crash, and graceful completion edge cases.",
       "goal": "Verify that lease management correctly recovers from worker failures.",
@@ -5458,14 +3970,8 @@
         "Grace period: result arrives just after timeout \u2192 accepted",
         "Retry exhaustion: max retries exceeded \u2192 ESCALATED"
       ],
-      "out_scope": [
-        "Actual process killing",
-        "Network partition simulation"
-      ],
-      "context": [
-        "docs/prd/002-data-model.md",
-        "docs/prd/009-policy-and-enforcement-spec.md"
-      ],
+      "out_scope": ["Actual process killing", "Network partition simulation"],
+      "context": ["docs/prd/002-data-model.md", "docs/prd/009-policy-and-enforcement-spec.md"],
       "criteria": [
         "Heartbeat timeout correctly detected",
         "Crash recovery captures partial work",
@@ -5484,10 +3990,7 @@
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
-      "deps": [
-        "T106",
-        "T103"
-      ],
+      "deps": ["T106", "T103"],
       "blocks": [],
       "desc": "Test escalation trigger scenarios and operator resolution paths.",
       "goal": "Verify that escalation works correctly for all trigger conditions and resolution types.",
@@ -5499,14 +4002,8 @@
         "Resolution: cancel \u2192 CANCELLED",
         "Resolution: mark done \u2192 DONE"
       ],
-      "out_scope": [
-        "Budget-based escalation",
-        "Time-based escalation"
-      ],
-      "context": [
-        "docs/prd/002-data-model.md",
-        "docs/prd/009-policy-and-enforcement-spec.md"
-      ],
+      "out_scope": ["Budget-based escalation", "Time-based escalation"],
+      "context": ["docs/prd/002-data-model.md", "docs/prd/009-policy-and-enforcement-spec.md"],
       "criteria": [
         "All tested trigger conditions produce ESCALATED",
         "All resolution types work correctly",
@@ -5523,11 +4020,7 @@
       "title": "Foundation",
       "goal": "Establish the monorepo, toolchain, database, domain types, and core infrastructure so all subsequent work can proceed safely.",
       "why": "Nothing can be built without a working monorepo, database, type system, and test framework. This phase has zero product functionality but enables everything.",
-      "epics": [
-        "E001",
-        "E002",
-        "E004"
-      ],
+      "epics": ["E001", "E002", "E004"],
       "tasks": [
         "T001",
         "T002",
@@ -5563,13 +4056,7 @@
       "title": "Core Domain Skeleton",
       "goal": "Implement the state machines, transition engine, job queue, scheduler, lease management, dependency engine, and policy system \u2014 the deterministic control plane core.",
       "why": "The control plane core is the foundation of correctness. All orchestration, scheduling, and safety depends on these modules.",
-      "epics": [
-        "E003",
-        "E005",
-        "E006",
-        "E007",
-        "E010"
-      ],
+      "epics": ["E003", "E005", "E006", "E007", "E010"],
       "tasks": [
         "T015",
         "T016",
@@ -5612,16 +4099,7 @@
       "title": "First End-to-End Vertical Slice",
       "goal": "Complete the worker runtime, workspace management, validation runner, review pipeline, merge pipeline, artifact service, and API layer to achieve a full task lifecycle from BACKLOG to DONE.",
       "why": "This proves the system works end-to-end. It is the V1 proof of concept.",
-      "epics": [
-        "E008",
-        "E009",
-        "E011",
-        "E012",
-        "E013",
-        "E014",
-        "E015",
-        "E017"
-      ],
+      "epics": ["E008", "E009", "E011", "E012", "E013", "E014", "E015", "E017"],
       "tasks": [
         "T039",
         "T040",
@@ -5676,12 +4154,7 @@
       "title": "UI and Operability",
       "goal": "Build the web UI, real-time events, and operator action system so humans can monitor and control the autonomous factory.",
       "why": "Without a UI, the system is a black box. Operators need visibility and intervention capabilities.",
-      "epics": [
-        "E018",
-        "E019",
-        "E020",
-        "E021"
-      ],
+      "epics": ["E018", "E019", "E020", "E021"],
       "tasks": [
         "T086",
         "T087",
@@ -5718,22 +4191,8 @@
       "title": "Hardening and Operational Readiness",
       "goal": "Add observability, comprehensive integration tests, and operational hardening to prepare for real autonomous operation.",
       "why": "The system must be observable, recoverable, and thoroughly tested before running autonomously.",
-      "epics": [
-        "E016",
-        "E022"
-      ],
-      "tasks": [
-        "T076",
-        "T077",
-        "T078",
-        "T079",
-        "T106",
-        "T107",
-        "T108",
-        "T109",
-        "T110",
-        "T111"
-      ],
+      "epics": ["E016", "E022"],
+      "tasks": ["T076", "T077", "T078", "T079", "T106", "T107", "T108", "T109", "T110", "T111"],
       "exit_criteria": [
         "OpenTelemetry traces cover task lifecycle end-to-end",
         "Prometheus metrics endpoint returns all starter metrics",

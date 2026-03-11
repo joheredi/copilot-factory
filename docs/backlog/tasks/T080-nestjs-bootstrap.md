@@ -1,17 +1,17 @@
 # T080: Implement NestJS application bootstrap and module structure
 
-| Field | Value |
-|---|---|
-| **ID** | T080 |
-| **Epic** | [E017: REST API Layer](../epics/E017-rest-api.md) |
-| **Type** | foundation |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T002](./T002-typescript-config.md), [T006](./T006-sqlite-drizzle-setup.md) |
-| **Blocks** | [T078](./T078-prometheus-endpoint.md), [T081](./T081-api-project-repo.md), [T082](./T082-api-task-management.md), [T083](./T083-api-worker-pool.md), [T084](./T084-api-artifacts-reviews.md), [T085](./T085-api-audit-policy-config.md), [T086](./T086-websocket-gateway.md) |
+| Field                     | Value                                                                                                                                                                                                                                                                        |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T080                                                                                                                                                                                                                                                                         |
+| **Epic**                  | [E017: REST API Layer](../epics/E017-rest-api.md)                                                                                                                                                                                                                            |
+| **Type**                  | foundation                                                                                                                                                                                                                                                                   |
+| **Status**                | pending                                                                                                                                                                                                                                                                      |
+| **Priority**              | P0                                                                                                                                                                                                                                                                           |
+| **Owner**                 | backend-engineer                                                                                                                                                                                                                                                             |
+| **AI Executable**         | Yes                                                                                                                                                                                                                                                                          |
+| **Human Review Required** | Yes                                                                                                                                                                                                                                                                          |
+| **Dependencies**          | [T002](./T002-typescript-config.md), [T006](./T006-sqlite-drizzle-setup.md)                                                                                                                                                                                                  |
+| **Blocks**                | [T078](./T078-prometheus-endpoint.md), [T081](./T081-api-project-repo.md), [T082](./T082-api-task-management.md), [T083](./T083-api-worker-pool.md), [T084](./T084-api-artifacts-reviews.md), [T085](./T085-api-audit-policy-config.md), [T086](./T086-websocket-gateway.md) |
 
 ---
 

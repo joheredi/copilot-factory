@@ -1,17 +1,17 @@
 # T059: Implement specialist reviewer job dispatch
 
-| Field | Value |
-|---|---|
-| **ID** | T059 |
-| **Epic** | [E012: Review Pipeline](../epics/E012-review-pipeline.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T026](./T026-job-dependencies.md), [T058](./T058-review-router.md) |
-| **Blocks** | [T060](./T060-lead-reviewer-dispatch.md) |
+| Field                     | Value                                                               |
+| ------------------------- | ------------------------------------------------------------------- |
+| **ID**                    | T059                                                                |
+| **Epic**                  | [E012: Review Pipeline](../epics/E012-review-pipeline.md)           |
+| **Type**                  | feature                                                             |
+| **Status**                | pending                                                             |
+| **Priority**              | P0                                                                  |
+| **Owner**                 | backend-engineer                                                    |
+| **AI Executable**         | Yes                                                                 |
+| **Human Review Required** | Yes                                                                 |
+| **Dependencies**          | [T026](./T026-job-dependencies.md), [T058](./T058-review-router.md) |
+| **Blocks**                | [T060](./T060-lead-reviewer-dispatch.md)                            |
 
 ---
 

@@ -1,17 +1,17 @@
 # T088: Implement queue and worker status broadcasting
 
-| Field | Value |
-|---|---|
-| **ID** | T088 |
-| **Epic** | [E018: Real-time Events](../epics/E018-realtime-events.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P2 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T086](./T086-websocket-gateway.md) |
-| **Blocks** | None |
+| Field                     | Value                                                      |
+| ------------------------- | ---------------------------------------------------------- |
+| **ID**                    | T088                                                       |
+| **Epic**                  | [E018: Real-time Events](../epics/E018-realtime-events.md) |
+| **Type**                  | feature                                                    |
+| **Status**                | pending                                                    |
+| **Priority**              | P2                                                         |
+| **Owner**                 | backend-engineer                                           |
+| **AI Executable**         | Yes                                                        |
+| **Human Review Required** | Yes                                                        |
+| **Dependencies**          | [T086](./T086-websocket-gateway.md)                        |
+| **Blocks**                | None                                                       |
 
 ---
 

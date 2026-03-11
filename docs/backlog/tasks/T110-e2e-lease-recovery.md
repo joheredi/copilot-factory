@@ -1,17 +1,17 @@
 # T110: Integration test: lease timeout and crash recovery
 
-| Field | Value |
-|---|---|
-| **ID** | T110 |
-| **Epic** | [E022: Integration Testing & E2E](../epics/E022-integration-testing.md) |
-| **Type** | test |
-| **Status** | pending |
-| **Priority** | P1 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T106](./T106-test-harness.md), [T033](./T033-lease-reclaim.md), [T034](./T034-crash-recovery-artifacts.md) |
-| **Blocks** | None |
+| Field                     | Value                                                                                                       |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T110                                                                                                        |
+| **Epic**                  | [E022: Integration Testing & E2E](../epics/E022-integration-testing.md)                                     |
+| **Type**                  | test                                                                                                        |
+| **Status**                | pending                                                                                                     |
+| **Priority**              | P1                                                                                                          |
+| **Owner**                 | backend-engineer                                                                                            |
+| **AI Executable**         | Yes                                                                                                         |
+| **Human Review Required** | Yes                                                                                                         |
+| **Dependencies**          | [T106](./T106-test-harness.md), [T033](./T033-lease-reclaim.md), [T034](./T034-crash-recovery-artifacts.md) |
+| **Blocks**                | None                                                                                                        |
 
 ---
 

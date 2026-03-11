@@ -1,17 +1,17 @@
 # T033: Implement stale lease reclaim and retry/escalation
 
-| Field | Value |
-|---|---|
-| **ID** | T033 |
-| **Epic** | [E006: Lease Management & Heartbeats](../epics/E006-lease-management.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T031](./T031-heartbeat-staleness.md), [T051](./T051-retry-escalation-policy.md) |
-| **Blocks** | [T034](./T034-crash-recovery-artifacts.md) |
+| Field                     | Value                                                                            |
+| ------------------------- | -------------------------------------------------------------------------------- |
+| **ID**                    | T033                                                                             |
+| **Epic**                  | [E006: Lease Management & Heartbeats](../epics/E006-lease-management.md)         |
+| **Type**                  | feature                                                                          |
+| **Status**                | pending                                                                          |
+| **Priority**              | P0                                                                               |
+| **Owner**                 | backend-engineer                                                                 |
+| **AI Executable**         | Yes                                                                              |
+| **Human Review Required** | Yes                                                                              |
+| **Dependencies**          | [T031](./T031-heartbeat-staleness.md), [T051](./T051-retry-escalation-policy.md) |
+| **Blocks**                | [T034](./T034-crash-recovery-artifacts.md)                                       |
 
 ---
 

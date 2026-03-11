@@ -1,17 +1,17 @@
 # T019: Implement optimistic concurrency control
 
-| Field | Value |
-|---|---|
-| **ID** | T019 |
-| **Epic** | [E003: State Machine & Transition Engine](../epics/E003-state-machine-transition.md) |
-| **Type** | foundation |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T017](./T017-transition-service.md) |
-| **Blocks** | None |
+| Field                     | Value                                                                                |
+| ------------------------- | ------------------------------------------------------------------------------------ |
+| **ID**                    | T019                                                                                 |
+| **Epic**                  | [E003: State Machine & Transition Engine](../epics/E003-state-machine-transition.md) |
+| **Type**                  | foundation                                                                           |
+| **Status**                | pending                                                                              |
+| **Priority**              | P0                                                                                   |
+| **Owner**                 | backend-engineer                                                                     |
+| **AI Executable**         | Yes                                                                                  |
+| **Human Review Required** | Yes                                                                                  |
+| **Dependencies**          | [T017](./T017-transition-service.md)                                                 |
+| **Blocks**                | None                                                                                 |
 
 ---
 

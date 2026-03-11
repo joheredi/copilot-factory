@@ -1,17 +1,17 @@
 # T057: Implement validation gate checking for state transitions
 
-| Field | Value |
-|---|---|
-| **ID** | T057 |
-| **Epic** | [E011: Validation Runner](../epics/E011-validation-runner.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T054](./T054-validation-runner-abstraction.md), [T056](./T056-validation-packet-emission.md), [T017](./T017-transition-service.md) |
-| **Blocks** | [T107](./T107-e2e-full-lifecycle.md) |
+| Field                     | Value                                                                                                                               |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T057                                                                                                                                |
+| **Epic**                  | [E011: Validation Runner](../epics/E011-validation-runner.md)                                                                       |
+| **Type**                  | feature                                                                                                                             |
+| **Status**                | pending                                                                                                                             |
+| **Priority**              | P0                                                                                                                                  |
+| **Owner**                 | backend-engineer                                                                                                                    |
+| **AI Executable**         | Yes                                                                                                                                 |
+| **Human Review Required** | Yes                                                                                                                                 |
+| **Dependencies**          | [T054](./T054-validation-runner-abstraction.md), [T056](./T056-validation-packet-emission.md), [T017](./T017-transition-service.md) |
+| **Blocks**                | [T107](./T107-e2e-full-lifecycle.md)                                                                                                |
 
 ---
 

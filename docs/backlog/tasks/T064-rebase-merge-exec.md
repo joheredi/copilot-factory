@@ -1,17 +1,17 @@
 # T064: Implement rebase-and-merge execution
 
-| Field | Value |
-|---|---|
-| **ID** | T064 |
-| **Epic** | [E013: Merge Pipeline](../epics/E013-merge-pipeline.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T023](./T023-schemas-merge-validation.md), [T063](./T063-merge-queue.md), [T039](./T039-worktree-creation.md) |
-| **Blocks** | [T065](./T065-merge-strategies.md), [T066](./T066-conflict-classification.md), [T067](./T067-post-merge-failure.md) |
+| Field                     | Value                                                                                                               |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T064                                                                                                                |
+| **Epic**                  | [E013: Merge Pipeline](../epics/E013-merge-pipeline.md)                                                             |
+| **Type**                  | feature                                                                                                             |
+| **Status**                | pending                                                                                                             |
+| **Priority**              | P0                                                                                                                  |
+| **Owner**                 | backend-engineer                                                                                                    |
+| **AI Executable**         | Yes                                                                                                                 |
+| **Human Review Required** | Yes                                                                                                                 |
+| **Dependencies**          | [T023](./T023-schemas-merge-validation.md), [T063](./T063-merge-queue.md), [T039](./T039-worktree-creation.md)      |
+| **Blocks**                | [T065](./T065-merge-strategies.md), [T066](./T066-conflict-classification.md), [T067](./T067-post-merge-failure.md) |
 
 ---
 

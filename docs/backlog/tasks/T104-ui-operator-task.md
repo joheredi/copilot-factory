@@ -1,17 +1,17 @@
 # T104: Integrate operator controls into task detail UI
 
-| Field | Value |
-|---|---|
-| **ID** | T104 |
-| **Epic** | [E021: Operator Actions & Overrides](../epics/E021-operator-actions.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P2 |
-| **Owner** | frontend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T095](./T095-ui-task-detail.md), [T101](./T101-api-operator-actions.md), [T103](./T103-escalation-resolution.md) |
-| **Blocks** | None |
+| Field                     | Value                                                                                                             |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T104                                                                                                              |
+| **Epic**                  | [E021: Operator Actions & Overrides](../epics/E021-operator-actions.md)                                           |
+| **Type**                  | feature                                                                                                           |
+| **Status**                | pending                                                                                                           |
+| **Priority**              | P2                                                                                                                |
+| **Owner**                 | frontend-engineer                                                                                                 |
+| **AI Executable**         | Yes                                                                                                               |
+| **Human Review Required** | Yes                                                                                                               |
+| **Dependencies**          | [T095](./T095-ui-task-detail.md), [T101](./T101-api-operator-actions.md), [T103](./T103-escalation-resolution.md) |
+| **Blocks**                | None                                                                                                              |
 
 ---
 

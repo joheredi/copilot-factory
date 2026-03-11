@@ -1,17 +1,17 @@
 # T024: Implement cross-field validation and schema versioning
 
-| Field | Value |
-|---|---|
-| **ID** | T024 |
-| **Epic** | [E004: Packet Schemas & Validation](../epics/E004-packet-schemas.md) |
-| **Type** | foundation |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T021](./T021-schemas-task-dev.md), [T022](./T022-schemas-review.md), [T023](./T023-schemas-merge-validation.md) |
-| **Blocks** | [T046](./T046-output-capture-validation.md) |
+| Field                     | Value                                                                                                            |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T024                                                                                                             |
+| **Epic**                  | [E004: Packet Schemas & Validation](../epics/E004-packet-schemas.md)                                             |
+| **Type**                  | foundation                                                                                                       |
+| **Status**                | pending                                                                                                          |
+| **Priority**              | P0                                                                                                               |
+| **Owner**                 | backend-engineer                                                                                                 |
+| **AI Executable**         | Yes                                                                                                              |
+| **Human Review Required** | Yes                                                                                                              |
+| **Dependencies**          | [T021](./T021-schemas-task-dev.md), [T022](./T022-schemas-review.md), [T023](./T023-schemas-merge-validation.md) |
+| **Blocks**                | [T046](./T046-output-capture-validation.md)                                                                      |
 
 ---
 

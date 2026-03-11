@@ -40,12 +40,12 @@ Git worktree operations can fail if the repo state is unexpected. Cleanup must h
 
 ## Tasks
 
-| ID | Title | Priority | Status |
-|---|---|---|---|
-| [T039](../tasks/T039-worktree-creation.md) | Implement git worktree creation per task | P0 | pending |
-| [T040](../tasks/T040-workspace-mounting.md) | Implement workspace packet and config mounting | P0 | pending |
-| [T041](../tasks/T041-workspace-cleanup.md) | Implement workspace cleanup for terminal states | P1 | pending |
-| [T042](../tasks/T042-reconcile-workspaces.md) | Implement ReconcileWorkspacesCommand | P1 | pending |
+| ID                                            | Title                                           | Priority | Status  |
+| --------------------------------------------- | ----------------------------------------------- | -------- | ------- |
+| [T039](../tasks/T039-worktree-creation.md)    | Implement git worktree creation per task        | P0       | pending |
+| [T040](../tasks/T040-workspace-mounting.md)   | Implement workspace packet and config mounting  | P0       | pending |
+| [T041](../tasks/T041-workspace-cleanup.md)    | Implement workspace cleanup for terminal states | P1       | pending |
+| [T042](../tasks/T042-reconcile-workspaces.md) | Implement ReconcileWorkspacesCommand            | P1       | pending |
 
 ## Sequencing Notes
 

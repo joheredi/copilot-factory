@@ -1,17 +1,17 @@
 # T035: Implement DAG validation with circular dependency detection
 
-| Field | Value |
-|---|---|
-| **ID** | T035 |
-| **Epic** | [E007: Dependency & Readiness Engine](../epics/E007-dependency-readiness.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T014](./T014-entity-repositories.md) |
-| **Blocks** | [T036](./T036-readiness-computation.md), [T037](./T037-reverse-dep-recalc.md) |
+| Field                     | Value                                                                         |
+| ------------------------- | ----------------------------------------------------------------------------- |
+| **ID**                    | T035                                                                          |
+| **Epic**                  | [E007: Dependency & Readiness Engine](../epics/E007-dependency-readiness.md)  |
+| **Type**                  | feature                                                                       |
+| **Status**                | pending                                                                       |
+| **Priority**              | P0                                                                            |
+| **Owner**                 | backend-engineer                                                              |
+| **AI Executable**         | Yes                                                                           |
+| **Human Review Required** | Yes                                                                           |
+| **Dependencies**          | [T014](./T014-entity-repositories.md)                                         |
+| **Blocks**                | [T036](./T036-readiness-computation.md), [T037](./T037-reverse-dep-recalc.md) |
 
 ---
 

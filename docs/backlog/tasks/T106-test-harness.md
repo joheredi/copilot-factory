@@ -1,17 +1,17 @@
 # T106: Create test harness with fake runner and workspace
 
-| Field | Value |
-|---|---|
-| **ID** | T106 |
-| **Epic** | [E022: Integration Testing & E2E](../epics/E022-integration-testing.md) |
-| **Type** | test |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T044](./T044-worker-supervisor.md), [T039](./T039-worktree-creation.md) |
-| **Blocks** | [T107](./T107-e2e-full-lifecycle.md), [T108](./T108-e2e-review-rework.md), [T109](./T109-e2e-merge-failures.md), [T110](./T110-e2e-lease-recovery.md), [T111](./T111-e2e-escalation.md) |
+| Field                     | Value                                                                                                                                                                                   |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T106                                                                                                                                                                                    |
+| **Epic**                  | [E022: Integration Testing & E2E](../epics/E022-integration-testing.md)                                                                                                                 |
+| **Type**                  | test                                                                                                                                                                                    |
+| **Status**                | pending                                                                                                                                                                                 |
+| **Priority**              | P0                                                                                                                                                                                      |
+| **Owner**                 | backend-engineer                                                                                                                                                                        |
+| **AI Executable**         | Yes                                                                                                                                                                                     |
+| **Human Review Required** | Yes                                                                                                                                                                                     |
+| **Dependencies**          | [T044](./T044-worker-supervisor.md), [T039](./T039-worktree-creation.md)                                                                                                                |
+| **Blocks**                | [T107](./T107-e2e-full-lifecycle.md), [T108](./T108-e2e-review-rework.md), [T109](./T109-e2e-merge-failures.md), [T110](./T110-e2e-lease-recovery.md), [T111](./T111-e2e-escalation.md) |
 
 ---
 

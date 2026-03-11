@@ -1,17 +1,17 @@
 # T078: Implement Prometheus metrics endpoint
 
-| Field | Value |
-|---|---|
-| **ID** | T078 |
-| **Epic** | [E016: Observability](../epics/E016-observability.md) |
-| **Type** | feature |
-| **Status** | pending |
-| **Priority** | P1 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T080](./T080-nestjs-bootstrap.md) |
-| **Blocks** | [T079](./T079-starter-metrics.md) |
+| Field                     | Value                                                 |
+| ------------------------- | ----------------------------------------------------- |
+| **ID**                    | T078                                                  |
+| **Epic**                  | [E016: Observability](../epics/E016-observability.md) |
+| **Type**                  | feature                                               |
+| **Status**                | pending                                               |
+| **Priority**              | P1                                                    |
+| **Owner**                 | backend-engineer                                      |
+| **AI Executable**         | Yes                                                   |
+| **Human Review Required** | Yes                                                   |
+| **Dependencies**          | [T080](./T080-nestjs-bootstrap.md)                    |
+| **Blocks**                | [T079](./T079-starter-metrics.md)                     |
 
 ---
 

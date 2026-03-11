@@ -1,17 +1,17 @@
 # T006: Set up SQLite with Drizzle ORM and migrations
 
-| Field | Value |
-|---|---|
-| **ID** | T006 |
-| **Epic** | [E001: Repository & Platform Foundation](../epics/E001-platform-foundation.md) |
-| **Type** | foundation |
-| **Status** | done |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T001](./T001-init-monorepo.md), [T002](./T002-typescript-config.md) |
-| **Blocks** | [T008](./T008-migration-project-repo.md), [T009](./T009-migration-task.md), [T010](./T010-migration-worker-pool.md), [T011](./T011-migration-lease-review.md), [T012](./T012-migration-merge-job.md), [T013](./T013-migration-audit-policy.md) |
+| Field                     | Value                                                                                                                                                                                                                                          |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ID**                    | T006                                                                                                                                                                                                                                           |
+| **Epic**                  | [E001: Repository & Platform Foundation](../epics/E001-platform-foundation.md)                                                                                                                                                                 |
+| **Type**                  | foundation                                                                                                                                                                                                                                     |
+| **Status**                | done                                                                                                                                                                                                                                           |
+| **Priority**              | P0                                                                                                                                                                                                                                             |
+| **Owner**                 | backend-engineer                                                                                                                                                                                                                               |
+| **AI Executable**         | Yes                                                                                                                                                                                                                                            |
+| **Human Review Required** | Yes                                                                                                                                                                                                                                            |
+| **Dependencies**          | [T001](./T001-init-monorepo.md), [T002](./T002-typescript-config.md)                                                                                                                                                                           |
+| **Blocks**                | [T008](./T008-migration-project-repo.md), [T009](./T009-migration-task.md), [T010](./T010-migration-worker-pool.md), [T011](./T011-migration-lease-review.md), [T012](./T012-migration-merge-job.md), [T013](./T013-migration-audit-policy.md) |
 
 ---
 

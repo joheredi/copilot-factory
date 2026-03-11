@@ -41,13 +41,13 @@ Review fan-out coordination is complex. Must handle partial reviewer failures.
 
 ## Tasks
 
-| ID | Title | Priority | Status |
-|---|---|---|---|
-| [T058](../tasks/T058-review-router.md) | Implement Review Router with deterministic rules | P0 | pending |
-| [T059](../tasks/T059-reviewer-dispatch.md) | Implement specialist reviewer job dispatch | P0 | pending |
-| [T060](../tasks/T060-lead-reviewer-dispatch.md) | Implement lead reviewer dispatch with dependencies | P0 | pending |
-| [T061](../tasks/T061-review-decision-apply.md) | Implement review decision application | P0 | pending |
-| [T062](../tasks/T062-rework-loop.md) | Implement rework loop with rejection context | P1 | pending |
+| ID                                              | Title                                              | Priority | Status  |
+| ----------------------------------------------- | -------------------------------------------------- | -------- | ------- |
+| [T058](../tasks/T058-review-router.md)          | Implement Review Router with deterministic rules   | P0       | pending |
+| [T059](../tasks/T059-reviewer-dispatch.md)      | Implement specialist reviewer job dispatch         | P0       | pending |
+| [T060](../tasks/T060-lead-reviewer-dispatch.md) | Implement lead reviewer dispatch with dependencies | P0       | pending |
+| [T061](../tasks/T061-review-decision-apply.md)  | Implement review decision application              | P0       | pending |
+| [T062](../tasks/T062-rework-loop.md)            | Implement rework loop with rejection context       | P1       | pending |
 
 ## Sequencing Notes
 

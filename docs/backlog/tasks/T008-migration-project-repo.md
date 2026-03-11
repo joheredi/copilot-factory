@@ -1,17 +1,17 @@
 # T008: Create migrations for Project, Repository, WorkflowTemplate tables
 
-| Field | Value |
-|---|---|
-| **ID** | T008 |
-| **Epic** | [E002: Domain Model & Persistence](../epics/E002-domain-model-persistence.md) |
-| **Type** | foundation |
-| **Status** | pending |
-| **Priority** | P0 |
-| **Owner** | backend-engineer |
-| **AI Executable** | Yes |
-| **Human Review Required** | Yes |
-| **Dependencies** | [T006](./T006-sqlite-drizzle-setup.md), [T007](./T007-domain-enums-types.md) |
-| **Blocks** | [T014](./T014-entity-repositories.md), [T081](./T081-api-project-repo.md) |
+| Field                     | Value                                                                         |
+| ------------------------- | ----------------------------------------------------------------------------- |
+| **ID**                    | T008                                                                          |
+| **Epic**                  | [E002: Domain Model & Persistence](../epics/E002-domain-model-persistence.md) |
+| **Type**                  | foundation                                                                    |
+| **Status**                | pending                                                                       |
+| **Priority**              | P0                                                                            |
+| **Owner**                 | backend-engineer                                                              |
+| **AI Executable**         | Yes                                                                           |
+| **Human Review Required** | Yes                                                                           |
+| **Dependencies**          | [T006](./T006-sqlite-drizzle-setup.md), [T007](./T007-domain-enums-types.md)  |
+| **Blocks**                | [T014](./T014-entity-repositories.md), [T081](./T081-api-project-repo.md)     |
 
 ---
 
