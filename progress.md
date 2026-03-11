@@ -422,3 +422,31 @@
 - T017: Transition service (depends on T015 ✅, T016)
 - T020: Shared Zod types (depends on T004 ✅)
 - T005: CI pipeline (depends on T003 ✅, T004 ✅)
+
+## 2026-03-11 — T016: Implement supporting state machines
+
+**Status:** Done
+
+**What was done:**
+
+- Implemented Worker Lease state machine (`worker-lease-state-machine.ts`) with 9 states, 15 transitions (including HEARTBEATING self-loop), guard functions for all transitions, and full public API (`validateWorkerLeaseTransition`, `getValidWorkerLeaseTargets`, `isTerminalWorkerLeaseState`, `getAllValidWorkerLeaseTransitions`).
+- Implemented Review Cycle state machine (`review-cycle-state-machine.ts`) with 8 states, 10 transitions, escalation from multiple states (IN_PROGRESS, AWAITING_REQUIRED_REVIEWS, CONSOLIDATING), and full public API.
+- Implemented Merge Queue Item state machine (`merge-queue-item-state-machine.ts`) with 8 states, 12 transitions, REQUEUED→ENQUEUED retry cycle, and full public API.
+- Created comprehensive test suites for all three state machines (131 new tests).
+- Exported all new functions and types from `@factory/domain` package index.
+- All three state machines follow the same Map-based transition table + guard function pattern established by T015's Task state machine.
+
+**Patterns used:**
+
+- `as const` enum objects with derived union types for state values
+- Map<TransitionKey, GuardFn> for transition tables
+- TransitionContext interfaces with optional fields for guard preconditions
+- Separate `reject()` helper for consistent error messages
+
+**Next loop should know:**
+
+- T017 (Transition Service) is now unblocked — it depends on T015 ✅ and T016 ✅ and T014 ✅.
+- T005 (CI pipeline) and T020 (Shared Zod types) are also ready.
+- Worker Lease HEARTBEATING state has a self-loop (the only self-transition allowed across all state machines).
+- TIMED_OUT and CRASHED are NOT terminal for Worker Lease — they transition to RECLAIMED.
+- REQUEUED is NOT terminal for Merge Queue Item — it transitions back to ENQUEUED.
