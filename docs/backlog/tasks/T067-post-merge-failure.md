@@ -5,7 +5,7 @@
 | **ID**                    | T067                                                                                                                         |
 | **Epic**                  | [E013: Merge Pipeline](../epics/E013-merge-pipeline.md)                                                                      |
 | **Type**                  | feature                                                                                                                      |
-| **Status**                | pending                                                                                                                      |
+| **Status**                | done                                                                                                                         |
 | **Priority**              | P0                                                                                                                           |
 | **Owner**                 | backend-engineer                                                                                                             |
 | **AI Executable**         | Yes                                                                                                                          |

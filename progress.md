@@ -429,3 +429,29 @@ Implemented the conflict classifier service that determines whether merge confli
 - The `@factory/testing` package now depends on `@factory/application` and `@factory/domain`
 - `import.meta.dirname` is used in test-database.test.ts for migrations path resolution
 - The `TransitionContext` property names are specific — use the actual type definition in domain, not guessed names
+
+## 2026-03-11 — T067: Implement post-merge validation and failure policy
+
+**Status:** Done
+
+**What was done:**
+
+- Created `packages/application/src/ports/post-merge-validation.ports.ts` — port interfaces for task transitions, follow-up task creation, merge queue pause/resume, and operator notifications
+- Created `packages/application/src/services/post-merge-validation.service.ts` — full implementation of:
+  - Post-merge validation triggering (runs merge-gate profile after merge)
+  - POST_MERGE_VALIDATION → DONE transition on success
+  - POST_MERGE_VALIDATION → FAILED transition on failure
+  - Severity classification per §9.11.1 (critical/high/low)
+  - Response policy per §9.11.2 (revert task, queue pause, operator notification)
+  - Exported `classifyFailureSeverity` pure function for reuse
+  - Configurable `PostMergeFailurePolicy` with defaults from §9.11.4
+- Created comprehensive test suite (33 tests) covering all severity levels, policy customization, audit trail, and precondition enforcement
+- Updated barrel exports in `packages/application/src/index.ts`
+
+**Patterns / notes for next loops:**
+
+- The `PostMergeFollowUpTaskRecord` type is named with `PostMerge` prefix to avoid collision with `FollowUpTaskRecord` from review-decision ports
+- The service follows the same factory-function + dependency-injection pattern as merge-executor and other application services
+- Severity classification: security check name match is case-insensitive (`check.checkName.toLowerCase() === "security"`)
+- The analysis agent integration for high-severity failures is policy-controlled (`useAnalysisAgentOnHigh`); when enabled, no revert task is created — a separate agent dispatch would handle that
+- Queue pause is a side effect outside the transaction boundary (correct per the pattern)

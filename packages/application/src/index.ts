@@ -576,3 +576,35 @@ export type {
   MergeConflictPolicy,
   ConflictClassificationResult,
 } from "./services/conflict-classifier.service.js";
+
+// Ports — post-merge validation interfaces (PRD 009 §9.11)
+export type {
+  PostMergeTask,
+  PostMergeValidationRunnerPort,
+  CreateFollowUpTaskData,
+  PostMergeFollowUpTaskRecord,
+  PostMergeFollowUpTaskCreationPort,
+  MergeQueuePausePort,
+  NotificationSeverity,
+  OperatorNotificationPort,
+  PostMergeTaskRepositoryPort,
+  PostMergeTransactionRepositories,
+  PostMergeUnitOfWork,
+} from "./ports/post-merge-validation.ports.js";
+
+// Services — post-merge validation and failure policy (PRD 009 §9.11)
+export {
+  createPostMergeValidationService,
+  classifyFailureSeverity,
+  DEFAULT_POST_MERGE_FAILURE_POLICY,
+} from "./services/post-merge-validation.service.js";
+export type {
+  PostMergeFailurePolicy,
+  FailureSeverity,
+  ExecutePostMergeValidationParams,
+  PostMergeSuccessResult,
+  PostMergeFailureResult,
+  PostMergeValidationResult,
+  PostMergeValidationService,
+  PostMergeValidationDependencies,
+} from "./services/post-merge-validation.service.js";
