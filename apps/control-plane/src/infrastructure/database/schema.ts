@@ -431,3 +431,326 @@ export const taskDependencies = sqliteTable(
     index("idx_task_dependency_depends_on").on(table.dependsOnTaskId),
   ],
 );
+
+// ─── T010: WorkerPool, Worker, AgentProfile, PromptTemplate ─────────────────
+
+/**
+ * Worker pool table — defines a pool of workers with shared configuration
+ * for concurrency limits, timeouts, token budgets, and capabilities.
+ * Pools are typed by role (developer, reviewer, lead-reviewer, etc.) and
+ * can be enabled/disabled independently.
+ *
+ * JSON columns (capabilities, repo_scope_rules) are stored as JSON text
+ * in SQLite. Drizzle handles serialization via `{ mode: "json" }`.
+ *
+ * @see {@link file://docs/prd/002-data-model.md} §2.3 Entity: WorkerPool
+ */
+export const workerPools = sqliteTable(
+  "worker_pool",
+  {
+    /** Unique identifier (UUID). */
+    workerPoolId: text("worker_pool_id").primaryKey(),
+
+    /** Human-readable pool name. */
+    name: text("name").notNull(),
+
+    /**
+     * The functional role this pool serves (e.g. "developer", "reviewer").
+     * Stored as text; validated at the application layer against WorkerPoolType enum.
+     */
+    poolType: text("pool_type").notNull(),
+
+    /**
+     * AI provider identifier (e.g. "copilot", "openai", "anthropic").
+     * Nullable — may not be set for non-AI pools.
+     */
+    provider: text("provider"),
+
+    /**
+     * Runtime environment identifier (e.g. "copilot-cli", "docker").
+     * Nullable — determined at execution time if not pre-configured.
+     */
+    runtime: text("runtime"),
+
+    /**
+     * AI model identifier (e.g. "gpt-4", "claude-3-opus").
+     * Nullable — may inherit from provider defaults.
+     */
+    model: text("model"),
+
+    /**
+     * Maximum number of concurrent workers allowed in this pool.
+     * Controls resource utilization and rate limiting.
+     */
+    maxConcurrency: integer("max_concurrency").notNull().default(1),
+
+    /**
+     * Default timeout in seconds for worker runs in this pool.
+     * Can be overridden per-task. Nullable — falls back to system default.
+     */
+    defaultTimeoutSec: integer("default_timeout_sec"),
+
+    /**
+     * Default token budget for AI model calls per worker run.
+     * Nullable — falls back to system default.
+     */
+    defaultTokenBudget: integer("default_token_budget"),
+
+    /**
+     * Cost profile identifier for billing and resource tracking.
+     * Nullable — may not be needed for local-first deployments.
+     */
+    costProfile: text("cost_profile"),
+
+    /**
+     * JSON array of capability strings this pool provides
+     * (e.g. ["typescript", "react", "database"]). Used for task-to-pool matching.
+     */
+    capabilities: text("capabilities", { mode: "json" }),
+
+    /**
+     * JSON object defining repository scope rules that restrict which
+     * repositories this pool can operate on. Schema validated at the
+     * application layer.
+     */
+    repoScopeRules: text("repo_scope_rules", { mode: "json" }),
+
+    /**
+     * Whether this pool is currently active and accepting work.
+     * Stored as integer (SQLite boolean): 1 = enabled, 0 = disabled.
+     */
+    enabled: integer("enabled").notNull().default(1),
+
+    /** Row creation timestamp (Unix epoch seconds). */
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+
+    /** Row last-update timestamp (Unix epoch seconds). */
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => [
+    /** Index for filtering pools by type (e.g. all "developer" pools). */
+    index("idx_worker_pool_pool_type").on(table.poolType),
+    /** Index for filtering enabled/disabled pools. */
+    index("idx_worker_pool_enabled").on(table.enabled),
+  ],
+);
+
+/**
+ * Worker table — represents an individual worker instance belonging to a pool.
+ * Tracks the worker's operational status, host information, heartbeat timing,
+ * and current task assignment. Health metadata is stored as JSON for
+ * extensible diagnostics.
+ *
+ * @see {@link file://docs/prd/002-data-model.md} §2.3 Entity: Worker
+ */
+export const workers = sqliteTable(
+  "worker",
+  {
+    /** Unique identifier (UUID). */
+    workerId: text("worker_id").primaryKey(),
+
+    /** FK to the parent worker pool. Enforced at DB level. */
+    poolId: text("pool_id")
+      .notNull()
+      .references(() => workerPools.workerPoolId),
+
+    /** Human-readable worker name or identifier. */
+    name: text("name").notNull(),
+
+    /**
+     * Current operational status of the worker (e.g. "online", "offline", "busy", "draining").
+     * Stored as text; validated at the application layer.
+     */
+    status: text("status").notNull(),
+
+    /**
+     * Hostname or address where this worker is running.
+     * Nullable — may not be meaningful for embedded workers.
+     */
+    host: text("host"),
+
+    /**
+     * Version string for the worker runtime (e.g. "copilot-cli/1.2.3").
+     * Nullable — set at worker registration.
+     */
+    runtimeVersion: text("runtime_version"),
+
+    /**
+     * Timestamp of the last heartbeat received from this worker.
+     * Used for staleness detection and lease reclaim. Nullable before first heartbeat.
+     */
+    lastHeartbeatAt: integer("last_heartbeat_at", { mode: "timestamp" }),
+
+    /**
+     * FK to the task currently assigned to this worker.
+     * Nullable when the worker is idle. References the existing tasks table.
+     */
+    currentTaskId: text("current_task_id").references(() => tasks.taskId),
+
+    /**
+     * Identifier for the current execution run.
+     * Nullable text — no DB-level FK constraint; execution run table
+     * will be defined in a future migration.
+     */
+    currentRunId: text("current_run_id"),
+
+    /**
+     * JSON object containing extensible health diagnostics
+     * (e.g. memory usage, CPU load, error counts). Schema is not
+     * enforced at the DB level.
+     */
+    healthMetadata: text("health_metadata", { mode: "json" }),
+  },
+  (table) => [
+    /** Index for lookups by parent pool. */
+    index("idx_worker_pool_id").on(table.poolId),
+    /** Index for filtering workers by operational status. */
+    index("idx_worker_status").on(table.status),
+  ],
+);
+
+/**
+ * Prompt template table — stores versioned prompt templates for AI agent
+ * roles. Each template defines the input/output schema and stop conditions
+ * for a specific agent role. Templates are referenced by AgentProfile.
+ *
+ * JSON columns (input_schema, output_schema, stop_conditions) are stored
+ * as JSON text in SQLite. Drizzle handles serialization.
+ *
+ * @see {@link file://docs/prd/002-data-model.md} §2.3 Entity: PromptTemplate
+ */
+export const promptTemplates = sqliteTable(
+  "prompt_template",
+  {
+    /** Unique identifier (UUID). */
+    promptTemplateId: text("prompt_template_id").primaryKey(),
+
+    /** Human-readable template name. */
+    name: text("name").notNull(),
+
+    /**
+     * Version string for this template (e.g. "1.0.0").
+     * Allows multiple versions of the same logical template to coexist.
+     */
+    version: text("version").notNull(),
+
+    /**
+     * The agent role this template is designed for (e.g. "developer", "reviewer").
+     * Stored as text; validated at the application layer against AgentRole enum.
+     */
+    role: text("role").notNull(),
+
+    /**
+     * The actual prompt template text. May contain placeholders for
+     * variable substitution at runtime.
+     */
+    templateText: text("template_text").notNull(),
+
+    /**
+     * JSON schema defining the expected input structure for this template.
+     * Validated at the application layer.
+     */
+    inputSchema: text("input_schema", { mode: "json" }),
+
+    /**
+     * JSON schema defining the expected output structure from the AI agent.
+     * Used for structured output validation.
+     */
+    outputSchema: text("output_schema", { mode: "json" }),
+
+    /**
+     * JSON array of stop condition definitions that determine when
+     * the agent should terminate execution.
+     */
+    stopConditions: text("stop_conditions", { mode: "json" }),
+
+    /** Row creation timestamp (Unix epoch seconds). */
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => [
+    /** Index for filtering templates by agent role. */
+    index("idx_prompt_template_role").on(table.role),
+  ],
+);
+
+/**
+ * Agent profile table — defines the configuration for an AI agent attached
+ * to a worker pool. Each profile references a prompt template and a set of
+ * policy IDs that govern the agent's behavior during execution.
+ *
+ * Policy reference columns (tool_policy_id, command_policy_id, etc.) are
+ * nullable text columns with no DB-level FK constraint until the PolicySet
+ * table is defined in T013.
+ *
+ * @see {@link file://docs/prd/002-data-model.md} §2.3 Entity: AgentProfile
+ */
+export const agentProfiles = sqliteTable(
+  "agent_profile",
+  {
+    /** Unique identifier (UUID). */
+    agentProfileId: text("agent_profile_id").primaryKey(),
+
+    /** FK to the parent worker pool. Enforced at DB level. */
+    poolId: text("pool_id")
+      .notNull()
+      .references(() => workerPools.workerPoolId),
+
+    /**
+     * FK to the prompt template used by this profile.
+     * Nullable — profile may be created before a template is assigned.
+     */
+    promptTemplateId: text("prompt_template_id").references(() => promptTemplates.promptTemplateId),
+
+    /**
+     * FK to the tool policy (defined in T013 PolicySet migration).
+     * Nullable until PolicySet table exists; no DB-level FK constraint.
+     */
+    toolPolicyId: text("tool_policy_id"),
+
+    /**
+     * FK to the command policy (defined in T013 PolicySet migration).
+     * Nullable until PolicySet table exists; no DB-level FK constraint.
+     */
+    commandPolicyId: text("command_policy_id"),
+
+    /**
+     * FK to the file scope policy (defined in T013 PolicySet migration).
+     * Nullable until PolicySet table exists; no DB-level FK constraint.
+     */
+    fileScopePolicyId: text("file_scope_policy_id"),
+
+    /**
+     * FK to the validation policy (defined in T013 PolicySet migration).
+     * Nullable until PolicySet table exists; no DB-level FK constraint.
+     */
+    validationPolicyId: text("validation_policy_id"),
+
+    /**
+     * FK to the review policy (defined in T013 PolicySet migration).
+     * Nullable until PolicySet table exists; no DB-level FK constraint.
+     */
+    reviewPolicyId: text("review_policy_id"),
+
+    /**
+     * FK to the budget policy (defined in T013 PolicySet migration).
+     * Nullable until PolicySet table exists; no DB-level FK constraint.
+     */
+    budgetPolicyId: text("budget_policy_id"),
+
+    /**
+     * FK to the retry policy (defined in T013 PolicySet migration).
+     * Nullable until PolicySet table exists; no DB-level FK constraint.
+     */
+    retryPolicyId: text("retry_policy_id"),
+  },
+  (table) => [
+    /** Index for lookups by parent pool. */
+    index("idx_agent_profile_pool_id").on(table.poolId),
+  ],
+);

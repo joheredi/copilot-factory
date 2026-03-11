@@ -5,7 +5,7 @@
 | **ID**                    | T010                                                                          |
 | **Epic**                  | [E002: Domain Model & Persistence](../epics/E002-domain-model-persistence.md) |
 | **Type**                  | foundation                                                                    |
-| **Status**                | pending                                                                       |
+| **Status**                | done                                                                          |
 | **Priority**              | P0                                                                            |
 | **Owner**                 | backend-engineer                                                              |
 | **AI Executable**         | Yes                                                                           |
@@ -55,9 +55,9 @@ The implementing agent should read these files before starting:
 
 ## Acceptance Criteria
 
-- [ ] All four tables created with correct schemas
-- [ ] Foreign key relationships enforced
-- [ ] JSON columns serialize/deserialize correctly
+- [x] All four tables created with correct schemas
+- [x] Foreign key relationships enforced
+- [x] JSON columns serialize/deserialize correctly
 
 ## Definition of Done
 

@@ -130,7 +130,7 @@ See [phase documents](phases/) for details.
 | [T007](tasks/T007-domain-enums-types.md)            | Define core domain enums and value objects                                            | E002 | P0       | foundation | done    |
 | [T008](tasks/T008-migration-project-repo.md)        | Create migrations for Project, Repository, WorkflowTemplate tables                    | E002 | P0       | foundation | done    |
 | [T009](tasks/T009-migration-task.md)                | Create migrations for Task and TaskDependency tables                                  | E002 | P0       | foundation | done    |
-| [T010](tasks/T010-migration-worker-pool.md)         | Create migrations for WorkerPool, Worker, AgentProfile, PromptTemplate tables         | E002 | P0       | foundation | pending |
+| [T010](tasks/T010-migration-worker-pool.md)         | Create migrations for WorkerPool, Worker, AgentProfile, PromptTemplate tables         | E002 | P0       | foundation | done    |
 | [T011](tasks/T011-migration-lease-review.md)        | Create migrations for TaskLease, ReviewCycle, ReviewPacket, LeadReviewDecision tables | E002 | P0       | foundation | pending |
 | [T012](tasks/T012-migration-merge-job.md)           | Create migrations for MergeQueueItem, ValidationRun, Job tables                       | E002 | P0       | foundation | pending |
 | [T013](tasks/T013-migration-audit-policy.md)        | Create migrations for AuditEvent and PolicySet tables                                 | E002 | P0       | foundation | pending |

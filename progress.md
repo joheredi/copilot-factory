@@ -254,3 +254,25 @@
 - T010 (WorkerPool, Worker, AgentProfile, PromptTemplate) and T013 (AuditEvent, PolicySet) are also ready (independent of T009)
 - The `uniqueIndex` import was added to schema.ts for the task_dependency unique constraint
 - Test pattern: use `seedProjectAndRepo()` helper to create prerequisite Project+Repository for task tests
+
+## T010 — WorkerPool, Worker, AgentProfile, PromptTemplate migrations (2026-03-11)
+
+**What was done:**
+
+- Added Drizzle schema definitions for 4 new tables: `worker_pool`, `worker`, `prompt_template`, `agent_profile`
+- Generated migration `0002_smart_micromax.sql`
+- Added 34 new tests covering all CRUD, FK enforcement, JSON round-trips, defaults, and cross-table relationships
+- Total test count: 177 (all passing)
+
+**Patterns used:**
+
+- Same schema patterns as T008/T009: UUID text PKs, `unixepoch()` timestamp defaults, `text({ mode: "json" })` for JSON columns, integer booleans
+- FK references to existing tables (tasks) enforced at DB level
+- FK references to future tables (PolicySet from T013) stored as nullable text without DB-level FK
+- PromptTemplate defined before AgentProfile in schema to support FK reference order
+
+**What next loop should know:**
+
+- T011, T012, T013 migrations are now unblocked (they depend on T006/T007/T009, all done)
+- T014 (entity repositories) still needs T010-T013 all done before starting
+- The `openTestDb()` helper in schema.test.ts now includes all T008-T010 tables — future tasks should continue this pattern

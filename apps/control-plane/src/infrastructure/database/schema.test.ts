@@ -19,7 +19,17 @@ import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
-import { projects, repositories, workflowTemplates, tasks, taskDependencies } from "./schema.js";
+import {
+  projects,
+  repositories,
+  workflowTemplates,
+  tasks,
+  taskDependencies,
+  workerPools,
+  workers,
+  promptTemplates,
+  agentProfiles,
+} from "./schema.js";
 
 /**
  * Helper: open an in-memory SQLite DB with foreign keys enabled and create
@@ -119,6 +129,73 @@ function openTestDb() {
     CREATE UNIQUE INDEX idx_task_dependency_unique ON task_dependency(task_id, depends_on_task_id);
     CREATE INDEX idx_task_dependency_task_id ON task_dependency(task_id);
     CREATE INDEX idx_task_dependency_depends_on ON task_dependency(depends_on_task_id);
+
+    -- T010: WorkerPool, Worker, PromptTemplate, AgentProfile
+    CREATE TABLE worker_pool (
+      worker_pool_id TEXT PRIMARY KEY NOT NULL,
+      name TEXT NOT NULL,
+      pool_type TEXT NOT NULL,
+      provider TEXT,
+      runtime TEXT,
+      model TEXT,
+      max_concurrency INTEGER NOT NULL DEFAULT 1,
+      default_timeout_sec INTEGER,
+      default_token_budget INTEGER,
+      cost_profile TEXT,
+      capabilities TEXT,
+      repo_scope_rules TEXT,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+      updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+
+    CREATE INDEX idx_worker_pool_pool_type ON worker_pool(pool_type);
+    CREATE INDEX idx_worker_pool_enabled ON worker_pool(enabled);
+
+    CREATE TABLE worker (
+      worker_id TEXT PRIMARY KEY NOT NULL,
+      pool_id TEXT NOT NULL REFERENCES worker_pool(worker_pool_id),
+      name TEXT NOT NULL,
+      status TEXT NOT NULL,
+      host TEXT,
+      runtime_version TEXT,
+      last_heartbeat_at INTEGER,
+      current_task_id TEXT REFERENCES task(task_id),
+      current_run_id TEXT,
+      health_metadata TEXT
+    );
+
+    CREATE INDEX idx_worker_pool_id ON worker(pool_id);
+    CREATE INDEX idx_worker_status ON worker(status);
+
+    CREATE TABLE prompt_template (
+      prompt_template_id TEXT PRIMARY KEY NOT NULL,
+      name TEXT NOT NULL,
+      version TEXT NOT NULL,
+      role TEXT NOT NULL,
+      template_text TEXT NOT NULL,
+      input_schema TEXT,
+      output_schema TEXT,
+      stop_conditions TEXT,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+
+    CREATE INDEX idx_prompt_template_role ON prompt_template(role);
+
+    CREATE TABLE agent_profile (
+      agent_profile_id TEXT PRIMARY KEY NOT NULL,
+      pool_id TEXT NOT NULL REFERENCES worker_pool(worker_pool_id),
+      prompt_template_id TEXT REFERENCES prompt_template(prompt_template_id),
+      tool_policy_id TEXT,
+      command_policy_id TEXT,
+      file_scope_policy_id TEXT,
+      validation_policy_id TEXT,
+      review_policy_id TEXT,
+      budget_policy_id TEXT,
+      retry_policy_id TEXT
+    );
+
+    CREATE INDEX idx_agent_profile_pool_id ON agent_profile(pool_id);
   `);
 
   const db = drizzle(sqlite);
@@ -1208,5 +1285,777 @@ describe("T009 — Task cross-table relationships", () => {
     expect(result.repo_name).toBe("test-repo");
     expect(result.project_name).toBe("test-project");
     expect(result.dependency_type).toBe("blocks");
+  });
+});
+
+// ─── T010 helpers ──────────────────────────────────────────────────────────
+
+/** Generate a minimal valid WorkerPool row. */
+function makeWorkerPool(overrides: Partial<typeof workerPools.$inferInsert> = {}) {
+  return {
+    workerPoolId: randomUUID(),
+    name: `pool-${randomUUID().slice(0, 8)}`,
+    poolType: "developer",
+    ...overrides,
+  };
+}
+
+/** Generate a minimal valid Worker row. */
+function makeWorker(poolId: string, overrides: Partial<typeof workers.$inferInsert> = {}) {
+  return {
+    workerId: randomUUID(),
+    poolId,
+    name: `worker-${randomUUID().slice(0, 8)}`,
+    status: "online",
+    ...overrides,
+  };
+}
+
+/** Generate a minimal valid PromptTemplate row. */
+function makePromptTemplate(overrides: Partial<typeof promptTemplates.$inferInsert> = {}) {
+  return {
+    promptTemplateId: randomUUID(),
+    name: `template-${randomUUID().slice(0, 8)}`,
+    version: "1.0.0",
+    role: "developer",
+    templateText: "You are a developer agent. Implement the task described below.",
+    ...overrides,
+  };
+}
+
+/** Generate a minimal valid AgentProfile row. */
+function makeAgentProfile(
+  poolId: string,
+  overrides: Partial<typeof agentProfiles.$inferInsert> = {},
+) {
+  return {
+    agentProfileId: randomUUID(),
+    poolId,
+    ...overrides,
+  };
+}
+
+// ─── T010 Tests ─────────────────────────────────────────────────────────────
+
+describe("T010 — WorkerPool table", () => {
+  let db: ReturnType<typeof openTestDb>["db"];
+  let sqlite: ReturnType<typeof openTestDb>["sqlite"];
+
+  beforeEach(() => {
+    ({ db, sqlite } = openTestDb());
+  });
+  afterEach(() => {
+    sqlite.close();
+  });
+
+  /**
+   * @why Verifies the table exists and Drizzle can insert + select from it
+   * with the minimum required fields (name, pool_type).
+   */
+  it("inserts and retrieves a worker pool with required fields", () => {
+    const pool = makeWorkerPool();
+    db.insert(workerPools).values(pool).run();
+
+    const rows = db.select().from(workerPools).all();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.workerPoolId).toBe(pool.workerPoolId);
+    expect(rows[0]!.name).toBe(pool.name);
+    expect(rows[0]!.poolType).toBe("developer");
+  });
+
+  /**
+   * @why The pool_type column must accept all valid WorkerPoolType enum values.
+   * This ensures the schema is compatible with the domain enum definitions.
+   */
+  it("accepts all valid pool_type values", () => {
+    const poolTypes = ["developer", "reviewer", "lead-reviewer", "merge-assist", "planner"];
+    for (const poolType of poolTypes) {
+      const pool = makeWorkerPool({ poolType });
+      db.insert(workerPools).values(pool).run();
+    }
+    const rows = db.select().from(workerPools).all();
+    expect(rows).toHaveLength(poolTypes.length);
+  });
+
+  /**
+   * @why max_concurrency must default to 1 when not provided, and enabled
+   * must default to 1 (true). These defaults ensure safe behavior for newly
+   * created pools.
+   */
+  it("applies correct defaults for max_concurrency and enabled", () => {
+    const pool = makeWorkerPool();
+    db.insert(workerPools).values(pool).run();
+
+    const row = db.select().from(workerPools).get();
+    expect(row!.maxConcurrency).toBe(1);
+    expect(row!.enabled).toBe(1);
+  });
+
+  /**
+   * @why JSON columns (capabilities, repo_scope_rules) must round-trip through
+   * SQLite without data loss. Drizzle's `text({ mode: "json" })` handles
+   * serialization; this validates the round-trip.
+   */
+  it("stores and retrieves JSON columns correctly", () => {
+    const capabilities = ["typescript", "react", "database"];
+    const repoScopeRules = { allowed: ["repo-a", "repo-b"], denied: ["repo-secret"] };
+
+    const pool = makeWorkerPool({ capabilities, repoScopeRules });
+    db.insert(workerPools).values(pool).run();
+
+    const row = db.select().from(workerPools).get();
+    expect(row!.capabilities).toEqual(capabilities);
+    expect(row!.repoScopeRules).toEqual(repoScopeRules);
+  });
+
+  /**
+   * @why Nullable columns (provider, runtime, model, default_timeout_sec,
+   * default_token_budget, cost_profile, capabilities, repo_scope_rules) must
+   * accept NULL values. These are optional configuration fields.
+   */
+  it("allows null for optional columns", () => {
+    const pool = makeWorkerPool();
+    db.insert(workerPools).values(pool).run();
+
+    const row = db.select().from(workerPools).get();
+    expect(row!.provider).toBeNull();
+    expect(row!.runtime).toBeNull();
+    expect(row!.model).toBeNull();
+    expect(row!.defaultTimeoutSec).toBeNull();
+    expect(row!.defaultTokenBudget).toBeNull();
+    expect(row!.costProfile).toBeNull();
+    expect(row!.capabilities).toBeNull();
+    expect(row!.repoScopeRules).toBeNull();
+  });
+
+  /**
+   * @why Timestamps must auto-populate via `DEFAULT (unixepoch())` so callers
+   * don't need to provide them. Verifies the default expression works.
+   */
+  it("auto-populates created_at and updated_at timestamps", () => {
+    const pool = makeWorkerPool();
+    db.insert(workerPools).values(pool).run();
+
+    const row = db.select().from(workerPools).get();
+    expect(row!.createdAt).toBeInstanceOf(Date);
+    expect(row!.updatedAt).toBeInstanceOf(Date);
+    const now = Date.now();
+    expect(now - row!.createdAt.getTime()).toBeLessThan(10_000);
+    expect(now - row!.updatedAt.getTime()).toBeLessThan(10_000);
+  });
+
+  /**
+   * @why Primary key uniqueness must be enforced. Duplicate inserts must fail.
+   */
+  it("rejects duplicate worker_pool_id", () => {
+    const pool = makeWorkerPool();
+    db.insert(workerPools).values(pool).run();
+    expect(() => db.insert(workerPools).values(pool).run()).toThrow();
+  });
+
+  /**
+   * @why Explicit integer values for max_concurrency and enabled must be
+   * stored and retrieved correctly. This verifies non-default integer columns.
+   */
+  it("stores explicit max_concurrency and enabled values", () => {
+    const pool = makeWorkerPool({
+      maxConcurrency: 10,
+      enabled: 0,
+      defaultTimeoutSec: 300,
+      defaultTokenBudget: 50000,
+    });
+    db.insert(workerPools).values(pool).run();
+
+    const row = db.select().from(workerPools).get();
+    expect(row!.maxConcurrency).toBe(10);
+    expect(row!.enabled).toBe(0);
+    expect(row!.defaultTimeoutSec).toBe(300);
+    expect(row!.defaultTokenBudget).toBe(50000);
+  });
+
+  /**
+   * @why All optional text fields (provider, runtime, model, cost_profile)
+   * must store and retrieve values correctly when provided.
+   */
+  it("stores and retrieves all optional text fields", () => {
+    const pool = makeWorkerPool({
+      provider: "copilot",
+      runtime: "copilot-cli",
+      model: "gpt-4",
+      costProfile: "standard",
+    });
+    db.insert(workerPools).values(pool).run();
+
+    const row = db.select().from(workerPools).get();
+    expect(row!.provider).toBe("copilot");
+    expect(row!.runtime).toBe("copilot-cli");
+    expect(row!.model).toBe("gpt-4");
+    expect(row!.costProfile).toBe("standard");
+  });
+});
+
+describe("T010 — Worker table", () => {
+  let db: ReturnType<typeof openTestDb>["db"];
+  let sqlite: ReturnType<typeof openTestDb>["sqlite"];
+
+  beforeEach(() => {
+    ({ db, sqlite } = openTestDb());
+  });
+  afterEach(() => {
+    sqlite.close();
+  });
+
+  /**
+   * @why Verifies the table exists and Drizzle can insert + select from it
+   * with the minimum required fields (pool_id, name, status) and the
+   * mandatory FK to worker_pool.
+   */
+  it("inserts and retrieves a worker with required fields", () => {
+    const pool = makeWorkerPool();
+    db.insert(workerPools).values(pool).run();
+
+    const worker = makeWorker(pool.workerPoolId);
+    db.insert(workers).values(worker).run();
+
+    const rows = db.select().from(workers).all();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.workerId).toBe(worker.workerId);
+    expect(rows[0]!.name).toBe(worker.name);
+    expect(rows[0]!.status).toBe("online");
+    expect(rows[0]!.poolId).toBe(pool.workerPoolId);
+  });
+
+  /**
+   * @why The FK to worker_pool must be enforced. Inserting a worker with a
+   * non-existent pool_id must fail.
+   */
+  it("rejects worker with non-existent pool_id", () => {
+    const worker = makeWorker(randomUUID());
+    expect(() => db.insert(workers).values(worker).run()).toThrow();
+  });
+
+  /**
+   * @why The FK to tasks (current_task_id) must be enforced when non-null.
+   * A valid task_id must exist in the tasks table.
+   */
+  it("rejects worker with non-existent current_task_id", () => {
+    const pool = makeWorkerPool();
+    db.insert(workerPools).values(pool).run();
+
+    const worker = makeWorker(pool.workerPoolId, { currentTaskId: randomUUID() });
+    expect(() => db.insert(workers).values(worker).run()).toThrow();
+  });
+
+  /**
+   * @why current_task_id FK must accept a valid task reference. This verifies
+   * the cross-table FK between worker and task works correctly through the
+   * full entity hierarchy (project → repo → task → worker).
+   */
+  it("accepts a valid current_task_id reference", () => {
+    // Set up entity hierarchy: project → repo → task
+    const wt = makeWorkflowTemplate();
+    db.insert(workflowTemplates).values(wt).run();
+    const proj = makeProject({ defaultWorkflowTemplateId: wt.workflowTemplateId });
+    db.insert(projects).values(proj).run();
+    const repo = makeRepository(proj.projectId);
+    db.insert(repositories).values(repo).run();
+    const task = makeTask(repo.repositoryId);
+    db.insert(tasks).values(task).run();
+
+    // Create pool and worker with task reference
+    const pool = makeWorkerPool();
+    db.insert(workerPools).values(pool).run();
+    const worker = makeWorker(pool.workerPoolId, { currentTaskId: task.taskId });
+    db.insert(workers).values(worker).run();
+
+    const row = db.select().from(workers).get();
+    expect(row!.currentTaskId).toBe(task.taskId);
+  });
+
+  /**
+   * @why Nullable columns (host, runtime_version, last_heartbeat_at,
+   * current_task_id, current_run_id, health_metadata) must accept NULL.
+   */
+  it("allows null for optional columns", () => {
+    const pool = makeWorkerPool();
+    db.insert(workerPools).values(pool).run();
+
+    const worker = makeWorker(pool.workerPoolId);
+    db.insert(workers).values(worker).run();
+
+    const row = db.select().from(workers).get();
+    expect(row!.host).toBeNull();
+    expect(row!.runtimeVersion).toBeNull();
+    expect(row!.lastHeartbeatAt).toBeNull();
+    expect(row!.currentTaskId).toBeNull();
+    expect(row!.currentRunId).toBeNull();
+    expect(row!.healthMetadata).toBeNull();
+  });
+
+  /**
+   * @why JSON health_metadata must round-trip correctly. This is used for
+   * extensible diagnostics data (memory, CPU, error counts).
+   */
+  it("stores and retrieves JSON health_metadata correctly", () => {
+    const pool = makeWorkerPool();
+    db.insert(workerPools).values(pool).run();
+
+    const healthMetadata = { memoryMb: 512, cpuPercent: 45.2, errorCount: 0 };
+    const worker = makeWorker(pool.workerPoolId, { healthMetadata });
+    db.insert(workers).values(worker).run();
+
+    const row = db.select().from(workers).get();
+    expect(row!.healthMetadata).toEqual(healthMetadata);
+  });
+
+  /**
+   * @why All optional text/integer fields must store and retrieve correctly.
+   */
+  it("stores all optional fields when provided", () => {
+    const pool = makeWorkerPool();
+    db.insert(workerPools).values(pool).run();
+
+    const worker = makeWorker(pool.workerPoolId, {
+      host: "worker-host-01",
+      runtimeVersion: "copilot-cli/1.2.3",
+      currentRunId: randomUUID(),
+    });
+    db.insert(workers).values(worker).run();
+
+    const row = db.select().from(workers).get();
+    expect(row!.host).toBe("worker-host-01");
+    expect(row!.runtimeVersion).toBe("copilot-cli/1.2.3");
+    expect(row!.currentRunId).toBe(worker.currentRunId);
+  });
+
+  /**
+   * @why Primary key uniqueness must be enforced. Duplicate inserts must fail.
+   */
+  it("rejects duplicate worker_id", () => {
+    const pool = makeWorkerPool();
+    db.insert(workerPools).values(pool).run();
+
+    const worker = makeWorker(pool.workerPoolId);
+    db.insert(workers).values(worker).run();
+    expect(() => db.insert(workers).values(worker).run()).toThrow();
+  });
+
+  /**
+   * @why last_heartbeat_at is stored as a timestamp (integer). When provided,
+   * Drizzle should handle the Date ↔ Unix epoch conversion correctly.
+   */
+  it("stores and retrieves last_heartbeat_at as a Date", () => {
+    const pool = makeWorkerPool();
+    db.insert(workerPools).values(pool).run();
+
+    const heartbeat = new Date();
+    const worker = makeWorker(pool.workerPoolId, { lastHeartbeatAt: heartbeat });
+    db.insert(workers).values(worker).run();
+
+    const row = db.select().from(workers).get();
+    expect(row!.lastHeartbeatAt).toBeInstanceOf(Date);
+    // Compare to second precision (Unix epoch seconds)
+    expect(Math.abs(row!.lastHeartbeatAt!.getTime() - heartbeat.getTime())).toBeLessThan(1000);
+  });
+});
+
+describe("T010 — PromptTemplate table", () => {
+  let db: ReturnType<typeof openTestDb>["db"];
+  let sqlite: ReturnType<typeof openTestDb>["sqlite"];
+
+  beforeEach(() => {
+    ({ db, sqlite } = openTestDb());
+  });
+  afterEach(() => {
+    sqlite.close();
+  });
+
+  /**
+   * @why Verifies the table exists and Drizzle can insert + select from it
+   * with the minimum required fields (name, version, role, template_text).
+   */
+  it("inserts and retrieves a prompt template with required fields", () => {
+    const tmpl = makePromptTemplate();
+    db.insert(promptTemplates).values(tmpl).run();
+
+    const rows = db.select().from(promptTemplates).all();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.promptTemplateId).toBe(tmpl.promptTemplateId);
+    expect(rows[0]!.name).toBe(tmpl.name);
+    expect(rows[0]!.version).toBe("1.0.0");
+    expect(rows[0]!.role).toBe("developer");
+    expect(rows[0]!.templateText).toBe(tmpl.templateText);
+  });
+
+  /**
+   * @why JSON columns (input_schema, output_schema, stop_conditions) must
+   * round-trip through SQLite without data loss. These define the structured
+   * contract between the orchestrator and AI agents.
+   */
+  it("stores and retrieves JSON schema columns correctly", () => {
+    const inputSchema = {
+      type: "object",
+      properties: { taskDescription: { type: "string" } },
+      required: ["taskDescription"],
+    };
+    const outputSchema = {
+      type: "object",
+      properties: { diff: { type: "string" }, explanation: { type: "string" } },
+    };
+    const stopConditions = [
+      { type: "token_limit", value: 10000 },
+      { type: "time_limit_sec", value: 300 },
+    ];
+
+    const tmpl = makePromptTemplate({ inputSchema, outputSchema, stopConditions });
+    db.insert(promptTemplates).values(tmpl).run();
+
+    const row = db.select().from(promptTemplates).get();
+    expect(row!.inputSchema).toEqual(inputSchema);
+    expect(row!.outputSchema).toEqual(outputSchema);
+    expect(row!.stopConditions).toEqual(stopConditions);
+  });
+
+  /**
+   * @why Nullable JSON columns must accept NULL when not provided.
+   */
+  it("allows null for optional JSON columns", () => {
+    const tmpl = makePromptTemplate();
+    db.insert(promptTemplates).values(tmpl).run();
+
+    const row = db.select().from(promptTemplates).get();
+    expect(row!.inputSchema).toBeNull();
+    expect(row!.outputSchema).toBeNull();
+    expect(row!.stopConditions).toBeNull();
+  });
+
+  /**
+   * @why Timestamps must auto-populate via `DEFAULT (unixepoch())`.
+   */
+  it("auto-populates created_at timestamp", () => {
+    const tmpl = makePromptTemplate();
+    db.insert(promptTemplates).values(tmpl).run();
+
+    const row = db.select().from(promptTemplates).get();
+    expect(row!.createdAt).toBeInstanceOf(Date);
+    const now = Date.now();
+    expect(now - row!.createdAt.getTime()).toBeLessThan(10_000);
+  });
+
+  /**
+   * @why Primary key uniqueness must be enforced. Duplicate inserts must fail.
+   */
+  it("rejects duplicate prompt_template_id", () => {
+    const tmpl = makePromptTemplate();
+    db.insert(promptTemplates).values(tmpl).run();
+    expect(() => db.insert(promptTemplates).values(tmpl).run()).toThrow();
+  });
+
+  /**
+   * @why The role column must accept all valid AgentRole enum values. This
+   * ensures templates can be created for every agent type in the system.
+   */
+  it("accepts all valid agent role values", () => {
+    const roles = [
+      "planner",
+      "developer",
+      "reviewer",
+      "lead-reviewer",
+      "merge-assist",
+      "post-merge-analysis",
+    ];
+    for (const role of roles) {
+      const tmpl = makePromptTemplate({ role });
+      db.insert(promptTemplates).values(tmpl).run();
+    }
+    const rows = db.select().from(promptTemplates).all();
+    expect(rows).toHaveLength(roles.length);
+  });
+});
+
+describe("T010 — AgentProfile table", () => {
+  let db: ReturnType<typeof openTestDb>["db"];
+  let sqlite: ReturnType<typeof openTestDb>["sqlite"];
+
+  beforeEach(() => {
+    ({ db, sqlite } = openTestDb());
+  });
+  afterEach(() => {
+    sqlite.close();
+  });
+
+  /**
+   * @why Verifies the table exists and Drizzle can insert + select from it
+   * with the minimum required fields (pool_id). All policy references are
+   * nullable.
+   */
+  it("inserts and retrieves an agent profile with required fields", () => {
+    const pool = makeWorkerPool();
+    db.insert(workerPools).values(pool).run();
+
+    const profile = makeAgentProfile(pool.workerPoolId);
+    db.insert(agentProfiles).values(profile).run();
+
+    const rows = db.select().from(agentProfiles).all();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.agentProfileId).toBe(profile.agentProfileId);
+    expect(rows[0]!.poolId).toBe(pool.workerPoolId);
+  });
+
+  /**
+   * @why The FK to worker_pool must be enforced. Inserting a profile with
+   * a non-existent pool_id must fail.
+   */
+  it("rejects profile with non-existent pool_id", () => {
+    const profile = makeAgentProfile(randomUUID());
+    expect(() => db.insert(agentProfiles).values(profile).run()).toThrow();
+  });
+
+  /**
+   * @why The FK to prompt_template must be enforced when non-null.
+   * A valid prompt_template_id must exist.
+   */
+  it("rejects profile with non-existent prompt_template_id", () => {
+    const pool = makeWorkerPool();
+    db.insert(workerPools).values(pool).run();
+
+    const profile = makeAgentProfile(pool.workerPoolId, {
+      promptTemplateId: randomUUID(),
+    });
+    expect(() => db.insert(agentProfiles).values(profile).run()).toThrow();
+  });
+
+  /**
+   * @why The FK to prompt_template must accept a valid reference. This
+   * validates the relationship between agent profiles and their templates.
+   */
+  it("accepts a valid prompt_template_id reference", () => {
+    const pool = makeWorkerPool();
+    db.insert(workerPools).values(pool).run();
+
+    const tmpl = makePromptTemplate();
+    db.insert(promptTemplates).values(tmpl).run();
+
+    const profile = makeAgentProfile(pool.workerPoolId, {
+      promptTemplateId: tmpl.promptTemplateId,
+    });
+    db.insert(agentProfiles).values(profile).run();
+
+    const row = db.select().from(agentProfiles).get();
+    expect(row!.promptTemplateId).toBe(tmpl.promptTemplateId);
+  });
+
+  /**
+   * @why All policy reference columns must accept NULL since the PolicySet
+   * table doesn't exist yet (T013). These are forward-looking FKs.
+   */
+  it("allows null for all policy reference columns", () => {
+    const pool = makeWorkerPool();
+    db.insert(workerPools).values(pool).run();
+
+    const profile = makeAgentProfile(pool.workerPoolId);
+    db.insert(agentProfiles).values(profile).run();
+
+    const row = db.select().from(agentProfiles).get();
+    expect(row!.promptTemplateId).toBeNull();
+    expect(row!.toolPolicyId).toBeNull();
+    expect(row!.commandPolicyId).toBeNull();
+    expect(row!.fileScopePolicyId).toBeNull();
+    expect(row!.validationPolicyId).toBeNull();
+    expect(row!.reviewPolicyId).toBeNull();
+    expect(row!.budgetPolicyId).toBeNull();
+    expect(row!.retryPolicyId).toBeNull();
+  });
+
+  /**
+   * @why All policy reference columns must store and retrieve text values
+   * correctly when provided. These will become FKs once PolicySet exists.
+   */
+  it("stores and retrieves all policy reference columns", () => {
+    const pool = makeWorkerPool();
+    db.insert(workerPools).values(pool).run();
+
+    const policyIds = {
+      toolPolicyId: randomUUID(),
+      commandPolicyId: randomUUID(),
+      fileScopePolicyId: randomUUID(),
+      validationPolicyId: randomUUID(),
+      reviewPolicyId: randomUUID(),
+      budgetPolicyId: randomUUID(),
+      retryPolicyId: randomUUID(),
+    };
+    const profile = makeAgentProfile(pool.workerPoolId, policyIds);
+    db.insert(agentProfiles).values(profile).run();
+
+    const row = db.select().from(agentProfiles).get();
+    expect(row!.toolPolicyId).toBe(policyIds.toolPolicyId);
+    expect(row!.commandPolicyId).toBe(policyIds.commandPolicyId);
+    expect(row!.fileScopePolicyId).toBe(policyIds.fileScopePolicyId);
+    expect(row!.validationPolicyId).toBe(policyIds.validationPolicyId);
+    expect(row!.reviewPolicyId).toBe(policyIds.reviewPolicyId);
+    expect(row!.budgetPolicyId).toBe(policyIds.budgetPolicyId);
+    expect(row!.retryPolicyId).toBe(policyIds.retryPolicyId);
+  });
+
+  /**
+   * @why Primary key uniqueness must be enforced. Duplicate inserts must fail.
+   */
+  it("rejects duplicate agent_profile_id", () => {
+    const pool = makeWorkerPool();
+    db.insert(workerPools).values(pool).run();
+
+    const profile = makeAgentProfile(pool.workerPoolId);
+    db.insert(agentProfiles).values(profile).run();
+    expect(() => db.insert(agentProfiles).values(profile).run()).toThrow();
+  });
+});
+
+describe("T010 — Cross-table relationships", () => {
+  let db: ReturnType<typeof openTestDb>["db"];
+  let sqlite: ReturnType<typeof openTestDb>["sqlite"];
+
+  beforeEach(() => {
+    ({ db, sqlite } = openTestDb());
+  });
+  afterEach(() => {
+    sqlite.close();
+  });
+
+  /**
+   * @why Validates the full entity graph: WorkerPool → Worker, WorkerPool →
+   * AgentProfile → PromptTemplate. This ensures all foreign keys in the T010
+   * tables work together correctly through a SQL join.
+   */
+  it("joins worker pool, worker, agent profile, and prompt template", () => {
+    // Create worker pool
+    const pool = makeWorkerPool({ name: "dev-pool", poolType: "developer" });
+    db.insert(workerPools).values(pool).run();
+
+    // Create worker in pool
+    const worker = makeWorker(pool.workerPoolId, { name: "worker-1", status: "online" });
+    db.insert(workers).values(worker).run();
+
+    // Create prompt template
+    const tmpl = makePromptTemplate({ name: "dev-template", role: "developer" });
+    db.insert(promptTemplates).values(tmpl).run();
+
+    // Create agent profile referencing pool and template
+    const profile = makeAgentProfile(pool.workerPoolId, {
+      promptTemplateId: tmpl.promptTemplateId,
+    });
+    db.insert(agentProfiles).values(profile).run();
+
+    // Verify via SQL join
+    const result = sqlite
+      .prepare(
+        `SELECT wp.name AS pool_name, wp.pool_type,
+                w.name AS worker_name, w.status AS worker_status,
+                pt.name AS template_name, pt.role AS template_role,
+                ap.agent_profile_id
+         FROM worker_pool wp
+         JOIN worker w ON w.pool_id = wp.worker_pool_id
+         JOIN agent_profile ap ON ap.pool_id = wp.worker_pool_id
+         JOIN prompt_template pt ON ap.prompt_template_id = pt.prompt_template_id`,
+      )
+      .get() as {
+      pool_name: string;
+      pool_type: string;
+      worker_name: string;
+      worker_status: string;
+      template_name: string;
+      template_role: string;
+      agent_profile_id: string;
+    };
+
+    expect(result.pool_name).toBe("dev-pool");
+    expect(result.pool_type).toBe("developer");
+    expect(result.worker_name).toBe("worker-1");
+    expect(result.worker_status).toBe("online");
+    expect(result.template_name).toBe("dev-template");
+    expect(result.template_role).toBe("developer");
+    expect(result.agent_profile_id).toBe(profile.agentProfileId);
+  });
+
+  /**
+   * @why A single worker pool should support multiple workers and agent
+   * profiles. This verifies the one-to-many relationships work correctly.
+   */
+  it("supports multiple workers and profiles per pool", () => {
+    const pool = makeWorkerPool();
+    db.insert(workerPools).values(pool).run();
+
+    // Add multiple workers
+    for (let i = 0; i < 3; i++) {
+      db.insert(workers).values(makeWorker(pool.workerPoolId)).run();
+    }
+
+    // Add multiple profiles
+    for (let i = 0; i < 2; i++) {
+      db.insert(agentProfiles).values(makeAgentProfile(pool.workerPoolId)).run();
+    }
+
+    const workerRows = db.select().from(workers).where(eq(workers.poolId, pool.workerPoolId)).all();
+    expect(workerRows).toHaveLength(3);
+
+    const profileRows = db
+      .select()
+      .from(agentProfiles)
+      .where(eq(agentProfiles.poolId, pool.workerPoolId))
+      .all();
+    expect(profileRows).toHaveLength(2);
+  });
+
+  /**
+   * @why Worker.current_task_id links the worker plane (T010) to the task
+   * lifecycle plane (T009). This verifies the cross-migration FK works by
+   * traversing the full hierarchy: project → repo → task → worker → pool.
+   */
+  it("links worker to task through the full entity hierarchy", () => {
+    // Set up T008/T009 hierarchy
+    const wt = makeWorkflowTemplate();
+    db.insert(workflowTemplates).values(wt).run();
+    const proj = makeProject({ defaultWorkflowTemplateId: wt.workflowTemplateId });
+    db.insert(projects).values(proj).run();
+    const repo = makeRepository(proj.projectId);
+    db.insert(repositories).values(repo).run();
+    const task = makeTask(repo.repositoryId, {
+      title: "implement-feature",
+      status: "in_development",
+    });
+    db.insert(tasks).values(task).run();
+
+    // Set up T010 hierarchy
+    const pool = makeWorkerPool({ name: "dev-pool" });
+    db.insert(workerPools).values(pool).run();
+    const worker = makeWorker(pool.workerPoolId, {
+      name: "active-worker",
+      status: "busy",
+      currentTaskId: task.taskId,
+    });
+    db.insert(workers).values(worker).run();
+
+    // Verify the full cross-migration join
+    const result = sqlite
+      .prepare(
+        `SELECT w.name AS worker_name, t.title AS task_title,
+                r.name AS repo_name, p.name AS project_name,
+                wp.name AS pool_name
+         FROM worker w
+         JOIN task t ON w.current_task_id = t.task_id
+         JOIN repository r ON t.repository_id = r.repository_id
+         JOIN project p ON r.project_id = p.project_id
+         JOIN worker_pool wp ON w.pool_id = wp.worker_pool_id`,
+      )
+      .get() as {
+      worker_name: string;
+      task_title: string;
+      repo_name: string;
+      project_name: string;
+      pool_name: string;
+    };
+
+    expect(result.worker_name).toBe("active-worker");
+    expect(result.task_title).toBe("implement-feature");
+    expect(result.pool_name).toBe("dev-pool");
   });
 });
