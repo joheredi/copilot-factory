@@ -471,6 +471,32 @@ export type {
   ReviewerDispatchDependencies,
 } from "./services/reviewer-dispatch.service.js";
 
+// Ports — lead review consolidation interfaces (PRD 002 §2.2, T060)
+export type {
+  LeadReviewTask,
+  LeadReviewCycle,
+  SpecialistReviewPacket,
+  LeadReviewJob,
+  ReviewCycleHistoryEntry,
+  LeadReviewAuditEvent,
+  LeadReviewTaskRepositoryPort,
+  LeadReviewCycleRepositoryPort,
+  LeadReviewPacketRepositoryPort,
+  LeadReviewJobRepositoryPort,
+  LeadReviewAuditRepositoryPort,
+  LeadReviewTransactionRepositories,
+  LeadReviewConsolidationUnitOfWork,
+} from "./ports/lead-review-consolidation.ports.js";
+
+// Services — lead review consolidation (PRD 002 §2.2, T060)
+export { createLeadReviewConsolidationService } from "./services/lead-review-consolidation.service.js";
+export type {
+  AssembleLeadReviewContextParams,
+  AssembleLeadReviewContextResult,
+  LeadReviewConsolidationService,
+  LeadReviewConsolidationDependencies,
+} from "./services/lead-review-consolidation.service.js";
+
 // Ports — merge executor interfaces (PRD 010 §10.10, T064)
 export type {
   MergeExecutorTask,

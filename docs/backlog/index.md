@@ -180,7 +180,7 @@ See [phase documents](phases/) for details.
 | [T057](tasks/T057-validation-gates.md)              | Implement validation gate checking for state transitions                              | E011 | P0       | feature    | done    |
 | [T058](tasks/T058-review-router.md)                 | Implement Review Router with deterministic rules                                      | E012 | P0       | feature    | done    |
 | [T059](tasks/T059-reviewer-dispatch.md)             | Implement specialist reviewer job dispatch                                            | E012 | P0       | feature    | done    |
-| [T060](tasks/T060-lead-reviewer-dispatch.md)        | Implement lead reviewer dispatch with dependencies                                    | E012 | P0       | feature    | pending |
+| [T060](tasks/T060-lead-reviewer-dispatch.md)        | Implement lead reviewer dispatch with dependencies                                    | E012 | P0       | feature    | done    |
 | [T061](tasks/T061-review-decision-apply.md)         | Implement review decision application                                                 | E012 | P0       | feature    | pending |
 | [T062](tasks/T062-rework-loop.md)                   | Implement rework loop with rejection context                                          | E012 | P1       | feature    | pending |
 | [T063](tasks/T063-merge-queue.md)                   | Implement merge queue with ordering contract                                          | E013 | P0       | feature    | done    |

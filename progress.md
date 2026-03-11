@@ -1,181 +1,5 @@
 # Progress Log
 
-## T064: Rebase-and-Merge Execution — Done
-
-**What was implemented:**
-
-- Created `packages/application/src/ports/merge-executor.ports.ts`:
-  - `MergeGitOperationsPort` for fetch, rebase, push, getHeadSha, getCurrentBranch
-  - `MergeValidationPort` for running merge-gate validation
-  - `ConflictClassifierPort` for classifying rebase conflicts (reworkable/non_reworkable)
-  - `MergeArtifactPort` for persisting MergePacket artifacts
-  - `MergeExecutorUnitOfWork` with narrow task and item repository ports
-  - `RebaseResult` type with success flag and conflict file list
-
-- Created `packages/application/src/services/merge-executor.service.ts`:
-  - `createMergeExecutorService()` factory with full DI: unitOfWork, eventEmitter, gitOps, validation, conflictClassifier, artifactStore, clock
-  - `executeMerge`: orchestrates full rebase-and-merge pipeline through 7 phases
-  - Phase 1: Load and validate item (PREPARING) and task (QUEUED_FOR_MERGE)
-  - Phase 2: Transition item PREPARING→REBASING, task QUEUED_FOR_MERGE→MERGING
-  - Phase 3: git fetch + rebase, with conflict classification on failure
-  - Phase 4: Transition item REBASING→VALIDATING, run merge-gate validation
-  - Phase 5: Transition item VALIDATING→MERGING, git push
-  - Phase 6: Transition item MERGING→MERGED, task MERGING→POST_MERGE_VALIDATION
-  - Phase 7: Build and persist MergePacket with schema validation
-  - Custom errors: `MergeItemNotPreparingError`, `TaskNotQueuedForMergeError`
-  - Discriminated union result: `MergeSuccessResult | RebaseConflictResult | ValidationFailedResult | PushFailedResult`
-  - Maps ValidationCheckOutcome to schema-compatible types (check_type enum mapping, status normalization)
-
-- Created 18 tests covering: happy path pipeline, MergePacket correctness, audit events for all transitions, domain event emission, artifact persistence, non-reworkable rebase conflict (FAILED), reworkable rebase conflict (CHANGES_REQUESTED/REQUEUED), conflict details in audit, validation failure, push failure, entity not found, wrong item status, wrong task status, missing task, git fetch before rebase, correct branch push, metadata propagation
-
-- Updated barrel exports in `packages/application/src/index.ts`
-
-**Patterns used:**
-
-- Factory function with explicit dependency injection (matching all other services)
-- Port abstraction for git ops, validation, conflict classification, artifact store
-- Domain state machine validation before every transition
-- Atomic transactions with audit events for each transition
-- Domain events emitted after transaction commits
-- `ConflictClassifierPort` prepared for T066 implementation
-- Schema validation via Zod safeParse before artifact persistence
-
-**Next loop should know:**
-
-- T064 unblocks T065 (squash/merge-commit strategies), T066 (conflict classification), T067 (post-merge failure)
-- The `ConflictClassifierPort` is the extension point for T066 — implement the classify() method with policy-based rules
-- The validation failure path does NOT transition the task (stays MERGING) — T067 handles post-merge-failure task transitions
-- The service is async (git ops + validation are Promise-based) unlike most other sync services
-
-## T063: Merge Queue with Ordering Contract — Done
-
-**What was implemented:**
-
-- Created `packages/application/src/ports/merge-queue.ports.ts`:
-  - `MergeQueueTaskRepositoryPort`, `MergeQueueItemDataPort` with ordering-aware queries
-  - `MergeQueueUnitOfWork` with `MergeQueueTransactionRepositories`
-  - Narrow entity shapes: `MergeQueueTask` (includes priority, repositoryId), `MergeQueueItemRecord`
-- Created `packages/application/src/services/merge-queue.service.ts`:
-  - `createMergeQueueService()` factory with `{unitOfWork, eventEmitter, idGenerator}` DI
-  - `enqueueForMerge`: validates APPROVED state, checks no duplicate, creates item, transitions task APPROVED → QUEUED_FOR_MERGE, recalculates positions, emits events
-  - `dequeueNext`: finds next ENQUEUED item by ordering contract (priority DESC → enqueue time ASC → ID ASC), atomically claims ENQUEUED → PREPARING, recalculates positions
-  - `recalculatePositions`: reassigns 1-indexed contiguous positions
-  - `getPriorityWeight()` utility: critical=4, high=3, medium=2, low=1
-  - Custom errors: `DuplicateEnqueueError`, `TaskNotApprovedError`
-- Created 23 tests covering: priority weights, happy-path enqueue, audit events, domain events, entity not found, non-approved task, duplicate enqueue, no events on failure, position assignment, empty queue, per-repo isolation, atomic claim, priority ordering, FIFO within priority, deterministic ID tie-breaking, skip non-ENQUEUED, contiguous positions, no-op on empty, repo isolation for positions
-- Updated `packages/application/src/index.ts` to export all new types and service
-
-**Patterns:** Follows dedicated UnitOfWork pattern (same as LeaseService, ReviewerDispatchService). Ordering contract implemented in the port (findNextEnqueued) so infrastructure can use SQL ORDER BY for efficiency. Position recalculation is a display-only concern done after mutations.
-
-## T059: Specialist Reviewer Job Dispatch — Done
-
-**What was implemented:**
-
-- Created `packages/application/src/ports/reviewer-dispatch.ports.ts`:
-  - `ReviewDispatchTaskRepositoryPort`, `ReviewDispatchCycleRepositoryPort`, `ReviewDispatchJobRepositoryPort`, `ReviewDispatchAuditRepositoryPort`
-  - `ReviewerDispatchUnitOfWork` with `ReviewDispatchTransactionRepositories`
-  - Narrow entity shapes: `ReviewDispatchTask`, `ReviewDispatchCycle`, `ReviewDispatchJob`, `ReviewDispatchAuditEvent`
-- Created `packages/application/src/services/reviewer-dispatch.service.ts`:
-  - `createReviewerDispatchService()` factory function
-  - Orchestrates: routing → cycle creation → job fan-out → task transition
-  - All mutations atomic within single transaction (per §10.3)
-  - Domain events emitted after commit
-  - Uses domain state machine validators directly (`validateTransition`, `validateReviewCycleTransition`)
-- Created 18 tests covering: happy path (single + multiple reviewers), state machine validation, review cycle creation, task update, audit events, domain events, router integration, edge cases, atomicity
-- Updated `packages/application/src/index.ts` to export all new types and service
-
-**Design decision:** Dedicated service with own UnitOfWork (not composing TransitionService + JobQueueService) because SQLite doesn't support nested transactions and §10.3 requires cross-entity atomicity.
-
-**Patterns:**
-
-- Same factory function pattern as all other application services
-- Injected `idGenerator` and `clock` for testability
-- Job fan-out uses `jobGroupId` = reviewCycleId for coordinator pattern
-- Lead review job uses `dependsOnJobIds` to wait for all specialists
-- Fake repository implementations in tests (no real DB needed)
-
-**Also fixed:** Updated `docs/backlog/index.md` to mark T057 and T069 as done (task files already said done but index was stale).
-
-## T069: Filesystem Artifact Storage — Done
-
-**What was implemented:**
-
-- Created `packages/infrastructure/src/artifacts/` module with:
-  - `ArtifactStore` class: filesystem-based artifact storage with atomic writes (write to `.tmp`, rename)
-  - `ArtifactStorageError` / `ArtifactNotFoundError`: domain-specific error classes
-  - Path builder functions (`taskBasePath`, `packetPath`, `runLogPath`, `runOutputPath`, `runValidationPath`, `reviewArtifactPath`, `mergeArtifactPath`, `summaryPath`)
-- Directory layout matches §7.11: `repositories/{repoId}/tasks/{taskId}/{packets,runs,reviews,merges,summaries}`
-- All returned paths are relative to artifact root (suitable as `artifact_refs`)
-- Added `rename` method to `FileSystem` interface for atomic writes
-- Updated `createNodeFileSystem` and all existing test fakes (3 files)
-- 42 new tests covering: atomic writes, directory idempotency, all typed helpers, read/write, error handling, path resolution, edge cases
-- Exported from `@factory/infrastructure` package
-
-**Patterns:**
-
-- Uses the existing `FileSystem` abstraction (same as workspace module)
-- Atomic write pattern: writeFile(tmp) → rename(tmp → final), cleanup tmp on failure
-- Generic `storeArtifact`/`storeJSON` plus typed helpers that build §7.11 paths
-
-**Next loop notes:**
-
-- T070 (artifact retrieval) can build on `readArtifact`/`readJSON`/`exists` methods
-- Port implementations (ValidationPacketArtifactPort, PolicySnapshotArtifactPort, ArtifactExistencePort) can delegate to ArtifactStore
-- T071/T072 (retry summarization, partial work snapshot) depend on this store
-
-## T039: Git Worktree Creation — Done
-
-**What was implemented:**
-
-- T039: Implemented git worktree creation per task
-- Created `packages/infrastructure/src/workspace/` module with:
-  - `WorkspaceManager` class for workspace provisioning
-  - `GitOperations` interface + `createExecGitOperations()` production impl using `execFile`
-  - `FileSystem` interface + `createNodeFileSystem()` production impl
-  - Branch naming: `factory/{taskId}` and `factory/{taskId}/r{attempt}` for retries
-  - Workspace reuse on retry when worktree is clean
-  - Error types: `GitOperationError`, `WorkspaceBranchExistsError`, `WorkspaceDirtyError`
-- 31 new tests (17 unit tests for WorkspaceManager with mocks, 14 integration tests with real git repos)
-
-**Patterns used:**
-
-- Constructor injection of `GitOperations` + `FileSystem` interfaces for testability
-
-**Next loop should know:**
-
-- T040 (workspace mounting), T041 (workspace cleanup), T044 (worker supervisor) are now unblocked
-
-## T036: Implement readiness computation (2026-03-11)
-
-### What was done
-
-- Created `packages/application/src/ports/readiness.ports.ts` — port interfaces for readiness computation (ReadinessTaskRepositoryPort, ReadinessTaskDependencyRepositoryPort, ReadinessUnitOfWork)
-- Created `packages/application/src/services/readiness.service.ts` — ReadinessService with `computeReadiness()` and `checkParentChildReadiness()`
-- Created `packages/application/src/services/readiness.service.test.ts` — 57 tests covering all acceptance criteria
-- Updated `packages/application/src/index.ts` — exported new service, types, and port interfaces
-
-### Patterns used
-
-- Hexagonal architecture: narrow port interfaces following the same pattern as dependency.ports.ts
-- Pure query service: computeReadiness does NOT trigger transitions (caller's responsibility)
-- ReadinessUnitOfWork for consistent reads within a transaction
-- Discriminated union results (ReadinessResultReady | ReadinessResultBlocked)
-
-### Key design decisions
-
-- Only `blocks` edges with `isHardBlock=true` affect readiness; all other edge types are informational
-- Only DONE satisfies a hard-block; FAILED, CANCELLED, ESCALATED do NOT
-- parent_child semantics are separate: checkParentChildReadiness() handles DONE/CANCELLED child checks
-- Service is a pure query — deterministic orchestration principle preserved
-
-### What the next loop should know
-
-- T036 unblocks T037 (reverse-dependency recalculation) which should wire up readiness recomputation on task status changes
-- The ReadinessService ports (ReadinessTaskRepositoryPort, ReadinessTaskDependencyRepositoryPort) need infrastructure implementations in apps/control-plane — these can adapt the existing task.repository.ts and task-dependency.repository.ts
-- The readiness service is intentionally decoupled from the transition service — the reconciliation loop or dependency module should call computeReadiness() and then call transitionService.transitionTask() with the appropriate TransitionContext
-
----
-
 ## T037 — Implement reverse-dependency recalculation
 
 ### Task
@@ -521,3 +345,32 @@ Created ReverseDependencyService in `packages/application` that automatically re
 - Builder-style test data factories with `createInput()` / `createRule()` overrides
 - Categorized rule evaluation maintaining spec-mandated ordering
 - Set-based deduplication for reviewer types across tiers
+
+## T060 — Implement lead reviewer dispatch with dependencies
+
+### Task
+
+T060 - Implement lead reviewer dispatch with dependencies (Epic E012: Review Pipeline)
+
+### What was done
+
+Created LeadReviewConsolidationService in `packages/application` that assembles the lead reviewer's complete context when the `lead_review_consolidation` job becomes claimable. T059 already creates the lead job with `dependsOnJobIds`, and T026 prevents claiming until all dependencies are terminal. T060 adds the context assembly: gathering all specialist ReviewPackets from the current cycle, fetching review history from prior cycles, transitioning the ReviewCycle to CONSOLIDATING, recording audit events, and emitting domain events. 25 tests covering: single/multiple specialist packets, failed specialist jobs, review history ordering, state machine validation (IN_PROGRESS and AWAITING_REQUIRED_REVIEWS sources), terminal state rejection, job completion verification, concurrent modification detection, audit recording, and event emission.
+
+### Files created
+
+- `packages/application/src/ports/lead-review-consolidation.ports.ts`
+- `packages/application/src/services/lead-review-consolidation.service.ts`
+- `packages/application/src/services/lead-review-consolidation.service.test.ts`
+
+### Files modified
+
+- `packages/application/src/index.ts` — added exports for new service and port types
+
+### Patterns used
+
+- Service factory pattern with dependency injection (matching reviewer-dispatch.service.ts)
+- Narrow port interfaces per service (hexagonal architecture)
+- Unit of work for atomic transactions
+- Post-commit domain event emission
+- Defense-in-depth specialist job terminal check (even though T026 handles this at claim time)
+- Review history assembly with chronological ordering for multi-rework scenarios
