@@ -186,7 +186,7 @@ See [phase documents](phases/) for details.
 | [T063](tasks/T063-merge-queue.md)                   | Implement merge queue with ordering contract                                          | E013 | P0       | feature    | done    |
 | [T064](tasks/T064-rebase-merge-exec.md)             | Implement rebase-and-merge execution                                                  | E013 | P0       | feature    | done    |
 | [T065](tasks/T065-merge-strategies.md)              | Implement squash and merge-commit strategies                                          | E013 | P1       | feature    | pending |
-| [T066](tasks/T066-conflict-classification.md)       | Implement merge conflict classification                                               | E013 | P0       | feature    | pending |
+| [T066](tasks/T066-conflict-classification.md)       | Implement merge conflict classification                                               | E013 | P0       | feature    | done    |
 | [T067](tasks/T067-post-merge-failure.md)            | Implement post-merge validation and failure policy                                    | E013 | P0       | feature    | pending |
 | [T068](tasks/T068-followup-task-gen.md)             | Implement follow-up task generation                                                   | E013 | P1       | feature    | pending |
 | [T069](tasks/T069-artifact-storage.md)              | Implement filesystem artifact storage                                                 | E014 | P0       | feature    | done    |

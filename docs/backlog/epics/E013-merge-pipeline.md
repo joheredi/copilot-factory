@@ -48,7 +48,7 @@ Git merge operations are inherently complex. Post-merge validation failures requ
 | [T063](../tasks/T063-merge-queue.md)             | Implement merge queue with ordering contract       | P0       | pending |
 | [T064](../tasks/T064-rebase-merge-exec.md)       | Implement rebase-and-merge execution               | P0       | pending |
 | [T065](../tasks/T065-merge-strategies.md)        | Implement squash and merge-commit strategies       | P1       | pending |
-| [T066](../tasks/T066-conflict-classification.md) | Implement merge conflict classification            | P0       | pending |
+| [T066](../tasks/T066-conflict-classification.md) | Implement merge conflict classification            | P0       | done    |
 | [T067](../tasks/T067-post-merge-failure.md)      | Implement post-merge validation and failure policy | P0       | pending |
 | [T068](../tasks/T068-followup-task-gen.md)       | Implement follow-up task generation                | P1       | pending |
 

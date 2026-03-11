@@ -561,3 +561,15 @@ export type {
   MergeExecutorService,
   MergeExecutorDependencies,
 } from "./services/merge-executor.service.js";
+
+// Services — conflict classifier for merge conflict classification (PRD 010 §10.10.2, T066)
+export {
+  classifyConflict,
+  createConflictClassifierService,
+  createDetailedConflictClassifier,
+  DEFAULT_MERGE_CONFLICT_POLICY,
+} from "./services/conflict-classifier.service.js";
+export type {
+  MergeConflictPolicy,
+  ConflictClassificationResult,
+} from "./services/conflict-classifier.service.js";

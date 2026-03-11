@@ -488,3 +488,36 @@ Implemented full CRUD endpoints for Projects and Repositories in the NestJS cont
 - T089 (React SPA init) is now unblocked by T081
 - The DatabaseModule is Global so all future feature modules get DB access automatically
 - PaginationQueryDto and PaginatedResponse can be reused by T082-T085
+
+## T066: Implement merge conflict classification (done)
+
+**Date:** 2026-03-11
+
+Implemented the conflict classifier service that determines whether merge conflicts are reworkable or non-reworkable per PRD §10.10.2.
+
+### What was done
+
+- Created `packages/application/src/services/conflict-classifier.service.ts`
+- Created `packages/application/src/services/conflict-classifier.service.test.ts` (32 tests)
+- Exported new types and functions from `packages/application/src/index.ts`
+
+### Key design decisions
+
+- Implemented as an application service with a factory function (`createConflictClassifierService`) that takes a `MergeConflictPolicy` config object
+- Uses `picomatch` for protected path glob matching (consistent with review-router pattern)
+- Directory prefix patterns (ending with `/`) are normalized to `<prefix>**` for picomatch compatibility
+- Provides both `ConflictClassifierPort` implementation and a detailed classifier that returns reasons
+- File count threshold is checked BEFORE protected paths (short-circuit on cheaper check)
+
+### Patterns used
+
+- Factory function + dependency injection (consistent with all other application services)
+- Port implementation pattern (implements existing `ConflictClassifierPort` from merge-executor.ports.ts)
+- `picomatch` with `{ dot: true }` for glob matching (consistent with review-router.service.ts)
+
+### What the next loop should know
+
+- T067 (post-merge validation and failure policy) is now unblocked
+- The `ConflictClassifierPort` was already consumed by `merge-executor.service.ts` — this task provides the production implementation
+- The JSDoc in merge-executor.service.ts references `createPolicyConflictClassifier(policySnapshot)` — the actual function is `createConflictClassifierService(policy)` which is close but the merge executor JSDoc may need updating in a future task
+- `MergeConflictPolicy` is not yet part of the hierarchical `FactoryConfig` — merge policy lives as opaque JSON in the DB schema. A future task should formalize the merge policy type in packages/config
