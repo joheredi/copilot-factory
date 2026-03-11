@@ -49,5 +49,10 @@ export type {
 export type { MergeQueueItem, NewMergeQueueItem } from "./merge-queue-item.repository.js";
 export type { ValidationRun, NewValidationRun } from "./validation-run.repository.js";
 export type { Job, NewJob } from "./job.repository.js";
-export type { AuditEvent, NewAuditEvent } from "./audit-event.repository.js";
+export type {
+  AuditEvent,
+  NewAuditEvent,
+  AuditEventQueryFilters,
+  PaginatedAuditEvents,
+} from "./audit-event.repository.js";
 export type { PolicySet, NewPolicySet } from "./policy-set.repository.js";

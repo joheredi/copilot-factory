@@ -5,7 +5,7 @@
 | **ID**                    | T074                                                                           |
 | **Epic**                  | [E015: Audit & Event System](../epics/E015-audit-events.md)                    |
 | **Type**                  | feature                                                                        |
-| **Status**                | pending                                                                        |
+| **Status**                | done                                                                           |
 | **Priority**              | P1                                                                             |
 | **Owner**                 | backend-engineer                                                               |
 | **AI Executable**         | Yes                                                                            |

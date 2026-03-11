@@ -433,6 +433,18 @@ export type {
   PolicySnapshotServiceDependencies,
 } from "./services/policy-snapshot.service.js";
 
+// Ports — audit event query interfaces (PRD 002 §2.3)
+export type {
+  AuditPaginationParams,
+  AuditEventFilters,
+  AuditEventQueryPort,
+  PaginatedAuditResult,
+} from "./ports/audit-query.ports.js";
+
+// Services — audit event query (PRD 002 §2.3)
+export { createAuditQueryService } from "./services/audit-query.service.js";
+export type { AuditQueryService, AuditQueryDependencies } from "./services/audit-query.service.js";
+
 // Ports — merge queue interfaces (PRD 010 §10.10)
 export type {
   MergeQueueTask,

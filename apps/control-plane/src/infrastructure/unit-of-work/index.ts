@@ -15,4 +15,5 @@ export {
   createReviewCyclePortAdapter,
   createMergeQueueItemPortAdapter,
   createAuditEventPortAdapter,
+  createAuditEventQueryPortAdapter,
 } from "./repository-adapters.js";

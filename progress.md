@@ -1,5 +1,25 @@
 # Progress Log
 
+## T074: Implement audit event query service — DONE (2026-03-11)
+
+**Status:** Done
+
+**What was done:**
+
+- Created `AuditEventQueryPort` in `packages/application/src/ports/audit-query.ports.ts` — read-side port (CQRS-lite) with pagination and filter types
+- Created `AuditQueryService` in `packages/application/src/services/audit-query.service.ts` — `getEntityTimeline()` and `searchAuditEvents()` with input validation and pagination normalization
+- 26 unit tests covering entity timelines, combinable AND filters, pagination, input validation, edge cases
+- Extended infrastructure repository (`audit-event.repository.ts`) with `findByEntityPaginated()` and `searchFiltered()` using Drizzle dynamic queries with `count()`, `desc()`, `limit/offset`
+- Created `createAuditEventQueryPortAdapter()` in `repository-adapters.ts` — maps infrastructure rows to application-layer `AuditEventRecord`
+- Extracted `mapRowToRecord()` helper to DRY the write and read adapters
+
+**Patterns & notes for next loops:**
+
+- CQRS-lite: separate read port (`AuditEventQueryPort`) from write port (`AuditEventRepositoryPort`). Query operations don't need transactions.
+- Pagination is offset-based (page 1-based, limit 1-100, defaults to page=1 limit=20), matching existing `PaginationQueryDto` pattern
+- All filters are AND-combined; SQL conditions built dynamically via `buildFilterConditions()` helper
+- `mapRowToRecord()` handles the Drizzle timestamp coercion (Unix epoch → Date) and field name mapping (auditEventId → id, metadataJson → metadata)
+
 ## T028: Implement scheduler tick loop — DONE (2026-03-11)
 
 **Status:** Done

@@ -34,6 +34,10 @@ import type {
   TransitionableMergeQueueItem,
   AuditEventRecord,
   NewAuditEvent,
+  AuditEventQueryPort,
+  AuditPaginationParams,
+  AuditEventFilters,
+  PaginatedAuditResult,
 } from "@factory/application";
 import { VersionConflictError } from "@factory/application";
 import type {
@@ -220,18 +224,92 @@ export function createAuditEventPortAdapter(db: BetterSQLite3Database): AuditEve
         // The port passes metadata as a JSON string, so parse it for storage.
         metadataJson: event.metadata != null ? (JSON.parse(event.metadata) as unknown) : null,
       });
+      return mapRowToRecord(row);
+    },
+  };
+}
+
+/**
+ * Map an infrastructure audit event row to the application-layer AuditEventRecord shape.
+ *
+ * Handles the field name mapping (auditEventId → id, metadataJson → metadata)
+ * and the timestamp coercion from Unix epoch seconds to Date.
+ */
+function mapRowToRecord(
+  row: ReturnType<ReturnType<typeof createAuditEventRepository>["findById"]> & object,
+): AuditEventRecord {
+  return {
+    id: row.auditEventId,
+    entityType: row.entityType,
+    entityId: row.entityId,
+    eventType: row.eventType,
+    actorType: row.actorType,
+    actorId: row.actorId,
+    oldState: row.oldState,
+    newState: row.newState,
+    metadata: row.metadataJson != null ? JSON.stringify(row.metadataJson) : null,
+    createdAt:
+      row.createdAt instanceof Date ? row.createdAt : new Date(Number(row.createdAt) * 1000),
+  };
+}
+
+/**
+ * Create an AuditEventQueryPort adapter backed by the infrastructure audit event repository.
+ *
+ * Provides read-only query operations with pagination and flexible filtering.
+ * Maps infrastructure row shapes to application-layer AuditEventRecord.
+ *
+ * @see docs/prd/002-data-model.md §2.3 — AuditEvent query patterns
+ */
+export function createAuditEventQueryPortAdapter(db: BetterSQLite3Database): AuditEventQueryPort {
+  const repo = createAuditEventRepository(db);
+
+  return {
+    getEntityTimeline(
+      entityType: string,
+      entityId: string,
+      pagination: AuditPaginationParams,
+    ): PaginatedAuditResult {
+      const offset = (pagination.page - 1) * pagination.limit;
+      const { items, total } = repo.findByEntityPaginated(
+        entityType,
+        entityId,
+        pagination.limit,
+        offset,
+      );
       return {
-        id: row.auditEventId,
-        entityType: row.entityType,
-        entityId: row.entityId,
-        eventType: row.eventType,
-        actorType: row.actorType,
-        actorId: row.actorId,
-        oldState: row.oldState,
-        newState: row.newState,
-        metadata: row.metadataJson != null ? JSON.stringify(row.metadataJson) : null,
-        createdAt:
-          row.createdAt instanceof Date ? row.createdAt : new Date(Number(row.createdAt) * 1000),
+        items: items.map(mapRowToRecord),
+        total,
+        page: pagination.page,
+        limit: pagination.limit,
+        totalPages: total > 0 ? Math.ceil(total / pagination.limit) : 0,
+      };
+    },
+
+    searchAuditEvents(
+      filters: AuditEventFilters,
+      pagination: AuditPaginationParams,
+    ): PaginatedAuditResult {
+      const offset = (pagination.page - 1) * pagination.limit;
+      const { items, total } = repo.searchFiltered(
+        {
+          entityType: filters.entityType,
+          entityId: filters.entityId,
+          eventType: filters.eventType,
+          actorType: filters.actorType,
+          actorId: filters.actorId,
+          startTime: filters.startTime,
+          endTime: filters.endTime,
+        },
+        pagination.limit,
+        offset,
+      );
+      return {
+        items: items.map(mapRowToRecord),
+        total,
+        page: pagination.page,
+        limit: pagination.limit,
+        totalPages: total > 0 ? Math.ceil(total / pagination.limit) : 0,
       };
     },
   };
