@@ -1,199 +1,28 @@
 # Progress Log
 
-## T061 — Implement review decision application
-
-### Task
-
-T061 - Implement review decision application (Epic E012: Review Pipeline)
-
-### What was done
-
-Created ReviewDecisionService in `packages/application` that processes the LeadReviewDecisionPacket and applies the lead reviewer's decision to the task and review cycle state. The service handles all four decision types:
-
-- **approved**: ReviewCycle→APPROVED, Task→APPROVED
-- **approved_with_follow_up**: same + creates skeleton follow-up tasks from follow_up_task_refs
-- **changes_requested**: ReviewCycle→REJECTED, Task→CHANGES_REQUESTED, increments reviewRoundCount. Checks escalation policy — if max_review_rounds exceeded, escalates instead.
-- **escalated**: ReviewCycle→ESCALATED, Task→ESCALATED
-
-Key patterns: Zod schema validation first, single atomic transaction for all state changes, domain events emitted after commit, optimistic concurrency with version-based guards, escalation policy check using `shouldEscalate()` from `@factory/domain`.
-
-35 tests covering: packet validation (schema + cross-field invariants), all four decision types, escalation from review round limit exceeded, cross-reference validation (packet IDs vs params), entity state validation, concurrent modification detection, domain event details, audit event metadata.
-
-### Files created
-
-- `packages/application/src/ports/review-decision.ports.ts` — narrow port interfaces
-- `packages/application/src/services/review-decision.service.ts` — service implementation
-- `packages/application/src/services/review-decision.service.test.ts` — comprehensive tests
-
-### Files modified
-
-- `packages/application/src/index.ts` — exported new service, ports, and SchemaValidationError
-- `docs/backlog/tasks/T061-review-decision-apply.md` — status → done
-- `docs/backlog/index.md` — status → done
-
-### Patterns & Notes for Next Loops
-
-- The `IssueSchema` (from `@factory/schemas/shared`) requires fields: `severity`, `code`, `title`, `description`, `blocking`, and optionally `file_path`, `line`. Test data must match this shape.
-- For `changes_requested`, the escalation check uses `reviewRoundCount + 1` (the next round) vs `maxReviewRounds`. The domain `shouldEscalate()` uses `>=`.
-- The `incrementReviewRoundCount` port bumps the version, so the subsequent `updateStatus` must use the new version — two separate version bumps within one transaction.
-- T062 (rework loop) is now unblocked by T061.
-
-## T037 — Implement reverse-dependency recalculation
-
-### Task
-
-T037 - Implement reverse-dependency recalculation (Epic E007: Dependency & Readiness Engine)
-
-### What was done
-
-Created ReverseDependencyService in `packages/application` that automatically recalculates readiness for downstream tasks when a prerequisite completes. The service composes ReadinessService (query) and TransitionService (command). Only DONE triggers recalculation; FAILED/CANCELLED leave dependents BLOCKED. 35 tests covering: single/multiple dependents, multi-dependency chains, edge type filtering, error handling, idempotency, and complex graph topologies.
-
-### Files created
-
-- `packages/application/src/ports/reverse-dependency.ports.ts`
-- `packages/application/src/services/reverse-dependency.service.ts`
-- `packages/application/src/services/reverse-dependency.service.test.ts`
-
-### Files modified
-
-- `packages/application/src/index.ts` (exports)
-
-### Patterns
-
-- Service composition pattern (composes ReadinessService + TransitionService)
-- Hexagonal ports for reverse-dependency repository queries
-- Idempotent recalculation with graceful error handling for InvalidTransitionError and VersionConflictError
-
-## 2026-03-11 — T048: Implement command policy model and enforcement
+## 2026-03-11 — T082: Implement Task management endpoints
 
 **Status:** Done
 
 **What was done:**
 
-- Created `packages/domain/src/policies/command-policy.ts` — full command policy type model and enforcement logic per PRD §9.3
-  - `CommandPolicyMode` (allowlist/denylist), `CommandViolationAction`, `CommandViolationReason` const enums
-  - `AllowedCommand`, `DeniedPattern`, `ForbiddenArgPattern`, `CommandPolicy` interfaces
-  - `parseCommandString()` — splits raw command into base command + arg tokens
-  - `evaluateCommandPolicy()` — evaluates a command against a policy with 5-step evaluation order: invalid → shell operators → denied patterns → allowlist/denylist → forbidden arg patterns
-  - Glob-style pattern matching for denied patterns (`*` wildcards)
-  - Regex matching for forbidden argument patterns
-- Created `packages/config/src/defaults/command-policy.ts` — default V1 policy and merge utility
-  - `DEFAULT_COMMAND_POLICY` — allowlist mode with curated development commands (pnpm, npm, npx, git, tsc, node, cat, ls, find, grep, head, tail, wc, mkdir, diff)
-  - Default denied patterns: rm -rf /, curl|sh, wget|bash, sudo, ssh, scp, chmod 777, eval
-  - Default forbidden arg patterns: deep path traversal (3+ levels), /etc/, /proc/, /sys/
-  - `mergeCommandPolicies(base, override)` — last-writer-wins field merge for hierarchical config
-- Added `@factory/domain` dependency to `@factory/config` package with TypeScript project reference
-- 66 new tests (44 domain + 22 config), all passing. 1,963 total tests.
-
-**Patterns established:**
-
-- Policy types live in `packages/domain/src/policies/` (domain owns enforcement rules)
-- Default policy values live in `packages/config/src/defaults/` (config owns concrete defaults)
-- Policy interfaces use `readonly` throughout for immutability
-- Evaluation functions return structured results with reason codes for audit logging
-- `as const` + union type pattern for policy enums (consistent with existing domain enums)
-
-**Next steps:**
-
-- T049 (file scope policy), T050 (validation policy), T051 (retry/escalation policy) — same pattern in domain/config
-- T052 (hierarchical config resolution) — the merge utility here is the foundation
-- T053 (policy snapshot generation) — combines all resolved policies into snapshot
-
----
-
-### T040: Implement workspace packet and config mounting — DONE
-
-**What was done:**
-
-- Extended `FileSystem` interface in `packages/infrastructure/src/workspace/types.ts` with `writeFile`, `readFile`, and `unlink` methods
-- Updated `node-fs.ts` production implementation with the new methods (ENOENT-safe unlink)
-- Created `WorkspacePacketMounter` class in `packages/infrastructure/src/workspace/workspace-packet-mounter.ts`:
-  - `mountPackets(workspacePath, input)` — writes task-packet.json, run-config.json, and effective-policy-snapshot.json to workspace root
-  - `unmountPackets(workspacePath)` — removes all three files (best-effort, idempotent)
-  - Write-then-verify pattern: each file is read back and parsed as JSON after writing
-  - Atomic cleanup guarantee: if any write/verification fails, all previously written files are removed
-- Created `PacketMountError` error class with workspace path, failed filename, and cause
-- Exported `MountPacketsInput`, `MountPacketsResult` types, all constants and classes from barrel exports
-- Updated existing `createMockFs` in workspace-manager.test.ts to include new FileSystem methods
-- 15 new tests covering: happy path, write order, verification, partial cleanup, cleanup resilience, unmount, error diagnostics
-- 1,978 total tests passing
-
-**Patterns established:**
-
-- FileSystem interface is the central filesystem abstraction in infrastructure — extend it for new file operations
-- Write-then-verify pattern for mounted files ensures workers never start with corrupt context
-- Cleanup-on-failure uses `[...writtenPaths, currentFilePath]` to include both completed and in-progress files
-
-**Next steps:**
-
-- T044 (Worker Supervisor) is now unblocked — depends on T030 ✅, T039 ✅, T040 ✅, T043 ✅
-- T041 (workspace cleanup for terminal states) and T042 (ReconcileWorkspacesCommand) can proceed
-
-## T044: Implement Worker Supervisor — Done
-
-**Date:** 2026-03-11
-**What was done:**
-
-- Created `packages/application/src/ports/worker-supervisor.ports.ts` with port interfaces for worker entity CRUD, workspace provisioning, packet mounting, runtime adapter, and heartbeat forwarding
-- Created `packages/application/src/services/worker-supervisor.service.ts` with full implementation of `createWorkerSupervisorService` factory function
-- Created `packages/application/src/services/worker-supervisor.service.test.ts` with 19 tests covering the full spawn lifecycle, cancellation, heartbeat forwarding, error handling, and domain events
-- Added `WorkerStatusChangedEvent` to domain events in `packages/application/src/events/domain-events.ts`
-- Exported all new types and services from `packages/application/src/index.ts`
+- Created `apps/control-plane/src/tasks/tasks.controller.ts` — REST controller with CRUD + batch endpoints
+- Created `apps/control-plane/src/tasks/tasks.service.ts` — service with filtering, OCC updates, detail enrichment
+- Created DTOs: `create-task.dto.ts`, `update-task.dto.ts`, `task-filter-query.dto.ts` (Zod-validated)
+- Updated `tasks.module.ts` to register controller and service
+- Endpoints: POST /tasks, POST /tasks/batch, GET /tasks (with filters), GET /tasks/:id (detail), PUT /tasks/:id
+- Filtering supports: status, repositoryId, priority, taskType with AND semantics
+- Detail endpoint enriches task with current lease, review cycle, dependencies, and dependents
+- Update requires `version` field for optimistic concurrency control (409 on conflict)
+- New tasks always initialize in BACKLOG state
+- 7 controller tests (mocked service) + 23 service tests (in-memory SQLite)
+- All 2795 tests passing, build clean
 
 **Patterns used:**
 
-- Factory function pattern (consistent with LeaseService, HeartbeatService, etc.)
-- Port-based decoupling — all infrastructure dependencies abstracted behind application-layer ports
-- Unit of work for transactional Worker entity mutations
-- Domain event emission after each status transition
-- Injectable clock for deterministic testing
-- Best-effort cleanup on failure (cancel → collect → finalize runtime before updating Worker to failed)
-
-**Key design decisions:**
-
-- Placed in application layer (not infrastructure) because it orchestrates domain operations and coordinates infrastructure adapters
-- Worker entity status is tracked independently from lease status — they represent different lifecycle dimensions
-- Runtime adapter types are re-declared in supervisor ports to avoid application→infrastructure dependency
-- Terminal heartbeat is sent after stream ends to signal completion to the lease service
-
-**What the next loop should know:**
-
-- T044 unblocks T045 (Copilot CLI adapter), T046 (output capture/validation), and T106 (test harness)
-- The `WorkerEntityStatus` type is defined in the supervisor ports, not in `@factory/domain` enums — a future task may want to move it there
-- The supervisor does NOT own task or lease state transitions — those remain with TransitionService and LeaseService
-- `RuntimeAdapterPort` mirrors `WorkerRuntime` from infrastructure — when implementing T045, the Copilot CLI adapter should satisfy both interfaces
-
-## 2026-03-11 — T049: Implement file scope policy model and enforcement
-
-**Status:** Done
-
-**What was done:**
-
-- Created `packages/domain/src/policies/file-scope-policy.ts` — core policy model and enforcement
-  - `FileScopePolicy` interface matching §9.4.1 canonical shape (read_roots, write_roots, deny_roots, allow_read/write_outside_scope, on_violation)
-  - `checkReadAccess(path, policy)` and `checkWriteAccess(path, policy)` — evaluate individual file access with full precedence chain
-  - `validatePostRunDiff(modifiedFiles, policy)` — batch validate post-run git diff against write scope
-  - `normalizePath()` — strip leading ./ and /, collapse repeated slashes
-  - Precedence: deny_roots > write_roots > read_roots > outside (per §9.4.2)
-  - Root matching uses directory-level prefix matching with trailing slash normalization to prevent false positives
-  - Evaluation results include matchedRoot, matchedRootValue, normalizedPath for audit trail
-- Created `packages/config/src/defaults/file-scope-policy.ts` — default V1 policy + merge
-  - `DEFAULT_FILE_SCOPE_POLICY`: reads broadly allowed, writes to apps/ and packages/ only, deny .github/workflows/, secrets/, infra/production/, .git/
-  - `mergeFileScopePolicies(base, override)` — last-writer-wins merge for hierarchical config resolution
-- 45 domain tests + 22 config tests = 67 new tests, 2064 total tests passing
-- Exported from `@factory/domain` and `@factory/config`
-
-**Patterns:**
-
-- Follows T048 (command policy) established patterns exactly: const objects for enum-like values, readonly interfaces, evaluation results with explanation
-- FileScopePolicySchema already existed in `@factory/schemas/policy-snapshot.ts` — domain types are compatible
-- Root matching normalizes both the path AND the root to ensure consistent prefix matching
-
-**Next loop should know:**
-
-- T049 unblocks T053 (effective policy snapshot generation), which also needs T050, T051, T052
-- The `..` path traversal is NOT resolved by normalizePath — callers must resolve or reject before policy evaluation
-- FileScopePolicy type in domain is separate from the Zod schema in schemas package — they are structurally compatible but not the same type
+- Followed T081 (projects) patterns exactly: Zod DTOs with static schema, service with writeTransaction, controller with Swagger annotations
+- OCC via VersionConflictError → ConflictException mapping
+- Dynamic Drizzle queries with conditional WHERE for filtering
 
 ## 2026-03-11 — T050: Implement validation policy with profile selection
 
