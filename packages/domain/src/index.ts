@@ -116,3 +116,25 @@ export type {
   FileScopeEvaluation,
   PostRunDiffValidation,
 } from "./policies/file-scope-policy.js";
+
+export {
+  ValidationStage,
+  ProfileSelectionSource,
+  MissingValidationProfileError,
+  DEFAULT_DEV_PROFILE_NAME,
+  MERGE_GATE_PROFILE_NAME,
+  DEFAULT_DEV_PROFILE,
+  MERGE_GATE_PROFILE,
+  createDefaultValidationPolicy,
+  getSystemDefaultProfileName,
+  selectProfile,
+  getAllChecks,
+  getMissingCommands,
+} from "./policies/validation-policy.js";
+
+export type {
+  ValidationProfile,
+  ValidationPolicy,
+  ProfileSelectionContext,
+  ProfileSelectionResult,
+} from "./policies/validation-policy.js";

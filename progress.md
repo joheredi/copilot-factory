@@ -478,3 +478,38 @@ Created ReverseDependencyService in `packages/application` that automatically re
 - T049 unblocks T053 (effective policy snapshot generation), which also needs T050, T051, T052
 - The `..` path traversal is NOT resolved by normalizePath — callers must resolve or reject before policy evaluation
 - FileScopePolicy type in domain is separate from the Zod schema in schemas package — they are structurally compatible but not the same type
+
+## 2026-03-11 — T050: Implement validation policy with profile selection
+
+**Status:** Done
+
+**What was done:**
+
+- Created `packages/domain/src/policies/validation-policy.ts` with full implementation
+- Implements §9.5 validation policy model and §9.5.3 profile selection algorithm
+- Key types: `ValidationProfile`, `ValidationPolicy`, `ProfileSelectionContext`, `ProfileSelectionResult`
+- 4-level precedence: task override > workflow template > task type > system default (dev/merge)
+- `selectProfile()` resolves profile name through precedence chain, looks up in policy, throws `MissingValidationProfileError` on miss
+- `ValidationStage` enum: DEVELOPMENT → `default-dev`, MERGE → `merge-gate`
+- `ProfileSelectionSource` enum tracks which precedence layer supplied the profile name
+- Default profiles match spec exactly: `default-dev` (required: test+lint, optional: build), `merge-gate` (required: test+build, optional: lint)
+- Helper functions: `getAllChecks()`, `getMissingCommands()`, `createDefaultValidationPolicy()`, `getSystemDefaultProfileName()`
+- 42 new tests covering all precedence paths, fallthrough, empty/undefined handling, missing profile errors, integration scenarios
+- All exports added to `packages/domain/src/index.ts`
+- Total tests: 2,106 (all passing)
+
+**Patterns used:**
+
+- Same `as const` + derived union type pattern as command-policy and file-scope-policy
+- Readonly interfaces throughout
+- Pure functions with no side effects
+- JSDoc with @see references to PRD spec
+- Co-located test file
+
+**Next loop should know:**
+
+- T050 now unblocks T053 (effective policy snapshot generation) and T054 (validation runner abstraction)
+- T053 still needs T048, T049, T050, T051, T052 — so T051 and T052 must be done first
+- T054 depends on T050 — now ready if other deps are met
+- Empty string overrides are treated as absent in the selection algorithm (same as undefined)
+- `MissingValidationProfileError` contains `profileName`, `source`, and `availableProfiles` for audit event emission
