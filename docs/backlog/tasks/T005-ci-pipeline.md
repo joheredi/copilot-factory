@@ -5,7 +5,7 @@
 | **ID**                    | T005                                                                           |
 | **Epic**                  | [E001: Repository & Platform Foundation](../epics/E001-platform-foundation.md) |
 | **Type**                  | infra                                                                          |
-| **Status**                | pending                                                                        |
+| **Status**                | done                                                                           |
 | **Priority**              | P0                                                                             |
 | **Owner**                 | platform-engineer                                                              |
 | **AI Executable**         | Yes                                                                            |
@@ -54,9 +54,9 @@ The implementing agent should read these files before starting:
 
 ## Acceptance Criteria
 
-- [ ] CI workflow file exists and is valid YAML
-- [ ] Workflow runs lint, typecheck, and test steps
-- [ ] pnpm caching is configured for performance
+- [x] CI workflow file exists and is valid YAML
+- [x] Workflow runs lint, typecheck, and test steps
+- [x] pnpm caching is configured for performance
 
 ## Definition of Done
 

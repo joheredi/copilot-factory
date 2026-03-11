@@ -1,5 +1,27 @@
 # Progress Log
 
+## 2026-03-11 — T005: Create CI pipeline with GitHub Actions
+
+**Status:** Done
+
+**What was done:**
+
+- Created `.github/workflows/ci.yml` with GitHub Actions CI pipeline
+- Triggers on push to `main` and pull requests targeting `main`
+- Five parallel jobs after install: lint, typecheck (via `pnpm build`), test, format-check
+- Uses `pnpm/action-setup@v4` + `actions/setup-node@v4` with pnpm store caching
+- Node.js version read from `.nvmrc` (v20)
+- Concurrency group cancels in-progress runs for the same ref
+- All jobs run independently (no `fail-fast`) so each reports its own status
+
+**Patterns / notes for next loops:**
+
+- pnpm version is auto-detected from `packageManager` field by `pnpm/action-setup@v4`
+- Typecheck uses `pnpm build` (which runs `tsc --build`) rather than a separate `tsc --noEmit`
+- The `install` job exists purely to warm the pnpm cache; subsequent jobs re-install from cache
+
+---
+
 ## 2026-03-11 — T070: Implement artifact reference resolution and retrieval
 
 **Status:** Done
