@@ -1,5 +1,60 @@
 # Progress Log
 
+## T033: Implement stale lease reclaim and retry/escalation — DONE (2026-03-11)
+
+**Status:** Done
+
+**What was done:**
+
+- Added 3 new transitions to the task state machine (`task-state-machine.ts`):
+  - `IN_DEVELOPMENT → READY` (lease reclaimed, retry eligible)
+  - `ASSIGNED → READY` (lease reclaimed before worker reached IN_DEVELOPMENT)
+  - `ASSIGNED → FAILED` (lease timed out, no retry remaining)
+  - New guard context field: `leaseReclaimedRetryEligible`
+
+- Created `packages/application/src/ports/lease-reclaim.ports.ts`:
+  - `ReclaimableLease`, `ReclaimableTask` entity shapes
+  - `ReclaimLeaseRepositoryPort` with `updateStatusWithReason`
+  - `ReclaimTaskRepositoryPort` with `updateStatusAndRetryCount`
+  - `ReclaimUnitOfWork` transaction boundary
+
+- Created `packages/application/src/services/lease-reclaim.service.ts`:
+  - `createLeaseReclaimService(unitOfWork, eventEmitter)` factory
+  - `reclaimLease(params)` — atomically reclaims a stale/crashed lease:
+    1. Validates lease is in STARTING/RUNNING/HEARTBEATING
+    2. Transitions lease to TIMED_OUT or CRASHED via state machine
+    3. Evaluates `shouldRetry()` from retry policy
+    4. If eligible: task → READY, increment retry_count
+    5. If exhausted: evaluates `shouldEscalate()` → FAILED or ESCALATED
+    6. Records audit event with full decision context
+    7. Emits domain events after commit
+  - Handles race condition: task already transitioned by another process
+
+- Added `LeaseNotReclaimableError` to `errors.ts`
+
+- Created 25 tests in `lease-reclaim.service.test.ts` covering:
+  - Retry-eligible paths (heartbeat miss, crash, TTL, ASSIGNED state, boundary counts)
+  - Escalation paths (exhausted retries, fail_then_escalate, no increment on escalation)
+  - Failure summary requirement (required+missing vs required+present)
+  - Audit trail (full context, escalation action)
+  - Domain events (2 events per reclaim, correct from/to statuses)
+  - Error cases (not found, non-reclaimable states, task already transitioned)
+  - Concurrency safety (duplicate reclaim prevention, version conflict)
+  - Retry count boundary conditions (equals max, last available)
+
+**Patterns used:**
+
+- Same factory + unit-of-work + event-emitter pattern as lease.service.ts
+- Domain state machine validation for both lease and task transitions
+- Audit event captures old/new state JSON with decision metadata
+- Domain events emitted AFTER successful transaction commit
+
+**Notes for next loops:**
+
+- T034 (crash recovery with partial artifact capture) is now unblocked
+- The reclaim service expects policies as params — T052 (hierarchical config) will provide these at runtime
+- COMPLETING leases are NOT reclaimed by this service (handled by graceful completion + reconciliation sweep T029)
+
 ## T051: Implement retry and escalation policy evaluation — DONE (2026-03-11)
 
 **Status:** Done

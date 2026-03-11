@@ -284,3 +284,24 @@ export class WorkerMismatchError extends Error {
     this.actualWorkerId = actualWorkerId;
   }
 }
+
+/**
+ * Thrown when a lease reclaim is attempted on a lease that is not in
+ * a reclaimable state (STARTING, RUNNING, or HEARTBEATING).
+ *
+ * Only active leases that have been detected as stale or crashed can
+ * be reclaimed. Terminal or idle leases cannot be reclaimed.
+ *
+ * @see docs/prd/002-data-model.md §2.8 — Stale Detection and Reclaim
+ */
+export class LeaseNotReclaimableError extends Error {
+  public readonly leaseId: string;
+  public readonly currentStatus: string;
+
+  constructor(leaseId: string, currentStatus: string) {
+    super(`Lease ${leaseId} is not in a reclaimable state: current status is ${currentStatus}`);
+    this.name = "LeaseNotReclaimableError";
+    this.leaseId = leaseId;
+    this.currentStatus = currentStatus;
+  }
+}

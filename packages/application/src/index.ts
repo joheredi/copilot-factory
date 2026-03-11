@@ -14,6 +14,7 @@ export {
   LeaseNotAcceptingResultsError,
   GracePeriodExpiredError,
   WorkerMismatchError,
+  LeaseNotReclaimableError,
 } from "./errors.js";
 
 // Ports — repository interfaces
@@ -272,3 +273,23 @@ export type {
   WorkerSupervisorService,
   WorkerSupervisorDependencies,
 } from "./services/worker-supervisor.service.js";
+
+// Ports — lease reclaim interfaces
+export type {
+  ReclaimableLease,
+  ReclaimableTask,
+  ReclaimLeaseRepositoryPort,
+  ReclaimTaskRepositoryPort,
+  ReclaimTransactionRepositories,
+  ReclaimUnitOfWork,
+} from "./ports/lease-reclaim.ports.js";
+
+// Services — lease reclaim with retry/escalation policy
+export { createLeaseReclaimService } from "./services/lease-reclaim.service.js";
+export type {
+  ReclaimReason,
+  ReclaimLeaseParams,
+  ReclaimOutcome,
+  ReclaimLeaseResult,
+  LeaseReclaimService,
+} from "./services/lease-reclaim.service.js";

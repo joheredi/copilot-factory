@@ -672,13 +672,14 @@ describe("getValidTargets", () => {
     expect(targets).toHaveLength(4);
   });
 
-  it("IN_DEVELOPMENT can reach DEV_COMPLETE, FAILED, ESCALATED, CANCELLED", () => {
+  it("IN_DEVELOPMENT can reach DEV_COMPLETE, FAILED, READY, ESCALATED, CANCELLED", () => {
     const targets = getValidTargets(TaskStatus.IN_DEVELOPMENT);
     expect(targets).toContain(TaskStatus.DEV_COMPLETE);
     expect(targets).toContain(TaskStatus.FAILED);
+    expect(targets).toContain(TaskStatus.READY);
     expect(targets).toContain(TaskStatus.ESCALATED);
     expect(targets).toContain(TaskStatus.CANCELLED);
-    expect(targets).toHaveLength(4);
+    expect(targets).toHaveLength(5);
   });
 
   it("IN_REVIEW can reach CHANGES_REQUESTED, APPROVED, ESCALATED, CANCELLED", () => {
@@ -714,15 +715,16 @@ describe("getValidTargets", () => {
 describe("getAllValidTransitions", () => {
   /**
    * Validates the total count of valid transitions matches expected count.
-   * 18 explicit normal-flow + 3 ESCALATED resolutions
+   * 21 explicit normal-flow (18 original + 3 reclaim transitions)
+   * + 3 ESCALATED resolutions
    * + 12 wildcard ESCALATED (from non-terminal, non-ESCALATED states)
    * + 12 wildcard CANCELLED (from non-terminal, non-ESCALATED states; ESCALATED → CANCELLED is explicit)
-   * = 45 total
+   * = 48 total
    */
   it("returns the expected number of valid transitions", () => {
     const transitions = getAllValidTransitions();
-    // 18 normal + 3 escalated resolutions + 12 wildcard→ESCALATED + 12 wildcard→CANCELLED
-    expect(transitions.length).toBe(45);
+    // 21 normal + 3 escalated resolutions + 12 wildcard→ESCALATED + 12 wildcard→CANCELLED
+    expect(transitions.length).toBe(48);
   });
 
   it("contains no duplicate transitions", () => {

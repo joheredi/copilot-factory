@@ -114,9 +114,21 @@ export interface TransitionContext {
 
   /**
    * Whether the lease timed out with no retries remaining.
-   * Required for: IN_DEVELOPMENT → FAILED
+   * Required for: IN_DEVELOPMENT → FAILED, ASSIGNED → FAILED
    */
   readonly leaseTimedOutNoRetry?: boolean;
+
+  /**
+   * Whether the lease was reclaimed and the task is eligible for retry.
+   * Required for: IN_DEVELOPMENT → READY, ASSIGNED → READY
+   *
+   * When a lease is reclaimed (stale, timed out, or crashed) and the
+   * retry policy permits another attempt, the task returns to READY
+   * for rescheduling.
+   *
+   * @see docs/prd/002-data-model.md §2.8 — Lease State → Task State Mapping
+   */
+  readonly leaseReclaimedRetryEligible?: boolean;
 
   /**
    * Whether the caller is an operator (human or escalation policy).
@@ -263,6 +275,47 @@ function guardInDevelopmentToFailed(ctx: TransitionContext): TransitionResult {
     return reject(
       "Cannot transition IN_DEVELOPMENT → FAILED: no unrecoverable failure and lease has not timed out without retry",
     );
+  }
+  return VALID;
+}
+
+/**
+ * Guard: IN_DEVELOPMENT → READY
+ * Lease was reclaimed (stale/timed out/crashed) and retry policy permits another attempt.
+ * The task returns to READY for rescheduling with incremented retry_count.
+ * @see PRD §2.8 Lease State → Task State Mapping
+ */
+function guardInDevelopmentToReady(ctx: TransitionContext): TransitionResult {
+  if (ctx.leaseReclaimedRetryEligible !== true) {
+    return reject(
+      "Cannot transition IN_DEVELOPMENT → READY: lease has not been reclaimed with retry eligibility",
+    );
+  }
+  return VALID;
+}
+
+/**
+ * Guard: ASSIGNED → READY
+ * Lease was reclaimed before the worker reached IN_DEVELOPMENT and retry is eligible.
+ * @see PRD §2.8 Lease State → Task State Mapping
+ */
+function guardAssignedToReady(ctx: TransitionContext): TransitionResult {
+  if (ctx.leaseReclaimedRetryEligible !== true) {
+    return reject(
+      "Cannot transition ASSIGNED → READY: lease has not been reclaimed with retry eligibility",
+    );
+  }
+  return VALID;
+}
+
+/**
+ * Guard: ASSIGNED → FAILED
+ * Lease timed out before the worker reached IN_DEVELOPMENT, no retry remaining.
+ * @see PRD §2.8 Lease State → Task State Mapping
+ */
+function guardAssignedToFailed(ctx: TransitionContext): TransitionResult {
+  if (ctx.leaseTimedOutNoRetry !== true) {
+    return reject("Cannot transition ASSIGNED → FAILED: lease has not timed out without retry");
   }
   return VALID;
 }
@@ -502,8 +555,11 @@ const TRANSITION_GUARDS: ReadonlyMap<TransitionKey, GuardFn> = new Map<Transitio
   [`${TaskStatus.BLOCKED}→${TaskStatus.READY}`, guardBlockedToReady],
   [`${TaskStatus.READY}→${TaskStatus.ASSIGNED}`, guardReadyToAssigned],
   [`${TaskStatus.ASSIGNED}→${TaskStatus.IN_DEVELOPMENT}`, guardAssignedToInDevelopment],
+  [`${TaskStatus.ASSIGNED}→${TaskStatus.READY}`, guardAssignedToReady],
+  [`${TaskStatus.ASSIGNED}→${TaskStatus.FAILED}`, guardAssignedToFailed],
   [`${TaskStatus.IN_DEVELOPMENT}→${TaskStatus.DEV_COMPLETE}`, guardInDevelopmentToDevComplete],
   [`${TaskStatus.IN_DEVELOPMENT}→${TaskStatus.FAILED}`, guardInDevelopmentToFailed],
+  [`${TaskStatus.IN_DEVELOPMENT}→${TaskStatus.READY}`, guardInDevelopmentToReady],
   [`${TaskStatus.DEV_COMPLETE}→${TaskStatus.IN_REVIEW}`, guardDevCompleteToInReview],
   [`${TaskStatus.IN_REVIEW}→${TaskStatus.CHANGES_REQUESTED}`, guardInReviewToChangesRequested],
   [`${TaskStatus.IN_REVIEW}→${TaskStatus.APPROVED}`, guardInReviewToApproved],
