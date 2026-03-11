@@ -402,3 +402,26 @@ Created ReverseDependencyService in `packages/application` that automatically re
 - Fake query port pattern for testing (map of "taskId:profileName" → result)
 - Discriminated union result types (GateNotApplicableResult | GatePassedResult | GateFailedResult)
 - Uses domain constants DEFAULT_DEV_PROFILE_NAME and MERGE_GATE_PROFILE_NAME from @factory/domain
+
+## T058: Review Router with Deterministic Rules — Done
+
+**What was implemented:**
+
+- Created `packages/application/src/services/review-router.service.ts`:
+  - Pure deterministic service (no ports/UnitOfWork needed) — receives all inputs, produces routing decision
+  - Rule evaluation in §10.6.2 order: 1) repo-required, 2) path-based, 3) tag/domain, 4) risk-based
+  - Path matching via `picomatch` (glob patterns against changed file paths)
+  - Compound AND logic across condition fields, OR within each field
+  - Deduplication: reviewers promoted from optional→required when later rules require them
+  - General reviewer always required (V1 invariant from §9.9)
+  - Full routing rationale with rule names and tier labels for auditability
+- 45 new tests covering: condition evaluation, rule categorization, all 4 evaluation tiers, deduplication/promotion, complex multi-rule scenarios, rationale completeness
+- Added `picomatch` dependency to `@factory/application`
+- Exported all types and factory function from barrel `index.ts`
+
+**Patterns:**
+
+- Pure deterministic service pattern (no side effects, no DB) for configuration-driven logic
+- Builder-style test data factories with `createInput()` / `createRule()` overrides
+- Categorized rule evaluation maintaining spec-mandated ordering
+- Set-based deduplication for reviewer types across tiers

@@ -178,7 +178,7 @@ See [phase documents](phases/) for details.
 | [T055](tasks/T055-validation-command-exec.md)       | Implement test/lint/build command execution                                           | E011 | P0       | feature    | done    |
 | [T056](tasks/T056-validation-packet-emission.md)    | Implement ValidationResultPacket emission                                             | E011 | P0       | feature    | done    |
 | [T057](tasks/T057-validation-gates.md)              | Implement validation gate checking for state transitions                              | E011 | P0       | feature    | pending |
-| [T058](tasks/T058-review-router.md)                 | Implement Review Router with deterministic rules                                      | E012 | P0       | feature    | pending |
+| [T058](tasks/T058-review-router.md)                 | Implement Review Router with deterministic rules                                      | E012 | P0       | feature    | done    |
 | [T059](tasks/T059-reviewer-dispatch.md)             | Implement specialist reviewer job dispatch                                            | E012 | P0       | feature    | pending |
 | [T060](tasks/T060-lead-reviewer-dispatch.md)        | Implement lead reviewer dispatch with dependencies                                    | E012 | P0       | feature    | pending |
 | [T061](tasks/T061-review-decision-apply.md)         | Implement review decision application                                                 | E012 | P0       | feature    | pending |

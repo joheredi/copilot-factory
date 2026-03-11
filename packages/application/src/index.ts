@@ -403,3 +403,19 @@ export type {
   PolicySnapshotService,
   PolicySnapshotServiceDependencies,
 } from "./services/policy-snapshot.service.js";
+
+// Services — review routing (PRD 010 §10.6)
+export {
+  createReviewRouterService,
+  evaluateCondition,
+  categorizeRules,
+} from "./services/review-router.service.js";
+export type {
+  ReviewRouterService,
+  ReviewRoutingInput,
+  ReviewRoutingConfig,
+  ReviewRoutingRule,
+  ReviewRoutingCondition,
+  RoutingDecision,
+  RoutingRationaleEntry,
+} from "./services/review-router.service.js";

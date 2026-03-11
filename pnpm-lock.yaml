@@ -112,9 +112,16 @@ importers:
       '@factory/schemas':
         specifier: workspace:*
         version: link:../schemas
+      picomatch:
+        specifier: ^4.0.3
+        version: 4.0.3
       zod:
         specifier: ^3.24.4
         version: 3.25.76
+    devDependencies:
+      '@types/picomatch':
+        specifier: ^4.0.2
+        version: 4.0.2
 
   packages/config:
     dependencies:
@@ -997,6 +1004,9 @@ packages:
 
   '@types/node@25.4.0':
     resolution: {integrity: sha512-9wLpoeWuBlcbBpOY3XmzSTG3oscB6xjBEEtn+pYXTfhyXhIxC5FsBer2KTopBlvKEiW9l13po9fq+SJY/5lkhw==}
+
+  '@types/picomatch@4.0.2':
+    resolution: {integrity: sha512-qHHxQ+P9PysNEGbALT8f8YOSHW0KJu6l2xU8DYY0fu/EmGxXdVnuTLvFUvBgPJMSqXq29SYHveejeAha+4AYgA==}
 
   '@typescript-eslint/eslint-plugin@8.57.0':
     resolution: {integrity: sha512-qeu4rTHR3/IaFORbD16gmjq9+rEs9fGKdX0kF6BKSfi+gCuG3RCKLlSBYzn/bGsY9Tj7KE/DAQStbp8AHJGHEQ==}
@@ -2753,6 +2763,8 @@ snapshots:
   '@types/node@25.4.0':
     dependencies:
       undici-types: 7.18.2
+
+  '@types/picomatch@4.0.2': {}
 
   '@typescript-eslint/eslint-plugin@8.57.0(@typescript-eslint/parser@8.57.0(eslint@10.0.3)(typescript@5.9.3))(eslint@10.0.3)(typescript@5.9.3)':
     dependencies:
