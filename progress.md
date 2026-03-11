@@ -1,5 +1,48 @@
 # Progress Log
 
+## T031: Implement heartbeat receive and staleness detection
+
+**Status:** Done
+**Date:** 2026-03-11
+
+### What was done
+
+- Created `packages/application/src/ports/heartbeat.ports.ts` — port interfaces for heartbeat reception and staleness detection:
+  - `HeartbeatableLease` — minimal lease record for heartbeat processing
+  - `StaleLeaseRecord` — lease record returned by staleness detection query
+  - `HeartbeatLeaseRepositoryPort` — findById, updateHeartbeat, findStaleLeases
+  - `HeartbeatUnitOfWork` — transaction boundary for heartbeat operations
+- Created `packages/application/src/services/heartbeat.service.ts` — heartbeat service with two operations:
+  - `receiveHeartbeat(params)` — validates lease is active (STARTING/RUNNING/HEARTBEATING), determines target state (STARTING→RUNNING, RUNNING→HEARTBEATING, HEARTBEATING→HEARTBEATING self-loop, or →COMPLETING for terminal heartbeats), validates via domain state machine, updates heartbeat_at atomically, records audit event, emits domain events
+  - `detectStaleLeases(policy)` — computes heartbeat deadline from policy (interval × missed_threshold + grace), queries repo for stale leases, classifies each as `missed_heartbeats` or `ttl_expired`
+- Created `packages/application/src/services/heartbeat.service.test.ts` — 34 tests covering:
+  - Happy path state transitions (STARTING→RUNNING, RUNNING→HEARTBEATING, self-loop, terminal heartbeat)
+  - Heartbeat timestamp updates and clock injection
+  - Audit events (lease.heartbeat vs lease.completing, metadata)
+  - Domain events (emitted after commit, not on error)
+  - Error cases (EntityNotFoundError, LeaseNotActiveError for 6 non-receivable states, VersionConflictError)
+  - Multiple lease independence
+  - Staleness detection (heartbeat deadline, null heartbeat_at, TTL expiry, priority classification, policy variations, output structure)
+- Added `LeaseNotActiveError` to `packages/application/src/errors.ts`
+- Updated barrel exports in `packages/application/src/index.ts`
+
+### Patterns used
+
+- Factory function pattern (createHeartbeatService) matching lease.service.ts
+- Injectable clock for deterministic time-based testing
+- Separate port file per service (heartbeat.ports.ts)
+- Status-based optimistic concurrency for lease updates
+- Domain state machine validation before committing transitions
+- Audit events recorded atomically, domain events emitted after commit
+
+### Notes for next loop
+
+- T031 unblocks T033 (lease reclaim logic) which will consume detectStaleLeases output
+- The HeartbeatLeaseRepositoryPort.findStaleLeases takes computed deadlines — the infrastructure implementation should query: status IN (STARTING, RUNNING, HEARTBEATING) WHERE COALESCE(heartbeat_at, leased_at) < heartbeatDeadline, UNION with status IN (LEASED, STARTING, RUNNING, HEARTBEATING) WHERE expires_at < ttlDeadline
+- The completing terminal heartbeat is included (RUNNING/HEARTBEATING → COMPLETING) per PRD §9.8 graceful completion protocol
+- LeaseNotActiveError is the new error type for heartbeats on non-receivable states
+- Default policy: 30s interval, 2 missed, 15s grace → 75s staleness window
+
 ## T024: Implement cross-field validation and schema versioning
 
 **Status:** Done

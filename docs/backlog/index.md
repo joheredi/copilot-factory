@@ -151,7 +151,7 @@ See [phase documents](phases/) for details.
 | [T028](tasks/T028-scheduler-tick-loop.md)           | Implement scheduler tick loop                                                         | E005 | P1       | feature    | pending |
 | [T029](tasks/T029-reconciliation-sweep.md)          | Implement reconciliation sweep job                                                    | E005 | P1       | feature    | pending |
 | [T030](tasks/T030-lease-acquisition.md)             | Implement lease acquisition with exclusivity                                          | E006 | P0       | feature    | done    |
-| [T031](tasks/T031-heartbeat-staleness.md)           | Implement heartbeat receive and staleness detection                                   | E006 | P0       | feature    | pending |
+| [T031](tasks/T031-heartbeat-staleness.md)           | Implement heartbeat receive and staleness detection                                   | E006 | P0       | feature    | done    |
 | [T032](tasks/T032-graceful-completion.md)           | Implement graceful completion protocol                                                | E006 | P0       | feature    | pending |
 | [T033](tasks/T033-lease-reclaim.md)                 | Implement stale lease reclaim and retry/escalation                                    | E006 | P0       | feature    | pending |
 | [T034](tasks/T034-crash-recovery-artifacts.md)      | Implement crash recovery with partial artifact capture                                | E006 | P1       | feature    | pending |

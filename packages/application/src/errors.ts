@@ -177,6 +177,30 @@ export class SelfDependencyError extends Error {
   }
 }
 
+/**
+ * Thrown when a heartbeat is received for a lease that is not in an active
+ * state capable of receiving heartbeats.
+ *
+ * Heartbeat-receivable states are: STARTING, RUNNING, HEARTBEATING.
+ * Any other state (e.g., IDLE, LEASED, TIMED_OUT, COMPLETING) rejects
+ * the heartbeat.
+ *
+ * @see docs/prd/002-data-model.md §2.8 — Heartbeat Protocol
+ */
+export class LeaseNotActiveError extends Error {
+  public readonly leaseId: string;
+  public readonly currentStatus: string;
+
+  constructor(leaseId: string, currentStatus: string) {
+    super(
+      `Lease ${leaseId} is not in an active state for heartbeat reception: current status is ${currentStatus}`,
+    );
+    this.name = "LeaseNotActiveError";
+    this.leaseId = leaseId;
+    this.currentStatus = currentStatus;
+  }
+}
+
 export class TaskNotReadyForLeaseError extends Error {
   public readonly taskId: string;
   public readonly currentStatus: string;

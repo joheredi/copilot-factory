@@ -7,6 +7,7 @@ export {
   VersionConflictError,
   ExclusivityViolationError,
   TaskNotReadyForLeaseError,
+  LeaseNotActiveError,
   CyclicDependencyError,
   DuplicateDependencyError,
   SelfDependencyError,
@@ -144,3 +145,24 @@ export type {
   ScheduleResult,
   SchedulerService,
 } from "./services/scheduler.service.js";
+
+// Ports — heartbeat reception and staleness detection interfaces
+export type {
+  HeartbeatableLease,
+  StaleLeaseRecord,
+  HeartbeatLeaseRepositoryPort,
+  HeartbeatTransactionRepositories,
+  HeartbeatUnitOfWork,
+} from "./ports/heartbeat.ports.js";
+
+// Services — heartbeat reception and staleness detection
+export { createHeartbeatService } from "./services/heartbeat.service.js";
+export type {
+  ReceiveHeartbeatParams,
+  ReceiveHeartbeatResult,
+  StalenessPolicy,
+  StalenessReason,
+  StaleLeaseInfo,
+  DetectStaleLeasesResult,
+  HeartbeatService,
+} from "./services/heartbeat.service.js";
