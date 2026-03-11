@@ -2,5 +2,21 @@
   "name": "@factory/application",
   "version": "0.1.0",
   "private": true,
-  "description": "Application layer — commands, queries, orchestrators, and use cases."
+  "type": "module",
+  "description": "Application layer — commands, queries, orchestrators, and use cases.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
+  }
 }

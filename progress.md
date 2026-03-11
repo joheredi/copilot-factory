@@ -21,8 +21,34 @@
 - pnpm version pinned via `packageManager` field in root `package.json`.
 
 **Next steps:**
-- T002: Configure TypeScript for all packages.
 - T003: Set up ESLint and Prettier.
 - T004: Set up Vitest testing framework.
 - T005: Create CI pipeline with GitHub Actions.
 - T006: Set up SQLite with Drizzle ORM and migrations.
+
+## 2026-03-11 — T002: Configure TypeScript for all packages
+
+**Status:** Done
+
+**What was done:**
+- Created `tsconfig.base.json` at repo root with strict TypeScript settings: `target: ES2022`, `module: NodeNext`, `moduleResolution: NodeNext`, `strict: true`, `verbatimModuleSyntax: true`, plus additional strictness flags (`noUncheckedIndexedAccess`, `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`, `noImplicitReturns`, `noPropertyAccessFromIndexSignature`).
+- Created root `tsconfig.json` with project references to all 11 workspaces (8 packages + 3 apps).
+- Created per-workspace `tsconfig.json` files extending `tsconfig.base.json` with `composite: true`, `outDir: dist`, `rootDir: src`, `include: [src]`.
+- Added `src/index.ts` entry points for all 11 workspaces with JSDoc module descriptions.
+- Updated all 11 workspace `package.json` files with: `type: module`, `main`, `types`, `exports` (with types + import conditions), `build` script (`tsc --build`), `clean` script, and `files: [dist]`.
+- Installed `typescript`, `tsx`, and `@types/node` as root devDependencies.
+- Verified cross-package import resolution works via pnpm workspace symlinks + package.json exports with `moduleResolution: NodeNext`.
+
+**Patterns established:**
+- All packages use ESM (`"type": "module"` in package.json).
+- `module: NodeNext` with `moduleResolution: NodeNext` — imports must use file extensions (`.js`) and `import type` for type-only imports.
+- `verbatimModuleSyntax: true` — enforces explicit `import type` syntax.
+- Cross-package imports resolve via pnpm workspace protocol + package.json `exports` field (no tsconfig `paths` needed).
+- Build via `tsc --build` (composite project references) for incremental builds.
+- `outDir` and `rootDir` are set per-package (not in base config) since tsconfig `extends` resolves relative paths from the originating config file.
+
+**Next steps:**
+- T003: Set up ESLint and Prettier.
+- T004: Set up Vitest testing framework.
+- T005: Create CI pipeline with GitHub Actions.
+- T006: Set up SQLite with Drizzle ORM and migrations (depends on T002 ✅).

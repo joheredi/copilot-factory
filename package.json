@@ -14,5 +14,10 @@
     "format": "pnpm -r run format",
     "clean": "pnpm -r run clean",
     "dev": "pnpm -r run dev"
+  },
+  "devDependencies": {
+    "@types/node": "^25.4.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
   }
 }

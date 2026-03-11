@@ -1,0 +1,16 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/domain" },
+    { "path": "packages/schemas" },
+    { "path": "packages/config" },
+    { "path": "packages/observability" },
+    { "path": "packages/testing" },
+    { "path": "packages/application" },
+    { "path": "packages/infrastructure" },
+    { "path": "packages/ui-components" },
+    { "path": "apps/control-plane" },
+    { "path": "apps/web-ui" },
+    { "path": "apps/worker-runner" }
+  ]
+}

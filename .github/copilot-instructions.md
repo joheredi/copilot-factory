@@ -26,6 +26,16 @@ pnpm format           # Format all packages (delegates to workspace format scrip
 
 > **Note:** Individual workspace build/test/lint scripts are added by subsequent tasks (T002–T004). Until those are complete, root-level `pnpm build`, `pnpm test`, and `pnpm lint` will succeed vacuously (no workspace scripts to run yet).
 
+# TypeScript configuration
+
+- **Base config:** `tsconfig.base.json` at repo root — strict mode, ES2022 target, NodeNext module resolution.
+- **Per-workspace config:** Each workspace has `tsconfig.json` extending the base with `composite: true` for project references.
+- **Root project references:** `tsconfig.json` at repo root references all 11 workspaces for `tsc --build` ordering.
+- **Module system:** ESM throughout (`"type": "module"` in all workspace package.json files). Use `.js` extensions in import paths and `import type` for type-only imports (`verbatimModuleSyntax` is enabled).
+- **Cross-package imports:** Resolved via pnpm workspace symlinks + package.json `exports` field. No tsconfig `paths` aliases needed with `moduleResolution: NodeNext`.
+- **Build command:** Each workspace uses `tsc --build`. Run `pnpm build` from root to build all.
+- **Important:** `outDir`/`rootDir` are set per-workspace (not in base config) because tsconfig `extends` resolves relative paths from the originating config file.
+
 # High-level architecture
 
 The intended system is a local-first orchestration platform for software delivery using bounded AI workers inside a deterministic control plane.

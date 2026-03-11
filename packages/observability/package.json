@@ -2,5 +2,19 @@
   "name": "@factory/observability",
   "version": "0.1.0",
   "private": true,
-  "description": "Observability layer — structured logging, OpenTelemetry tracing, and Prometheus metrics."
+  "type": "module",
+  "description": "Observability layer — structured logging, OpenTelemetry tracing, and Prometheus metrics.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
+  }
 }

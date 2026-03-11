@@ -2,5 +2,19 @@
   "name": "@factory/infrastructure",
   "version": "0.1.0",
   "private": true,
-  "description": "Infrastructure layer — database repositories, git services, runner adapters, filesystem storage, event transport."
+  "type": "module",
+  "description": "Infrastructure layer — database repositories, git services, runner adapters, filesystem storage, event transport.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
+  }
 }
