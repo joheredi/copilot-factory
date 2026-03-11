@@ -169,7 +169,7 @@ See [phase documents](phases/) for details.
 | [T046](tasks/T046-output-capture-validation.md)     | Implement structured output capture and validation                                    | E009 | P0       | feature    | pending |
 | [T047](tasks/T047-command-wrapper.md)               | Implement policy-aware command wrapper                                                | E009 | P0       | security   | pending |
 | [T048](tasks/T048-command-policy.md)                | Implement command policy model and enforcement                                        | E010 | P0       | feature    | done    |
-| [T049](tasks/T049-file-scope-policy.md)             | Implement file scope policy model and enforcement                                     | E010 | P0       | feature    | pending |
+| [T049](tasks/T049-file-scope-policy.md)             | Implement file scope policy model and enforcement                                     | E010 | P0       | feature    | done    |
 | [T050](tasks/T050-validation-policy.md)             | Implement validation policy with profile selection                                    | E010 | P0       | feature    | pending |
 | [T051](tasks/T051-retry-escalation-policy.md)       | Implement retry and escalation policy evaluation                                      | E010 | P0       | feature    | pending |
 | [T052](tasks/T052-hierarchical-config.md)           | Implement hierarchical configuration resolution                                       | E010 | P0       | feature    | pending |

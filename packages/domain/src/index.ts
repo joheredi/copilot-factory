@@ -100,3 +100,19 @@ export type {
   ParsedCommand,
   CommandPolicyEvaluation,
 } from "./policies/command-policy.js";
+
+export {
+  FileScopeViolationAction,
+  FileScopeViolationReason,
+  FileScopeRootMatch,
+  normalizePath,
+  checkReadAccess,
+  checkWriteAccess,
+  validatePostRunDiff,
+} from "./policies/file-scope-policy.js";
+
+export type {
+  FileScopePolicy,
+  FileScopeEvaluation,
+  PostRunDiffValidation,
+} from "./policies/file-scope-policy.js";

@@ -446,3 +446,35 @@ Created ReverseDependencyService in `packages/application` that automatically re
 - The `WorkerEntityStatus` type is defined in the supervisor ports, not in `@factory/domain` enums — a future task may want to move it there
 - The supervisor does NOT own task or lease state transitions — those remain with TransitionService and LeaseService
 - `RuntimeAdapterPort` mirrors `WorkerRuntime` from infrastructure — when implementing T045, the Copilot CLI adapter should satisfy both interfaces
+
+## 2026-03-11 — T049: Implement file scope policy model and enforcement
+
+**Status:** Done
+
+**What was done:**
+
+- Created `packages/domain/src/policies/file-scope-policy.ts` — core policy model and enforcement
+  - `FileScopePolicy` interface matching §9.4.1 canonical shape (read_roots, write_roots, deny_roots, allow_read/write_outside_scope, on_violation)
+  - `checkReadAccess(path, policy)` and `checkWriteAccess(path, policy)` — evaluate individual file access with full precedence chain
+  - `validatePostRunDiff(modifiedFiles, policy)` — batch validate post-run git diff against write scope
+  - `normalizePath()` — strip leading ./ and /, collapse repeated slashes
+  - Precedence: deny_roots > write_roots > read_roots > outside (per §9.4.2)
+  - Root matching uses directory-level prefix matching with trailing slash normalization to prevent false positives
+  - Evaluation results include matchedRoot, matchedRootValue, normalizedPath for audit trail
+- Created `packages/config/src/defaults/file-scope-policy.ts` — default V1 policy + merge
+  - `DEFAULT_FILE_SCOPE_POLICY`: reads broadly allowed, writes to apps/ and packages/ only, deny .github/workflows/, secrets/, infra/production/, .git/
+  - `mergeFileScopePolicies(base, override)` — last-writer-wins merge for hierarchical config resolution
+- 45 domain tests + 22 config tests = 67 new tests, 2064 total tests passing
+- Exported from `@factory/domain` and `@factory/config`
+
+**Patterns:**
+
+- Follows T048 (command policy) established patterns exactly: const objects for enum-like values, readonly interfaces, evaluation results with explanation
+- FileScopePolicySchema already existed in `@factory/schemas/policy-snapshot.ts` — domain types are compatible
+- Root matching normalizes both the path AND the root to ensure consistent prefix matching
+
+**Next loop should know:**
+
+- T049 unblocks T053 (effective policy snapshot generation), which also needs T050, T051, T052
+- The `..` path traversal is NOT resolved by normalizePath — callers must resolve or reject before policy evaluation
+- FileScopePolicy type in domain is separate from the Zod schema in schemas package — they are structurally compatible but not the same type
