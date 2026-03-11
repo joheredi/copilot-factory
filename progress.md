@@ -402,3 +402,30 @@ Implemented the conflict classifier service that determines whether merge confli
 - The `ConflictClassifierPort` was already consumed by `merge-executor.service.ts` — this task provides the production implementation
 - The JSDoc in merge-executor.service.ts references `createPolicyConflictClassifier(policySnapshot)` — the actual function is `createConflictClassifierService(policy)` which is close but the merge executor JSDoc may need updating in a future task
 - `MergeConflictPolicy` is not yet part of the hierarchical `FactoryConfig` — merge policy lives as opaque JSON in the DB schema. A future task should formalize the merge policy type in packages/config
+
+## T106: Create test harness with fake runner and workspace — DONE
+
+**What was done:**
+
+- Created `FakeClock` in `packages/testing/src/fakes/fake-clock.ts` — deterministic time control with advance/setTime/reset/createDateNow
+- Created `FakeWorkspaceManager` in `packages/testing/src/fakes/fake-workspace-manager.ts` — implements WorkspaceProviderPort with in-memory tracking, error injection, and cleanup support
+- Created `FakeRunnerAdapter` in `packages/testing/src/fakes/fake-runner-adapter.ts` — implements RuntimeAdapterPort with configurable outcomes (success/failure/partial/cancelled), per-run overrides, error injection, and full call tracking
+- Created `createTestDatabase()` in `packages/testing/src/database/test-database.ts` — in-memory SQLite with Drizzle migrations, FK enforcement, writeTransaction support
+- Created 13 entity factory functions in `packages/testing/src/fixtures/entity-factories.ts` (Project, Repository, Task, WorkerPool, TaskLease, ReviewCycle, MergeQueueItem, Job, ValidationRun, SupervisedWorker, AuditEvent, Packet, AgentProfile)
+- Created `runTaskToState()` and `findTransitionPath()` in `packages/testing/src/helpers/run-task-to-state.ts` — drives tasks through the lifecycle using BFS pathfinding and auto-generated transition contexts
+- 83 new tests across 7 test files, all passing
+- Added dependencies: @factory/application, @factory/domain, better-sqlite3, drizzle-orm
+
+**Patterns:**
+
+- Entity factories use `createTestId()` for unique IDs and accept `Partial<T>` overrides
+- FakeRunnerAdapter supports `outcomesByRun` Map for mixed-scenario tests (first run succeeds, second fails)
+- `runTaskToState` uses BFS for off-happy-path targets (FAILED, ESCALATED, CANCELLED) and optimizes with the happy path array for common cases
+- Test DB uses `:memory:` SQLite with the same pragmas as production (WAL, FK ON, busy_timeout)
+
+**What the next loop should know:**
+
+- T107-T111 (integration tests) are now unblocked and should use the test harness
+- The `@factory/testing` package now depends on `@factory/application` and `@factory/domain`
+- `import.meta.dirname` is used in test-database.test.ts for migrations path resolution
+- The `TransitionContext` property names are specific — use the actual type definition in domain, not guessed names

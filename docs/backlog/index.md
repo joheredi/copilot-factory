@@ -226,7 +226,7 @@ See [phase documents](phases/) for details.
 | [T103](tasks/T103-escalation-resolution.md)         | Implement escalation resolution flow                                                  | E021 | P1       | feature    | pending |
 | [T104](tasks/T104-ui-operator-task.md)              | Integrate operator controls into task detail UI                                       | E021 | P2       | feature    | pending |
 | [T105](tasks/T105-ui-operator-pool-merge.md)        | Integrate operator controls into pool and merge queue UI                              | E021 | P2       | feature    | pending |
-| [T106](tasks/T106-test-harness.md)                  | Create test harness with fake runner and workspace                                    | E022 | P0       | test       | pending |
+| [T106](tasks/T106-test-harness.md)                  | Create test harness with fake runner and workspace                                    | E022 | P0       | test       | done    |
 | [T107](tasks/T107-e2e-full-lifecycle.md)            | Integration test: full task lifecycle BACKLOG to DONE                                 | E022 | P0       | test       | pending |
 | [T108](tasks/T108-e2e-review-rework.md)             | Integration test: review rejection and rework loop                                    | E022 | P0       | test       | pending |
 | [T109](tasks/T109-e2e-merge-failures.md)            | Integration test: merge conflict and failure paths                                    | E022 | P1       | test       | pending |

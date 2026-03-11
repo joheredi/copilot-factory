@@ -3,7 +3,31 @@
  *
  * Provides reusable utilities for tests across all packages in the monorepo.
  * Import from `@factory/testing` in test files to access helpers.
+ *
+ * ## Available exports
+ *
+ * ### Core utilities
+ * - `createTestId(prefix?)` — unique test IDs
+ * - `createSequentialId(prefix?)` — deterministic sequential IDs
+ * - `sleep(ms)` — async delay
+ *
+ * ### Fakes (test doubles)
+ * - `FakeClock` — deterministic time control
+ * - `FakeWorkspaceManager` — in-memory workspace provider
+ * - `FakeRunnerAdapter` — configurable worker runtime adapter
+ *
+ * ### Fixtures (entity factories)
+ * - `createTestProject()`, `createTestTask()`, etc. — domain entity factories
+ *
+ * ### Database
+ * - `createTestDatabase()` — in-memory SQLite with migrations
+ *
+ * ### Helpers
+ * - `runTaskToState()` — drive task through lifecycle to a target state
+ * - `findTransitionPath()` — compute shortest state transition path
  */
+
+// ─── Core utilities ─────────────────────────────────────────────────────────
 
 /**
  * Generates a unique test identifier with an optional prefix.
@@ -51,3 +75,59 @@ export function createSequentialId(prefix = "test"): () => string {
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+// ─── Fakes ──────────────────────────────────────────────────────────────────
+
+export { FakeClock, DEFAULT_INITIAL_TIME } from "./fakes/index.js";
+export { FakeWorkspaceManager } from "./fakes/index.js";
+export type { FakeWorkspaceManagerConfig, TrackedWorkspace } from "./fakes/index.js";
+export { FakeRunnerAdapter } from "./fakes/index.js";
+export type { FakeRunnerConfig, FakeRunOutcome, FakeRunnerCall } from "./fakes/index.js";
+
+// ─── Fixtures ───────────────────────────────────────────────────────────────
+
+export {
+  createTestProject,
+  createTestRepository,
+  createTestTask,
+  createTestWorkerPool,
+  createTestTaskLease,
+  createTestReviewCycle,
+  createTestMergeQueueItem,
+  createTestJob,
+  createTestValidationRun,
+  createTestSupervisedWorker,
+  createTestAuditEvent,
+  createTestPacket,
+  createTestAgentProfile,
+} from "./fixtures/index.js";
+
+export type {
+  TestProject,
+  TestRepository,
+  TestTask,
+  TestWorkerPool,
+  TestTaskLease,
+  TestReviewCycle,
+  TestMergeQueueItem,
+  TestJob,
+  TestValidationRun,
+  TestSupervisedWorker,
+  TestAuditEvent,
+  TestPacket,
+  TestAgentProfile,
+} from "./fixtures/index.js";
+
+// ─── Database ───────────────────────────────────────────────────────────────
+
+export { createTestDatabase } from "./database/index.js";
+export type { TestDatabaseConnection, TestDatabaseConfig } from "./database/index.js";
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+export { runTaskToState, findTransitionPath } from "./helpers/index.js";
+export type {
+  RunTaskToStateResult,
+  RunTaskToStateOptions,
+  TransitionCallback,
+} from "./helpers/index.js";

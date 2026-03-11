@@ -46,6 +46,10 @@ The `eng/` directory is excluded from ESLint (utility scripts with Node.js globa
 - **Coverage:** `pnpm test:coverage` uses `@vitest/coverage-v8`.
 - **Scoped tests:** From a workspace directory, `pnpm test` runs only that workspace's tests via `--project` flag.
 - **Shared helpers:** `@factory/testing` exports `createTestId()`, `createSequentialId()`, `sleep()` for use in tests.
+- **Test doubles:** `@factory/testing` exports `FakeClock`, `FakeWorkspaceManager`, `FakeRunnerAdapter` for integration tests. `FakeRunnerAdapter` supports configurable outcomes per run via `outcomesByRun` Map.
+- **Entity factories:** `@factory/testing` exports `createTestProject()`, `createTestTask()`, `createTestTaskLease()`, and 10 more factories. All accept `Partial<T>` overrides.
+- **Test database:** `createTestDatabase({ migrationsFolder })` creates an in-memory SQLite with Drizzle migrations applied. Use `apps/control-plane/drizzle` as the migrations folder.
+- **Lifecycle helper:** `runTaskToState(targetState, { fromState?, onTransition? })` drives a task through valid transitions to the target state using BFS pathfinding.
 - **I/O test fakes:** `@factory/infrastructure` tests use `FakeCliProcess` and `FakeFileSystem` to test adapters (e.g., `CopilotCliAdapter`) without real I/O or OS processes. Prefer this pattern for new infrastructure adapters.
 
 # TypeScript configuration
