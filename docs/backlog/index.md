@@ -127,7 +127,7 @@ See [phase documents](phases/) for details.
 | [T004](tasks/T004-vitest-setup.md) | Set up Vitest testing framework | E001 | P0 | foundation | done |
 | [T005](tasks/T005-ci-pipeline.md) | Create CI pipeline with GitHub Actions | E001 | P0 | infra | pending |
 | [T006](tasks/T006-sqlite-drizzle-setup.md) | Set up SQLite with Drizzle ORM and migrations | E001 | P0 | foundation | done |
-| [T007](tasks/T007-domain-enums-types.md) | Define core domain enums and value objects | E002 | P0 | foundation | pending |
+| [T007](tasks/T007-domain-enums-types.md) | Define core domain enums and value objects | E002 | P0 | foundation | done |
 | [T008](tasks/T008-migration-project-repo.md) | Create migrations for Project, Repository, WorkflowTemplate tables | E002 | P0 | foundation | pending |
 | [T009](tasks/T009-migration-task.md) | Create migrations for Task and TaskDependency tables | E002 | P0 | foundation | pending |
 | [T010](tasks/T010-migration-worker-pool.md) | Create migrations for WorkerPool, Worker, AgentProfile, PromptTemplate tables | E002 | P0 | foundation | pending |

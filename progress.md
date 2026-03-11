@@ -115,3 +115,34 @@
 - T007: Define core domain enums and value objects (depends on T002 ✅).
 - T008-T013: Create entity migrations (depend on T006 ✅ and T007).
 - T003: Set up ESLint and Prettier.
+
+## 2026-03-11 — T007: Define core domain enums and value objects
+
+**Status:** Done
+
+**What was done:**
+- Created `packages/domain/src/enums.ts` with 24 `as const` enum objects covering all enumerated values from PRD 002-data-model.md and PRD 008-packet-and-schema-spec.md.
+- Each enum uses the `as const` object + derived union type pattern for both runtime-accessible values and compile-time type safety.
+- All values are case-sensitive exact matches to the PRD specifications.
+- Created `packages/domain/src/enums.test.ts` with 53 tests verifying all 24 enums have correct value counts and exact spec-matching values.
+- Updated `packages/domain/src/index.ts` to re-export all 24 enum objects and their types.
+
+**Enums defined (24 total):**
+- From PRD 002: TaskStatus (16), WorkerLeaseStatus (9), ReviewCycleStatus (8), MergeQueueItemStatus (8), DependencyType (3), WorkerPoolType (5), JobType (8), JobStatus (6), ValidationRunScope (5), FileScopeEnforcementLevel (3), EscalationAction (2).
+- From PRD 008: PacketType (8), PacketStatus (4), FileChangeType (4), IssueSeverity (4), ValidationCheckType (7), ValidationCheckStatus (3), ReviewVerdict (3), LeadReviewDecision (4), MergeStrategy (3), MergeAssistRecommendation (3), Confidence (3), PostMergeAnalysisRecommendation (4), AgentRole (6).
+
+**Design decisions:**
+- Used `as const` objects rather than TypeScript `const enum` or bare string literal unions. This provides both runtime-accessible values (for iteration, validation, and DB schema use) and full TypeScript type inference. Avoids `const enum` cross-module declaration file issues.
+- UPPER_CASE enum values (TaskStatus, etc.) use matching UPPER_CASE keys. Snake_case/kebab-case values use UPPER_SNAKE_CASE keys for readability.
+- Single `enums.ts` file organized by domain area with JSDoc cross-referencing PRD sections.
+
+**Patterns established:**
+- Domain enums live in `packages/domain/src/enums.ts` and are re-exported from `packages/domain/src/index.ts`.
+- Enum pattern: `export const Foo = { ... } as const; export type Foo = (typeof Foo)[keyof typeof Foo];`
+- Every enum has JSDoc referencing the authoritative PRD section.
+- Tests verify exact value counts and bidirectional containment (no extra, no missing values).
+
+**Next steps:**
+- T008-T013: Create entity migrations (depend on T006 ✅ and T007 ✅).
+- T003: Set up ESLint and Prettier.
+- T015: Implement Task state machine (depends on T007 ✅ and T014).

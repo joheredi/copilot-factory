@@ -1,2 +1,27 @@
 /** @module @factory/domain — Entities, value objects, enums, invariants, and state machines. */
-export {};
+export {
+  TaskStatus,
+  WorkerLeaseStatus,
+  ReviewCycleStatus,
+  MergeQueueItemStatus,
+  DependencyType,
+  WorkerPoolType,
+  JobType,
+  JobStatus,
+  ValidationRunScope,
+  ValidationCheckType,
+  ValidationCheckStatus,
+  PacketType,
+  PacketStatus,
+  FileChangeType,
+  IssueSeverity,
+  ReviewVerdict,
+  LeadReviewDecision,
+  MergeStrategy,
+  MergeAssistRecommendation,
+  PostMergeAnalysisRecommendation,
+  Confidence,
+  AgentRole,
+  FileScopeEnforcementLevel,
+  EscalationAction,
+} from "./enums.js";
