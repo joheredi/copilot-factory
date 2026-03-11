@@ -49,3 +49,20 @@ export {
   RUN_CONFIG_FILENAME,
   POLICY_SNAPSHOT_FILENAME,
 } from "./workspace/index.js";
+
+// ─── Policy Enforcement ──────────────────────────────────────────────────────
+export type {
+  PolicyViolationArtifact,
+  CommandExecutionOptions,
+  CommandExecutionResult,
+} from "./policy/index.js";
+
+export {
+  PolicyViolationError,
+  CommandExecutionError,
+  createPolicyViolationArtifact,
+  validateCommand,
+  executeCommand,
+  setProcessRunner,
+  restoreDefaultProcessRunner,
+} from "./policy/index.js";

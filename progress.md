@@ -1,179 +1,5 @@
 # Progress Log
 
-## 2026-03-11 — T014: Implement data access repositories for all entities
-
-**Status:** Done
-
-**What was done:**
-
-- Created `apps/control-plane/src/infrastructure/repositories/` with 18 repository factory functions
-- Each repository is a `createXxxRepository(db: BetterSQLite3Database)` factory returning a typed object with CRUD + query methods
-- All 18 schema entities covered: WorkflowTemplate, Project, Repository, Task, TaskDependency, WorkerPool, Worker, AgentProfile, PromptTemplate, TaskLease, ReviewCycle, ReviewPacket, LeadReviewDecision, MergeQueueItem, ValidationRun, Job, AuditEvent, PolicySet
-- **Task repository**: Optimistic concurrency via version column — `update()` requires `expectedVersion`, atomically checks and increments, throws `VersionConflictError` on mismatch
-- **Job repository**: `claimJob()` atomically sets status=CLAIMED + leaseOwner + increments attemptCount, only if job is PENDING
-- **AuditEvent repository**: Insert-only by design — no update/delete methods
-- **TaskLease repository**: `findActiveByTaskId()` filters out terminal statuses (COMPLETED, TIMED_OUT, CRASHED, RECLAIMED)
-- **MergeQueueItem repository**: `findByRepositoryId()` returns items ordered by position
-- Central `index.ts` re-exports all factory functions and entity types
-- 138 tests in `repositories.test.ts` covering CRUD, special behaviors, and edge cases
-- 418 total tests pass (280 existing + 138 new)
-
-**Patterns established:**
-
-- Factory function pattern: `createXxxRepository(db)` — accepts `BetterSQLite3Database` for both standalone and transactional use
-- Consistent API: `findById`, `findAll(opts?)`, `create`, `update`, `delete` + entity-specific queries
-- `$dynamic()` used for optional limit/offset pagination
-- Optimistic concurrency via WHERE clause on version column (Task repository)
-- Atomic claim pattern via conditional UPDATE (Job repository)
-- Entity types exported as `Xxx` (select) and `NewXxx` (insert) from each repository module
-
-**Next steps:**
-
-- T015: Task state machine (depends on T014 ✅)
-- T025: Job queue core (depends on T014 ✅)
-- T030: Lease acquisition (depends on T014 ✅)
-- T035: DAG validation (depends on T014 ✅)
-- T005: CI pipeline (independent — depends on T003 ✅, T004 ✅)
-- T020-T024: Zod packet schemas (independent — depends on T004 ✅)
-
-## 2026-03-11 — T015: Implement Task state machine with transition validation
-
-**Status:** Done
-
-**What was done:**
-
-- Created `packages/domain/src/state-machines/task-state-machine.ts` with full implementation of the task state machine from PRD §2.1.
-- Implemented all 16 task states and 45 valid transitions (18 explicit normal-flow + 3 ESCALATED resolutions + 12 wildcard→ESCALATED + 12 wildcard→CANCELLED).
-- Each transition has a guard function checking preconditions from the PRD transition table.
-- Exported `validateTransition(current, target, context)` returning `{valid, reason}`.
-- Exported helpers: `getValidTargets()`, `isTerminalState()`, `getAllValidTransitions()`.
-- Created 395 exhaustive tests covering every valid transition, every invalid transition pair, self-transitions, terminal state invariants, guard preconditions, lifecycle scenarios, and rework cycles.
-- Updated `packages/domain/src/index.ts` to re-export all state machine functions and types.
-
-**Patterns established:**
-
-- State machines live in `packages/domain/src/state-machines/` with one file per machine.
-- Transition maps use `Map<TransitionKey, GuardFn>` where `TransitionKey` is `"FROM→TO"`.
-- Wildcard transitions (e.g., \* → ESCALATED) are handled separately from the explicit map.
-- Guard functions are pure `(ctx: TransitionContext) => TransitionResult`.
-- `TransitionContext` is a flat interface where callers supply only relevant fields.
-- Tests use `it.each()` for exhaustive transition pair coverage.
-
-**Next ready tasks:**
-
-- T016: Supporting state machines (depends on T007 ✅)
-- T017: Transition service (depends on T015 ✅, T016)
-- T020: Shared Zod types (depends on T004 ✅)
-- T005: CI pipeline (depends on T003 ✅, T004 ✅)
-
-## 2026-03-11 — T016: Implement supporting state machines
-
-**Status:** Done
-
-**What was done:**
-
-- Implemented Worker Lease state machine (`worker-lease-state-machine.ts`) with 9 states, 15 transitions (including HEARTBEATING self-loop), guard functions for all transitions, and full public API (`validateWorkerLeaseTransition`, `getValidWorkerLeaseTargets`, `isTerminalWorkerLeaseState`, `getAllValidWorkerLeaseTransitions`).
-- Implemented Review Cycle state machine (`review-cycle-state-machine.ts`) with 8 states, 10 transitions, escalation from multiple states (IN_PROGRESS, AWAITING_REQUIRED_REVIEWS, CONSOLIDATING), and full public API.
-- Implemented Merge Queue Item state machine (`merge-queue-item-state-machine.ts`) with 8 states, 12 transitions, REQUEUED→ENQUEUED retry cycle, and full public API.
-- Created comprehensive test suites for all three state machines (131 new tests).
-- Exported all new functions and types from `@factory/domain` package index.
-- All three state machines follow the same Map-based transition table + guard function pattern established by T015's Task state machine.
-
-**Patterns used:**
-
-- `as const` enum objects with derived union types for state values
-- Map<TransitionKey, GuardFn> for transition tables
-- TransitionContext interfaces with optional fields for guard preconditions
-- Separate `reject()` helper for consistent error messages
-
-**Next loop should know:**
-
-- T017 (Transition Service) is now unblocked — it depends on T015 ✅ and T016 ✅ and T014 ✅.
-- T005 (CI pipeline) and T020 (Shared Zod types) are also ready.
-- Worker Lease HEARTBEATING state has a self-loop (the only self-transition allowed across all state machines).
-- TIMED_OUT and CRASHED are NOT terminal for Worker Lease — they transition to RECLAIMED.
-- REQUEUED is NOT terminal for Merge Queue Item — it transitions back to ENQUEUED.
-
-## T017: Build Centralized State Transition Service (done)
-
-**Date:** 2026-03-11
-
-**What was done:**
-
-- Created the centralized State Transition Service in `packages/application/src/services/transition.service.ts`
-- Defined repository port interfaces in `packages/application/src/ports/repository.ports.ts`
-- Defined UnitOfWork port in `packages/application/src/ports/unit-of-work.port.ts`
-- Defined DomainEventEmitter port in `packages/application/src/ports/event-emitter.port.ts`
-- Defined domain event types in `packages/application/src/events/domain-events.ts`
-- Defined application-layer error types in `packages/application/src/errors.ts`
-- Added `@factory/domain` as a dependency of `@factory/application`
-- Added tsconfig project reference from application → domain
-- Wrote 33 unit tests covering all 4 entity transition methods
-
-**Design decisions:**
-
-- Used port-based dependency injection (repository ports + UnitOfWork + DomainEventEmitter) to keep the application layer decoupled from infrastructure. The control-plane wires implementations.
-- Tasks use version-based optimistic concurrency; other entities (lease, review cycle, merge queue item) use status-based optimistic concurrency checks.
-- Domain events are emitted AFTER transaction commit to prevent events on rollback.
-- Audit events are created WITHIN the transaction to guarantee atomicity with state changes.
-
-**Patterns for next loops:**
-
-- The `createTransitionService(unitOfWork, eventEmitter)` factory pattern should be used when wiring up the service in the control-plane.
-- All state transitions in downstream tasks (T018, T019, T030, etc.) should go through this service.
-- The UnitOfWork port needs a concrete implementation in `apps/control-plane` that wraps `connection.writeTransaction()`.
-- Repository ports need adapter implementations that delegate to the existing Drizzle repository factories.
-
-## 2026-03-11 — T018: Implement atomic transition + audit persistence
-
-**Status:** Done
-
-**What was done:**
-
-- Created `SqliteUnitOfWork` in `apps/control-plane/src/infrastructure/unit-of-work/sqlite-unit-of-work.ts` — concrete implementation of the `UnitOfWork` port that delegates to `DatabaseConnection.writeTransaction` (BEGIN IMMEDIATE).
-- Created repository port adapters in `apps/control-plane/src/infrastructure/unit-of-work/repository-adapters.ts` — bridges 5 narrow application-layer ports to the full infrastructure repositories:
-  - `createTaskPortAdapter` — version-based optimistic concurrency, re-throws infra `VersionConflictError` as application-layer `VersionConflictError`
-  - `createTaskLeasePortAdapter` — status-based optimistic concurrency
-  - `createReviewCyclePortAdapter` — status-based optimistic concurrency
-  - `createMergeQueueItemPortAdapter` — status-based optimistic concurrency
-  - `createAuditEventPortAdapter` — maps between port's `NewAuditEvent` and infra's Drizzle schema (handles `mode: "json"` serialization)
-- Created 15 integration tests in `sqlite-unit-of-work.integration.test.ts` proving:
-  - State change + audit event persisted atomically on success (all 4 entity types)
-  - Failed transitions leave no partial state (rollback is complete)
-  - Entity not found throws cleanly with no side effects
-  - Sequential transitions increment versions correctly
-  - Metadata round-trips through audit events
-  - Status-based concurrency rejection for leases
-  - Audit write failure triggers full rollback (entity state reverted)
-  - Stale version detection via optimistic concurrency
-- Added `@factory/application` and `@factory/domain` as dependencies of `@factory/control-plane`
-- Added project references in `apps/control-plane/tsconfig.json`
-
-**Key patterns:**
-
-- `createSqliteUnitOfWork(conn)` creates a UnitOfWork that can be injected into `createTransitionService`.
-- The adapter pattern (narrow port ← full repo) keeps the application layer decoupled from Drizzle/SQLite details.
-- For status-based entities, the adapter reads current status and verifies before updating — safe within BEGIN IMMEDIATE.
-- The infra task repo's `VersionConflictError` is caught and re-thrown as the application-layer `VersionConflictError` to maintain type compatibility.
-
-**For next loops:**
-
-- T019 (optimistic concurrency) can build on this — the version and status-based concurrency is already implemented and tested.
-- T073 (audit event recording) is unblocked — the audit event infrastructure is fully integrated.
-- The `createSqliteUnitOfWork` + `createTransitionService` wiring is ready for use in the control-plane bootstrap (T080).
-
-## T020: Define shared Zod types for packets — DONE (2026-03-11)
-
-- Created `packages/schemas/src/shared.ts` with three shared Zod schemas:
-  - `FileChangeSummarySchema` — file change description (path, change_type, summary)
-  - `IssueSchema` — review/validation issue (severity, code, title, description, file_path?, line?, blocking)
-  - `ValidationCheckResultSchema` — validation check outcome (check_type, tool_name, command, status, duration_ms, summary, artifact_refs?)
-- Created 13 Zod enum schemas re-exported from `@factory/domain` const-objects via a `zodEnumFromConst()` helper
-- All schemas export both Zod schema objects (`*Schema`) and inferred TypeScript types
-- Added `zod` and `@factory/domain` as dependencies to `@factory/schemas`
-- 116 tests covering spec examples, all enum values, boundary conditions (empty strings, negative numbers, fractional values), and type inference
-- Pattern: use `zodEnumFromConst()` to convert domain `{ KEY: "value" } as const` objects to `z.enum()`
-
 ## T035: Implement DAG validation with circular dependency detection — DONE (2026-03-11)
 
 **Status:** Done
@@ -513,3 +339,39 @@ Created ReverseDependencyService in `packages/application` that automatically re
 - T054 depends on T050 — now ready if other deps are met
 - Empty string overrides are treated as absent in the selection algorithm (same as undefined)
 - `MissingValidationProfileError` contains `profileName`, `source`, and `availableProfiles` for audit event emission
+
+## T047: Implement policy-aware command wrapper — DONE (2026-03-11)
+
+**Status:** Done
+
+**What was done:**
+
+- Created `packages/infrastructure/src/policy/command-wrapper.ts` — policy-aware command execution wrapper:
+  - `executeCommand(rawCommand, policy, options)` — validates via domain `evaluateCommandPolicy()`, then executes via `child_process.execFile` with structured args (no shell)
+  - `validateCommand(rawCommand, policy)` — validation-only path (no execution)
+  - `createPolicyViolationArtifact(evaluation)` — creates structured artifacts for audit persistence
+  - `PolicyViolationError` — thrown on denied commands, carries evaluation + artifact
+  - `CommandExecutionError` — thrown on non-zero exit codes, carries stdout/stderr/exitCode
+  - `setProcessRunner()` / `restoreDefaultProcessRunner()` — test seam for mocking process execution
+- Created `packages/infrastructure/src/policy/index.ts` — module exports
+- Updated `packages/infrastructure/src/index.ts` — added policy enforcement exports
+- Added `@factory/domain` as dependency of `@factory/infrastructure` (for `evaluateCommandPolicy`)
+- Added `../domain` to infrastructure's tsconfig references
+- 39 comprehensive tests covering:
+  - Allowlist enforcement (allowed commands, denied commands, arg prefix restrictions)
+  - Denied pattern matching (sudo, rm -rf, etc.)
+  - Shell operator blocking (&&, ||, |, ;, $(), backticks)
+  - Forbidden argument patterns (path traversal, system directory access)
+  - Policy violation artifact generation
+  - Command execution with mock process runner
+  - Execution options forwarding (cwd, env, timeout, maxOutput)
+  - Non-zero exit code handling and killed process handling
+  - Denylist mode, violation action modes (FAIL_RUN, DENY_COMMAND, AUDIT_ONLY)
+  - Edge cases (whitespace, empty commands, complex arg lists)
+
+**Patterns & notes for next loops:**
+
+- Infrastructure delegates to domain for policy evaluation — follows the layered architecture
+- `setProcessRunner()` enables test isolation without spawning real processes
+- T047 unblocks T045 (Copilot CLI adapter) and T055 (validation command exec)
+- `execFile` with `shell: false` prevents shell injection; arguments passed as arrays
