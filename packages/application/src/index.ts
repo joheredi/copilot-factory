@@ -497,6 +497,37 @@ export type {
   LeadReviewConsolidationDependencies,
 } from "./services/lead-review-consolidation.service.js";
 
+// Ports — review decision application interfaces (PRD 002 §2.2, T061)
+export type {
+  ReviewDecisionTask,
+  ReviewDecisionCycle,
+  NewLeadReviewDecisionData,
+  LeadReviewDecisionRecord,
+  NewFollowUpTaskData,
+  FollowUpTaskRecord,
+  ReviewDecisionAuditEvent,
+  ReviewDecisionTaskRepositoryPort,
+  ReviewDecisionCycleRepositoryPort,
+  ReviewDecisionRecordRepositoryPort,
+  ReviewDecisionFollowUpTaskPort,
+  ReviewDecisionAuditRepositoryPort,
+  ReviewDecisionTransactionRepositories,
+  ReviewDecisionUnitOfWork,
+} from "./ports/review-decision.ports.js";
+
+// Services — review decision application (PRD 002 §2.2, T061)
+export {
+  createReviewDecisionService,
+  SchemaValidationError,
+} from "./services/review-decision.service.js";
+export type {
+  ApplyReviewDecisionParams,
+  ReviewDecisionOutcome,
+  ApplyReviewDecisionResult,
+  ReviewDecisionService,
+  ReviewDecisionDependencies,
+} from "./services/review-decision.service.js";
+
 // Ports — merge executor interfaces (PRD 010 §10.10, T064)
 export type {
   MergeExecutorTask,

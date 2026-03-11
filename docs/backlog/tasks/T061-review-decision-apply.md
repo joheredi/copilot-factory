@@ -5,7 +5,7 @@
 | **ID**                    | T061                                                                                                             |
 | **Epic**                  | [E012: Review Pipeline](../epics/E012-review-pipeline.md)                                                        |
 | **Type**                  | feature                                                                                                          |
-| **Status**                | pending                                                                                                          |
+| **Status**                | done                                                                                                             |
 | **Priority**              | P0                                                                                                               |
 | **Owner**                 | backend-engineer                                                                                                 |
 | **AI Executable**         | Yes                                                                                                              |

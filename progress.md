@@ -1,5 +1,43 @@
 # Progress Log
 
+## T061 — Implement review decision application
+
+### Task
+
+T061 - Implement review decision application (Epic E012: Review Pipeline)
+
+### What was done
+
+Created ReviewDecisionService in `packages/application` that processes the LeadReviewDecisionPacket and applies the lead reviewer's decision to the task and review cycle state. The service handles all four decision types:
+
+- **approved**: ReviewCycle→APPROVED, Task→APPROVED
+- **approved_with_follow_up**: same + creates skeleton follow-up tasks from follow_up_task_refs
+- **changes_requested**: ReviewCycle→REJECTED, Task→CHANGES_REQUESTED, increments reviewRoundCount. Checks escalation policy — if max_review_rounds exceeded, escalates instead.
+- **escalated**: ReviewCycle→ESCALATED, Task→ESCALATED
+
+Key patterns: Zod schema validation first, single atomic transaction for all state changes, domain events emitted after commit, optimistic concurrency with version-based guards, escalation policy check using `shouldEscalate()` from `@factory/domain`.
+
+35 tests covering: packet validation (schema + cross-field invariants), all four decision types, escalation from review round limit exceeded, cross-reference validation (packet IDs vs params), entity state validation, concurrent modification detection, domain event details, audit event metadata.
+
+### Files created
+
+- `packages/application/src/ports/review-decision.ports.ts` — narrow port interfaces
+- `packages/application/src/services/review-decision.service.ts` — service implementation
+- `packages/application/src/services/review-decision.service.test.ts` — comprehensive tests
+
+### Files modified
+
+- `packages/application/src/index.ts` — exported new service, ports, and SchemaValidationError
+- `docs/backlog/tasks/T061-review-decision-apply.md` — status → done
+- `docs/backlog/index.md` — status → done
+
+### Patterns & Notes for Next Loops
+
+- The `IssueSchema` (from `@factory/schemas/shared`) requires fields: `severity`, `code`, `title`, `description`, `blocking`, and optionally `file_path`, `line`. Test data must match this shape.
+- For `changes_requested`, the escalation check uses `reviewRoundCount + 1` (the next round) vs `maxReviewRounds`. The domain `shouldEscalate()` uses `>=`.
+- The `incrementReviewRoundCount` port bumps the version, so the subsequent `updateStatus` must use the new version — two separate version bumps within one transaction.
+- T062 (rework loop) is now unblocked by T061.
+
 ## T037 — Implement reverse-dependency recalculation
 
 ### Task
