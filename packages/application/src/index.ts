@@ -326,3 +326,19 @@ export type {
   SchemaValidationResult,
   RepairResult,
 } from "./services/output-validator.service.js";
+
+// Ports — validation runner check execution (PRD 009 §9.5)
+export type {
+  CheckExecutorPort,
+  ExecuteCheckParams,
+  CheckExecutionResult,
+  ValidationCheckOutcome,
+  ValidationRunResult,
+} from "./ports/validation-runner.ports.js";
+
+// Services — validation runner orchestration (PRD 009 §9.5)
+export { createValidationRunnerService } from "./services/validation-runner.service.js";
+export type {
+  RunValidationParams,
+  ValidationRunnerService,
+} from "./services/validation-runner.service.js";

@@ -1,5 +1,28 @@
 # Progress Log
 
+## T054: Implement validation runner abstraction (2026-03-11)
+
+**What was done:**
+
+- Created `packages/application/src/ports/validation-runner.ports.ts` — defines `CheckExecutorPort` for executing individual checks, `ValidationCheckOutcome` for per-check results, and `ValidationRunResult` for aggregated results.
+- Created `packages/application/src/services/validation-runner.service.ts` — the `ValidationRunnerService` that loads profiles from `ValidationPolicy`, executes required checks then optional checks sequentially via the port, and aggregates results per PRD §9.5 rules.
+- Created 27 tests covering: profile loading errors, execution order, required/optional failure semantics, skipped check handling (`fail_on_skipped_required_check`), result aggregation, multi-profile support, and edge cases.
+- Updated `packages/application/src/index.ts` with all new exports.
+
+**Patterns used:**
+
+- Factory function pattern (`createValidationRunnerService(checkExecutor)`) consistent with all other application services.
+- Port-based DI: `CheckExecutorPort` will be implemented in T055 with real command execution.
+- No transactions needed (read-only orchestration with no DB writes).
+- Fake executor in tests (pattern similar to `FakeCliProcess` in infrastructure).
+
+**Next loop should know:**
+
+- T055 (validation command execution) should implement `CheckExecutorPort` to run shell commands.
+- T056 (validation packet emission) should use `ValidationRunResult` to build `ValidationResultPacket`.
+- T057 (validation gates) should use the runner to check whether transitions are allowed.
+- The runner is async (`Promise<ValidationRunResult>`) to support future parallel check execution.
+
 ## T046: Implement structured output capture and validation (2026-03-11)
 
 **What was done:**
