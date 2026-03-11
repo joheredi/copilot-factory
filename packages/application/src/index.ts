@@ -36,6 +36,15 @@ export type {
   LeaseUnitOfWork,
 } from "./ports/lease.ports.js";
 
+// Ports — job queue interfaces
+export type {
+  QueuedJob,
+  CreateJobData,
+  JobQueueRepositoryPort,
+  JobQueueTransactionRepositories,
+  JobQueueUnitOfWork,
+} from "./ports/job-queue.ports.js";
+
 // Ports — unit of work
 export type { TransactionRepositories, UnitOfWork } from "./ports/unit-of-work.port.js";
 
@@ -63,6 +72,17 @@ export type {
   LeaseAcquisitionResult,
   LeaseService,
 } from "./services/lease.service.js";
+
+// Services — job queue
+export { createJobQueueService } from "./services/job-queue.service.js";
+export type {
+  CreateJobResult,
+  ClaimJobResult,
+  CompleteJobResult,
+  FailJobResult,
+  StartJobResult,
+  JobQueueService,
+} from "./services/job-queue.service.js";
 
 // Services — optimistic retry with conflict resolution priority
 export { createOptimisticRetryService } from "./services/optimistic-retry.service.js";

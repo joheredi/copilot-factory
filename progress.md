@@ -1,5 +1,30 @@
 # Progress Log
 
+## T025 — Implement DB-backed job queue (2026-03-11)
+
+### What was done
+
+- Created `packages/application/src/ports/job-queue.ports.ts` — port interfaces for the job queue service:
+  - `QueuedJob` entity shape, `CreateJobData` input type
+  - `JobQueueRepositoryPort` with `findById`, `create`, `claimNextByType`, `updateStatus`
+  - `JobQueueUnitOfWork` and `JobQueueTransactionRepositories` for transaction boundaries
+- Created `packages/application/src/services/job-queue.service.ts` — DB-backed job queue service:
+  - `createJob` — enqueues with PENDING status, supports delayed execution via runAfter
+  - `claimJob` — atomic claim of oldest eligible job by type, respects runAfter, increments attempt count
+  - `startJob` — transitions CLAIMED → RUNNING
+  - `completeJob` — transitions CLAIMED/RUNNING → COMPLETED
+  - `failJob` — transitions CLAIMED/RUNNING → FAILED
+  - Injected clock for testability, factory function pattern matching existing services
+- 42 new tests covering: creation defaults, claim atomicity, FIFO ordering, runAfter filtering, concurrent claim simulation (10 workers / 3 jobs), full lifecycle, terminal state immutability
+- All 1,247 tests pass, build clean
+
+### Patterns for next loops
+
+- Job queue follows the same port/adapter/UnitOfWork pattern as lease and transition services
+- The `claimNextByType` port method is the atomic claim primitive — the real SQLite implementation uses `UPDATE...WHERE status='PENDING'`
+- T026 (job dependencies) will need to extend `claimNextByType` to check `dependsOnJobIds`
+- T027 (scheduler) will consume `JobQueueService.claimJob` and `createJob`
+
 ## T019 — Implement optimistic concurrency control (2026-03-11)
 
 ### What was done
