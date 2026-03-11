@@ -1,5 +1,31 @@
 # Progress Log
 
+## T028: Implement scheduler tick loop — DONE (2026-03-11)
+
+**Status:** Done
+
+**What was done:**
+
+- Implemented `SchedulerTickService` in `packages/application/src/services/scheduler-tick.service.ts`
+- Added `SchedulerTickJobQueryPort` and `SchedulerTickUnitOfWork` in `packages/application/src/ports/scheduler-tick.ports.ts`
+- 25 tests covering initialization, scheduling loop, self-rescheduling, configuration, edge cases
+- Exported all types and factory from `packages/application/src/index.ts`
+
+**Patterns & notes for next loops:**
+
+- Self-rescheduling via job queue: tick completes → creates next tick with `runAfter` delay. No `setInterval` needed.
+- `initialize()` checks for existing non-terminal tick jobs to prevent accumulation after restarts
+- `processTick()` loops `scheduleNext()` until exhaustion, then completes and reschedules
+- The `SchedulerTickJobQueryPort.countNonTerminalByType()` needs infrastructure implementation (SQLite query)
+- Configuration is injectable: tick interval, candidate limit, lease owner
+- Default tick interval: 5 seconds, default candidate limit: 50
+
+**Next loop should know:**
+
+- T028 doesn't directly block any other tasks (Blocks: None), but T029 (reconciliation sweep) is a natural companion
+- Infrastructure layer needs to implement `SchedulerTickJobQueryPort.countNonTerminalByType()` — a simple `SELECT COUNT(*) WHERE status NOT IN ('completed','failed','cancelled')` query
+- The NestJS control plane will need to wire up the tick service and call `initialize()` on startup, then poll `processTick()` in a loop or timer
+
 ## T045: Implement Copilot CLI execution adapter — DONE (2026-03-11)
 
 **Status:** Done

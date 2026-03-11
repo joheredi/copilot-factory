@@ -5,7 +5,7 @@
 | **ID**                    | T028                                                                  |
 | **Epic**                  | [E005: Job Queue & Scheduling](../epics/E005-job-queue-scheduling.md) |
 | **Type**                  | feature                                                               |
-| **Status**                | pending                                                               |
+| **Status**                | done                                                                  |
 | **Priority**              | P1                                                                    |
 | **Owner**                 | backend-engineer                                                      |
 | **AI Executable**         | Yes                                                                   |

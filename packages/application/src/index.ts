@@ -152,6 +152,32 @@ export type {
   SchedulerService,
 } from "./services/scheduler.service.js";
 
+// Ports — scheduler tick interfaces
+export type {
+  SchedulerTickJobQueryPort,
+  SchedulerTickTransactionRepositories,
+  SchedulerTickUnitOfWork,
+} from "./ports/scheduler-tick.ports.js";
+
+// Services — scheduler tick loop for recurring task assignment (PRD 007 §7.8)
+export {
+  createSchedulerTickService,
+  DEFAULT_TICK_INTERVAL_MS,
+  DEFAULT_CANDIDATE_LIMIT as DEFAULT_TICK_CANDIDATE_LIMIT,
+  DEFAULT_LEASE_OWNER as DEFAULT_TICK_LEASE_OWNER,
+} from "./services/scheduler-tick.service.js";
+export type {
+  SchedulerTickConfig,
+  InitializeTickResult,
+  TickAssignmentSummary,
+  TickStopReason,
+  TickProcessedResult,
+  TickSkippedResult,
+  ProcessTickResult,
+  SchedulerTickService,
+  SchedulerTickDependencies,
+} from "./services/scheduler-tick.service.js";
+
 // Ports — heartbeat reception and staleness detection interfaces
 export type {
   HeartbeatableLease,

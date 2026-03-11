@@ -148,7 +148,7 @@ See [phase documents](phases/) for details.
 | [T025](tasks/T025-job-queue-core.md)                | Implement DB-backed job queue                                                         | E005 | P0       | foundation | done    |
 | [T026](tasks/T026-job-dependencies.md)              | Implement job dependency and group coordination                                       | E005 | P0       | feature    | done    |
 | [T027](tasks/T027-scheduler-service.md)             | Implement Scheduler service                                                           | E005 | P0       | feature    | done    |
-| [T028](tasks/T028-scheduler-tick-loop.md)           | Implement scheduler tick loop                                                         | E005 | P1       | feature    | pending |
+| [T028](tasks/T028-scheduler-tick-loop.md)           | Implement scheduler tick loop                                                         | E005 | P1       | feature    | done    |
 | [T029](tasks/T029-reconciliation-sweep.md)          | Implement reconciliation sweep job                                                    | E005 | P1       | feature    | pending |
 | [T030](tasks/T030-lease-acquisition.md)             | Implement lease acquisition with exclusivity                                          | E006 | P0       | feature    | done    |
 | [T031](tasks/T031-heartbeat-staleness.md)           | Implement heartbeat receive and staleness detection                                   | E006 | P0       | feature    | done    |
