@@ -31,3 +31,12 @@ export {
   FileScopeEnforcementLevel,
   EscalationAction,
 } from "./enums.js";
+
+export {
+  validateTransition,
+  getValidTargets,
+  isTerminalState,
+  getAllValidTransitions,
+} from "./state-machines/task-state-machine.js";
+
+export type { TransitionContext, TransitionResult } from "./state-machines/task-state-machine.js";

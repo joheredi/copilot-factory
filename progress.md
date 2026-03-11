@@ -392,3 +392,33 @@
 - T035: DAG validation (depends on T014 ✅)
 - T005: CI pipeline (independent — depends on T003 ✅, T004 ✅)
 - T020-T024: Zod packet schemas (independent — depends on T004 ✅)
+
+## 2026-03-11 — T015: Implement Task state machine with transition validation
+
+**Status:** Done
+
+**What was done:**
+
+- Created `packages/domain/src/state-machines/task-state-machine.ts` with full implementation of the task state machine from PRD §2.1.
+- Implemented all 16 task states and 45 valid transitions (18 explicit normal-flow + 3 ESCALATED resolutions + 12 wildcard→ESCALATED + 12 wildcard→CANCELLED).
+- Each transition has a guard function checking preconditions from the PRD transition table.
+- Exported `validateTransition(current, target, context)` returning `{valid, reason}`.
+- Exported helpers: `getValidTargets()`, `isTerminalState()`, `getAllValidTransitions()`.
+- Created 395 exhaustive tests covering every valid transition, every invalid transition pair, self-transitions, terminal state invariants, guard preconditions, lifecycle scenarios, and rework cycles.
+- Updated `packages/domain/src/index.ts` to re-export all state machine functions and types.
+
+**Patterns established:**
+
+- State machines live in `packages/domain/src/state-machines/` with one file per machine.
+- Transition maps use `Map<TransitionKey, GuardFn>` where `TransitionKey` is `"FROM→TO"`.
+- Wildcard transitions (e.g., \* → ESCALATED) are handled separately from the explicit map.
+- Guard functions are pure `(ctx: TransitionContext) => TransitionResult`.
+- `TransitionContext` is a flat interface where callers supply only relevant fields.
+- Tests use `it.each()` for exhaustive transition pair coverage.
+
+**Next ready tasks:**
+
+- T016: Supporting state machines (depends on T007 ✅)
+- T017: Transition service (depends on T015 ✅, T016)
+- T020: Shared Zod types (depends on T004 ✅)
+- T005: CI pipeline (depends on T003 ✅, T004 ✅)
