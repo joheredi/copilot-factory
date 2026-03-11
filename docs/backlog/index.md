@@ -182,7 +182,7 @@ See [phase documents](phases/) for details.
 | [T059](tasks/T059-reviewer-dispatch.md)             | Implement specialist reviewer job dispatch                                            | E012 | P0       | feature    | done    |
 | [T060](tasks/T060-lead-reviewer-dispatch.md)        | Implement lead reviewer dispatch with dependencies                                    | E012 | P0       | feature    | done    |
 | [T061](tasks/T061-review-decision-apply.md)         | Implement review decision application                                                 | E012 | P0       | feature    | done    |
-| [T062](tasks/T062-rework-loop.md)                   | Implement rework loop with rejection context                                          | E012 | P1       | feature    | pending |
+| [T062](tasks/T062-rework-loop.md)                   | Implement rework loop with rejection context                                          | E012 | P1       | feature    | done    |
 | [T063](tasks/T063-merge-queue.md)                   | Implement merge queue with ordering contract                                          | E013 | P0       | feature    | done    |
 | [T064](tasks/T064-rebase-merge-exec.md)             | Implement rebase-and-merge execution                                                  | E013 | P0       | feature    | done    |
 | [T065](tasks/T065-merge-strategies.md)              | Implement squash and merge-commit strategies                                          | E013 | P1       | feature    | pending |

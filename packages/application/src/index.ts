@@ -531,6 +531,34 @@ export type {
   ReviewDecisionDependencies,
 } from "./services/review-decision.service.js";
 
+// Ports — rework context assembly interfaces (PRD 008 §8.12, T062)
+export type {
+  ReworkTask,
+  ReworkReviewCycle,
+  ReworkLeadReviewDecision,
+  ReworkSpecialistPacket,
+  ReworkDevResult,
+  ReworkTaskRepositoryPort,
+  ReworkReviewCycleRepositoryPort,
+  ReworkLeadReviewDecisionRepositoryPort,
+  ReworkSpecialistPacketRepositoryPort,
+  ReworkDevResultRepositoryPort,
+  ReworkContextTransactionRepositories,
+  ReworkContextUnitOfWork,
+} from "./ports/rework-context.ports.js";
+
+// Services — rework context assembly (PRD 008 §8.12, T062)
+export {
+  createReworkContextService,
+  RejectionContextAssemblyError,
+} from "./services/rework-context.service.js";
+export type {
+  BuildRejectionContextParams,
+  BuildRejectionContextResult,
+  ReworkContextService,
+  ReworkContextDependencies,
+} from "./services/rework-context.service.js";
+
 // Ports — merge executor interfaces (PRD 010 §10.10, T064)
 export type {
   MergeExecutorTask,

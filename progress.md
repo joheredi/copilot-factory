@@ -1,5 +1,29 @@
 # Progress Log
 
+## 2026-03-11 — T062: Implement rework loop with rejection context
+
+**Status:** Done
+
+**What was done:**
+
+- Created `packages/application/src/ports/rework-context.ports.ts` — Port interfaces for querying rejected review data (task, review cycle, lead decision, specialist packets, dev result)
+- Created `packages/application/src/services/rework-context.service.ts` — Service that assembles a validated `RejectionContext` from persisted review data
+- Created `packages/application/src/services/rework-context.service.test.ts` — 22 tests covering happy path, fallbacks, error handling, and defensive parsing
+- Updated `packages/application/src/index.ts` — Exported new service, ports, and error types
+
+**Design decision:**
+
+- RejectionContext is assembled at query-time from already-persisted data (LeadReviewDecision record + specialist ReviewPackets + DevResultPacket) rather than stored as a redundant JSON blob. This keeps data normalized and avoids schema migrations.
+- Lead decision blocking issues take priority over specialist issues (lead may have deduplicated/re-prioritized). Falls back to specialist issues if lead has none.
+- `priorUnresolvedIssues` from the dev result are returned alongside the RejectionContext for optional inclusion in the TaskPacket.
+
+**Patterns / notes for next loops:**
+
+- `ReworkContextService.buildRejectionContext()` can auto-discover the latest rejected cycle (omit `reviewCycleId`) or accept an explicit one
+- Packet JSON fields must be accessed with bracket notation (`obj["field"]`) due to TypeScript `noPropertyAccessFromIndexSignature` setting
+- The service validates assembled context against `RejectionContextSchema` before returning, so callers get guaranteed-valid data
+- Next: T108 (integration test for review rejection and rework loop) is now unblocked
+
 ## 2026-03-11 — T107: Integration test: full task lifecycle BACKLOG to DONE
 
 **Status:** Done
