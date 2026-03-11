@@ -138,3 +138,33 @@ export type {
   ProfileSelectionContext,
   ProfileSelectionResult,
 } from "./policies/validation-policy.js";
+
+export {
+  BackoffStrategy,
+  DEFAULT_RETRY_POLICY,
+  calculateBackoff,
+  shouldRetry,
+  createDefaultRetryPolicy,
+} from "./policies/retry-policy.js";
+
+export type {
+  RetryPolicy,
+  RetryEvaluationContext,
+  RetryEvaluation,
+} from "./policies/retry-policy.js";
+
+export {
+  EscalationTrigger,
+  DEFAULT_ESCALATION_POLICY,
+  shouldEscalate,
+  getTriggerAction,
+  getConfiguredTriggers,
+  createDefaultEscalationPolicy,
+} from "./policies/escalation-policy.js";
+
+export type {
+  EscalationTriggerAction,
+  EscalationPolicy,
+  EscalationEvaluationContext,
+  EscalationEvaluation,
+} from "./policies/escalation-policy.js";
