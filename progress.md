@@ -1,5 +1,29 @@
 # Progress Log
 
+## T021 — Define TaskPacket and DevResultPacket Zod schemas (2026-03-11)
+
+### What was done
+
+- Created `packages/schemas/src/rejection-context.ts` — RejectionContext schema (§8.12) with prior_review_cycle_id, blocking_issues array (min 1), and lead_decision_summary
+- Created `packages/schemas/src/task-packet.ts` — TaskPacket schema (§8.4) with all required top-level fields and 8 named nested sub-schemas (task, repository, workspace, context, repo_policy, tool_policy, validation_requirements, expected_output)
+- Created `packages/schemas/src/dev-result-packet.ts` — DevResultPacket schema (§8.5) with result sub-schema containing files_changed, validations_run, assumptions, risks, unresolved_issues
+- Added 3 missing enum Zod wrappers to shared.ts: TaskTypeSchema, TaskPrioritySchema, RiskLevelSchema
+- Updated index.ts barrel exports for all new schemas and types
+- Comprehensive tests: 10 (rejection-context) + 68 (task-packet) + 28 (dev-result-packet) = 106 new tests
+
+### Design decisions
+
+- `task.task_type`, `task.priority`, `task.severity` are free-form strings (not enum-constrained) because the PRD §8.4 does not formally enumerate their values and the spec example uses "backend-feature" which is not in the domain TaskType enum. RiskLevel is enum-constrained since it matches the domain enum exactly.
+- `context.prior_partial_work` uses `z.unknown().nullable()` since the PRD does not define its structure — it's null on initial attempts and may reference artifacts on retries.
+- All literal fields use `z.literal()` (packet_type, schema_version) for strict validation.
+- All timestamp fields use `z.string().datetime()` for ISO 8601 validation.
+
+### Patterns for next loops
+
+- New schema files follow the same pattern: JSDoc with §-references, named sub-schemas, type exports via `z.infer`, barrel export from index.ts
+- Test pattern: spec example validation, enum iteration with it.each, empty/missing field rejection, type inference test
+- The `zodEnumFromConst` helper is private to shared.ts — add new enum schemas there, not in separate files
+
 ## T025 — Implement DB-backed job queue (2026-03-11)
 
 ### What was done

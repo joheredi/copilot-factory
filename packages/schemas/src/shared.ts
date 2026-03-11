@@ -29,6 +29,9 @@ import {
   MergeAssistRecommendation,
   PostMergeAnalysisRecommendation,
   MergeStrategy,
+  TaskType,
+  TaskPriority,
+  RiskLevel,
 } from "@factory/domain";
 
 // ─── Helper ──────────────────────────────────────────────────────────────────
@@ -131,6 +134,35 @@ export const PostMergeAnalysisRecommendationSchema = zodEnumFromConst(
  * @see {@link file://docs/prd/008-packet-and-schema-spec.md} §8.8
  */
 export const MergeStrategySchema = zodEnumFromConst(MergeStrategy);
+
+/**
+ * Zod schema for {@link TaskType} enum values.
+ *
+ * Classifies the kind of work a task represents: feature, bug_fix, refactor,
+ * chore, documentation, test, or spike.
+ *
+ * @see {@link file://docs/prd/002-data-model.md} §2.3 Entity: Task (task_type)
+ */
+export const TaskTypeSchema = zodEnumFromConst(TaskType);
+
+/**
+ * Zod schema for {@link TaskPriority} enum values.
+ *
+ * Controls scheduling order: critical > high > medium > low.
+ *
+ * @see {@link file://docs/prd/002-data-model.md} §2.3 Entity: Task (priority)
+ */
+export const TaskPrioritySchema = zodEnumFromConst(TaskPriority);
+
+/**
+ * Zod schema for {@link RiskLevel} enum values.
+ *
+ * Determines the level of scrutiny applied during review routing and
+ * validation: high, medium, or low.
+ *
+ * @see {@link file://docs/prd/002-data-model.md} §2.3 Entity: Task (risk_level)
+ */
+export const RiskLevelSchema = zodEnumFromConst(RiskLevel);
 
 // ─── Shared Object Schemas ──────────────────────────────────────────────────
 

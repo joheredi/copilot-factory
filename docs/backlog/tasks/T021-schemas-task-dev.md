@@ -5,7 +5,7 @@
 | **ID**                    | T021                                                                                   |
 | **Epic**                  | [E004: Packet Schemas & Validation](../epics/E004-packet-schemas.md)                   |
 | **Type**                  | foundation                                                                             |
-| **Status**                | pending                                                                                |
+| **Status**                | done                                                                                   |
 | **Priority**              | P0                                                                                     |
 | **Owner**                 | backend-engineer                                                                       |
 | **AI Executable**         | Yes                                                                                    |
