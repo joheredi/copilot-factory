@@ -28,6 +28,7 @@ import {
   JobType,
   JobStatus,
   ValidationRunScope,
+  ValidationRunStatus,
   ValidationCheckType,
   ValidationCheckStatus,
   PacketType,
@@ -364,6 +365,23 @@ describe("ValidationRunScope (PRD 002 §2.3)", () => {
   });
 });
 
+describe("ValidationRunStatus (PRD 002 §2.3)", () => {
+  /**
+   * Verifies validation run status values. The validation runner uses these
+   * to track runs from creation through completion. Gate-checking logic
+   * inspects the status of relevant ValidationRuns before allowing transitions.
+   */
+  it("should have exactly 5 statuses", () => {
+    expect(valuesOf(ValidationRunStatus)).toHaveLength(5);
+  });
+
+  it("should contain all statuses from the PRD spec", () => {
+    const expected = ["pending", "running", "passed", "failed", "cancelled"];
+    expect(valuesOf(ValidationRunStatus)).toEqual(expect.arrayContaining(expected));
+    expect(expected).toEqual(expect.arrayContaining(valuesOf(ValidationRunStatus)));
+  });
+});
+
 describe("ValidationCheckType (PRD 008 §8.3.3)", () => {
   /**
    * Verifies validation check types. These categorize what kind of
@@ -643,6 +661,7 @@ describe("Enum completeness", () => {
       JobType,
       JobStatus,
       ValidationRunScope,
+      ValidationRunStatus,
       ValidationCheckType,
       ValidationCheckStatus,
       PacketType,
@@ -659,7 +678,7 @@ describe("Enum completeness", () => {
       FileScopeEnforcementLevel,
       EscalationAction,
     ];
-    expect(enumObjects).toHaveLength(29);
+    expect(enumObjects).toHaveLength(30);
     for (const obj of enumObjects) {
       expect(typeof obj).toBe("object");
       expect(Object.keys(obj).length).toBeGreaterThan(0);

@@ -1049,3 +1049,273 @@ export const leadReviewDecisions = sqliteTable(
     index("idx_lead_review_decision_cycle_id").on(table.reviewCycleId),
   ],
 );
+
+// ─── T012: MergeQueueItem, ValidationRun, Job ──────────────────────────────
+
+/**
+ * Merge queue item table — tracks tasks queued for merge into the target
+ * branch. Each task may have at most one active MergeQueueItem at a time.
+ * The merge queue enforces ordering via the `position` column and tracks
+ * the lifecycle of each merge attempt.
+ *
+ * `approved_commit_sha` records the commit SHA that was approved for merge.
+ * The merge executor verifies this hasn't changed (rebase safety) before
+ * performing the actual merge.
+ *
+ * @see {@link file://docs/prd/002-data-model.md} §2.3 Entity: MergeQueueItem
+ */
+export const mergeQueueItems = sqliteTable(
+  "merge_queue_item",
+  {
+    /** Unique identifier (UUID). */
+    mergeQueueItemId: text("merge_queue_item_id").primaryKey(),
+
+    /** FK to the task being merged. Enforced at DB level. */
+    taskId: text("task_id")
+      .notNull()
+      .references(() => tasks.taskId),
+
+    /** FK to the target repository. Enforced at DB level. */
+    repositoryId: text("repository_id")
+      .notNull()
+      .references(() => repositories.repositoryId),
+
+    /**
+     * Current status in the merge queue lifecycle.
+     * Stored as text; validated at the application layer against
+     * MergeQueueItemStatus enum values.
+     */
+    status: text("status").notNull(),
+
+    /**
+     * Position in the merge queue. Lower values merge first.
+     * The merge executor processes items in ascending position order.
+     */
+    position: integer("position").notNull(),
+
+    /**
+     * The commit SHA that was approved for merge. Used by the merge
+     * executor to verify nothing has changed since approval.
+     * Nullable until the task reaches the approved stage.
+     */
+    approvedCommitSha: text("approved_commit_sha"),
+
+    /** Timestamp when the item was enqueued (Unix epoch seconds). */
+    enqueuedAt: integer("enqueued_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+
+    /**
+     * Timestamp when the merge process started.
+     * Nullable until the merge executor begins work.
+     */
+    startedAt: integer("started_at", { mode: "timestamp" }),
+
+    /**
+     * Timestamp when the merge reached a terminal state.
+     * Nullable until the item completes or fails.
+     */
+    completedAt: integer("completed_at", { mode: "timestamp" }),
+  },
+  (table) => [
+    /**
+     * Composite index for the common query: "what items are queued for this
+     * repository?" Supports efficient merge queue polling per repository.
+     */
+    index("idx_merge_queue_item_repo_status").on(table.repositoryId, table.status),
+    /** Index for lookups by task — "is this task in the merge queue?" */
+    index("idx_merge_queue_item_task_id").on(table.taskId),
+  ],
+);
+
+/**
+ * Validation run table — records individual validation executions that occur
+ * at various points in the task lifecycle. Each run targets a specific scope
+ * (pre-dev, during-dev, pre-review, pre-merge, post-merge) and captures
+ * results for gate-checking logic.
+ *
+ * `artifact_refs` is a JSON array of artifact reference identifiers pointing
+ * to the detailed validation output stored in the artifact service.
+ *
+ * @see {@link file://docs/prd/002-data-model.md} §2.3 Entity: ValidationRun
+ */
+export const validationRuns = sqliteTable(
+  "validation_run",
+  {
+    /** Unique identifier (UUID). */
+    validationRunId: text("validation_run_id").primaryKey(),
+
+    /** FK to the task being validated. Enforced at DB level. */
+    taskId: text("task_id")
+      .notNull()
+      .references(() => tasks.taskId),
+
+    /**
+     * Lifecycle scope of this validation run.
+     * Stored as text; validated at the application layer against
+     * ValidationRunScope enum values.
+     */
+    runScope: text("run_scope").notNull(),
+
+    /**
+     * Current status of the validation run.
+     * Stored as text; validated at the application layer against
+     * ValidationRunStatus enum values.
+     */
+    status: text("status").notNull(),
+
+    /**
+     * Name of the validation tool that executed this run (e.g. "vitest",
+     * "eslint", "tsc"). Nullable when the run covers multiple tools.
+     */
+    toolName: text("tool_name"),
+
+    /**
+     * Human-readable summary of the validation results.
+     * Populated after the run completes.
+     */
+    summary: text("summary"),
+
+    /**
+     * JSON array of artifact reference identifiers pointing to detailed
+     * validation output stored in the artifact service.
+     */
+    artifactRefs: text("artifact_refs", { mode: "json" }),
+
+    /** Timestamp when the validation run started (Unix epoch seconds). */
+    startedAt: integer("started_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+
+    /**
+     * Timestamp when the validation run reached a terminal state.
+     * Nullable until the run completes.
+     */
+    completedAt: integer("completed_at", { mode: "timestamp" }),
+  },
+  (table) => [
+    /** Index for lookups by task — "all validation runs for this task." */
+    index("idx_validation_run_task_id").on(table.taskId),
+    /**
+     * Composite index for the common query: "what validation runs exist
+     * for this task at this scope?" Used by gate-checking logic.
+     */
+    index("idx_validation_run_task_scope").on(table.taskId, table.runScope),
+  ],
+);
+
+/**
+ * Job table — the persistence layer for the DB-backed job queue. Every
+ * schedulable unit of work (planning dispatch, worker dispatch, reviewer
+ * dispatch, merge execution, validation, reconciliation, cleanup) is
+ * represented as a Job row.
+ *
+ * The job queue polls this table using the composite index on
+ * (status, run_after) to find claimable jobs efficiently.
+ *
+ * `payload_json` holds the job-type-specific input data as a JSON object.
+ * `depends_on_job_ids` is a JSON array of job IDs that must reach terminal
+ * status before this job can be dispatched.
+ *
+ * @see {@link file://docs/prd/002-data-model.md} §2.3 Entity: Job
+ */
+export const jobs = sqliteTable(
+  "job",
+  {
+    /** Unique identifier (UUID). */
+    jobId: text("job_id").primaryKey(),
+
+    /**
+     * Type of work this job performs.
+     * Stored as text; validated at the application layer against
+     * JobType enum values.
+     */
+    jobType: text("job_type").notNull(),
+
+    /**
+     * The type of entity this job operates on (e.g. "task", "review_cycle").
+     * Used for routing and audit correlation.
+     */
+    entityType: text("entity_type"),
+
+    /**
+     * The ID of the entity this job operates on.
+     * Combined with entityType for job-to-entity correlation.
+     */
+    entityId: text("entity_id"),
+
+    /**
+     * Job-type-specific input data as a JSON object. Structure varies
+     * by job_type and is validated at the application layer.
+     */
+    payloadJson: text("payload_json", { mode: "json" }),
+
+    /**
+     * Current status in the job lifecycle.
+     * Stored as text; validated at the application layer against
+     * JobStatus enum values.
+     */
+    status: text("status").notNull(),
+
+    /**
+     * Number of times this job has been attempted. Incremented on each
+     * claim. Used by retry policy to determine whether to retry or fail.
+     */
+    attemptCount: integer("attempt_count").notNull().default(0),
+
+    /**
+     * Earliest timestamp at which this job may be dispatched.
+     * Used for delayed/scheduled execution. The queue poller skips
+     * jobs where run_after is in the future.
+     */
+    runAfter: integer("run_after", { mode: "timestamp" }),
+
+    /**
+     * Identifier of the worker/process that currently holds the lease
+     * on this job. Nullable when the job is unclaimed.
+     */
+    leaseOwner: text("lease_owner"),
+
+    /**
+     * FK to the parent job that spawned this job. Nullable for top-level jobs.
+     * Enables job hierarchy tracking (e.g. scheduler_tick spawns worker_dispatch).
+     */
+    parentJobId: text("parent_job_id"),
+
+    /**
+     * Group identifier for related jobs. Used to correlate jobs that belong
+     * to the same logical operation (e.g. all specialist reviewer jobs in
+     * one review cycle share the same group ID).
+     */
+    jobGroupId: text("job_group_id"),
+
+    /**
+     * JSON array of job IDs that must reach terminal status (completed or
+     * failed) before this job can be dispatched. The queue poller checks
+     * this constraint before claiming.
+     */
+    dependsOnJobIds: text("depends_on_job_ids", { mode: "json" }),
+
+    /** Row creation timestamp (Unix epoch seconds). */
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+
+    /** Row last-update timestamp (Unix epoch seconds). */
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => [
+    /**
+     * Composite index for efficient queue polling: "find all pending jobs
+     * whose run_after has passed." This is the hot-path query for the
+     * scheduler tick loop.
+     */
+    index("idx_job_status_run_after").on(table.status, table.runAfter),
+    /** Index for lookups by job group — "all jobs in this review cycle." */
+    index("idx_job_group_id").on(table.jobGroupId),
+    /** Index for lookups by parent — "all child jobs of this scheduler tick." */
+    index("idx_job_parent_job_id").on(table.parentJobId),
+  ],
+);

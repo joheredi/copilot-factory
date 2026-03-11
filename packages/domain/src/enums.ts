@@ -308,6 +308,24 @@ export const ValidationRunScope = {
 export type ValidationRunScope = (typeof ValidationRunScope)[keyof typeof ValidationRunScope];
 
 /**
+ * Validation run status values.
+ *
+ * Tracks the lifecycle of a validation run from creation to completion.
+ *
+ * @see {@link file://docs/prd/002-data-model.md} §2.3 Entity: ValidationRun
+ */
+export const ValidationRunStatus = {
+  PENDING: "pending",
+  RUNNING: "running",
+  PASSED: "passed",
+  FAILED: "failed",
+  CANCELLED: "cancelled",
+} as const;
+
+/** Union of all valid validation run status values. */
+export type ValidationRunStatus = (typeof ValidationRunStatus)[keyof typeof ValidationRunStatus];
+
+/**
  * Validation check type values.
  *
  * Categorizes the kind of validation check performed.

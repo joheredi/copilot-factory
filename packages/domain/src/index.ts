@@ -14,6 +14,7 @@ export {
   JobType,
   JobStatus,
   ValidationRunScope,
+  ValidationRunStatus,
   ValidationCheckType,
   ValidationCheckStatus,
   PacketType,

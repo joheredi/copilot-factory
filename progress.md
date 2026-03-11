@@ -305,3 +305,27 @@
 - T014 (entity repositories) will be ready once T011-T013 are all done
 - The test helper `openTestDb()` now creates all T008-T011 tables; future migrations should extend it
 - The `seedWorkerPool()` helper was added for tests that need a valid pool_id FK
+
+## T012: MergeQueueItem, ValidationRun, Job Migrations (2026-03-11)
+
+**What was done:**
+
+- Added `ValidationRunStatus` enum to `packages/domain/src/enums.ts` (pending, running, passed, failed, cancelled)
+- Added three Drizzle schema table definitions to `apps/control-plane/src/infrastructure/database/schema.ts`:
+  - `mergeQueueItems`: merge queue tracking with position, status, approved_commit_sha, timestamps
+  - `validationRuns`: validation execution tracking with run_scope, status, tool_name, artifact_refs JSON
+  - `jobs`: DB-backed job queue with job_type, payload_json, dependency/group coordination, lease_owner
+- Generated migration `0004_greedy_guardsmen.sql`
+- Added 35 comprehensive tests covering all three tables, nullable fields, JSON columns, FK constraints, cross-table joins, and the review cycle job coordination pattern
+- All 251 tests pass (up from 216 baseline)
+
+**Patterns used:**
+
+- Same Drizzle schema patterns as T008–T011: text PKs, integer timestamps with `(unixepoch())` default, JSON columns via `text("col", { mode: "json" })`, indexes via third argument to `sqliteTable`
+- Test pattern: in-memory SQLite DB created from raw SQL in `openTestDb()`, helper functions for generating valid rows
+
+**What the next loop should know:**
+
+- T012 and T013 both unblock T014 (entity repositories). T013 (AuditEvent, PolicySet) is the next critical dependency.
+- The Job table's `(status, run_after)` composite index is the hot path for queue polling (T025)
+- The `depends_on_job_ids` JSON column stores cross-job dependency references but has no DB-level FK — coordination is enforced at the application layer

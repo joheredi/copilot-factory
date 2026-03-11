@@ -5,7 +5,7 @@
 | **ID**                    | T012                                                                                                           |
 | **Epic**                  | [E002: Domain Model & Persistence](../epics/E002-domain-model-persistence.md)                                  |
 | **Type**                  | foundation                                                                                                     |
-| **Status**                | pending                                                                                                        |
+| **Status**                | done                                                                                                           |
 | **Priority**              | P0                                                                                                             |
 | **Owner**                 | backend-engineer                                                                                               |
 | **AI Executable**         | Yes                                                                                                            |
@@ -55,9 +55,9 @@ The implementing agent should read these files before starting:
 
 ## Acceptance Criteria
 
-- [ ] All three tables created with correct schemas
-- [ ] Job table supports dependency and group coordination fields
-- [ ] Indexes created for query performance
+- [x] All three tables created with correct schemas
+- [x] Job table supports dependency and group coordination fields
+- [x] Indexes created for query performance
 
 ## Definition of Done
 

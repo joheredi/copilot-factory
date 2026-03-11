@@ -33,6 +33,9 @@ import {
   reviewCycles,
   reviewPackets,
   leadReviewDecisions,
+  mergeQueueItems,
+  validationRuns,
+  jobs,
 } from "./schema.js";
 
 /**
@@ -261,6 +264,58 @@ function openTestDb() {
 
     CREATE INDEX idx_lead_review_decision_task_id ON lead_review_decision(task_id);
     CREATE INDEX idx_lead_review_decision_cycle_id ON lead_review_decision(review_cycle_id);
+
+    -- T012: MergeQueueItem, ValidationRun, Job
+    CREATE TABLE merge_queue_item (
+      merge_queue_item_id TEXT PRIMARY KEY NOT NULL,
+      task_id TEXT NOT NULL REFERENCES task(task_id),
+      repository_id TEXT NOT NULL REFERENCES repository(repository_id),
+      status TEXT NOT NULL,
+      position INTEGER NOT NULL,
+      approved_commit_sha TEXT,
+      enqueued_at INTEGER NOT NULL DEFAULT (unixepoch()),
+      started_at INTEGER,
+      completed_at INTEGER
+    );
+
+    CREATE INDEX idx_merge_queue_item_repo_status ON merge_queue_item(repository_id, status);
+    CREATE INDEX idx_merge_queue_item_task_id ON merge_queue_item(task_id);
+
+    CREATE TABLE validation_run (
+      validation_run_id TEXT PRIMARY KEY NOT NULL,
+      task_id TEXT NOT NULL REFERENCES task(task_id),
+      run_scope TEXT NOT NULL,
+      status TEXT NOT NULL,
+      tool_name TEXT,
+      summary TEXT,
+      artifact_refs TEXT,
+      started_at INTEGER NOT NULL DEFAULT (unixepoch()),
+      completed_at INTEGER
+    );
+
+    CREATE INDEX idx_validation_run_task_id ON validation_run(task_id);
+    CREATE INDEX idx_validation_run_task_scope ON validation_run(task_id, run_scope);
+
+    CREATE TABLE job (
+      job_id TEXT PRIMARY KEY NOT NULL,
+      job_type TEXT NOT NULL,
+      entity_type TEXT,
+      entity_id TEXT,
+      payload_json TEXT,
+      status TEXT NOT NULL,
+      attempt_count INTEGER NOT NULL DEFAULT 0,
+      run_after INTEGER,
+      lease_owner TEXT,
+      parent_job_id TEXT,
+      job_group_id TEXT,
+      depends_on_job_ids TEXT,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+      updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+
+    CREATE INDEX idx_job_status_run_after ON job(status, run_after);
+    CREATE INDEX idx_job_group_id ON job(job_group_id);
+    CREATE INDEX idx_job_parent_job_id ON job(parent_job_id);
   `);
 
   const db = drizzle(sqlite);
@@ -2913,5 +2968,909 @@ describe("T011 — LeadReviewDecision table", () => {
     expect(result.packet_verdict).toBe("changes_requested");
     expect(result.lead_decision).toBe("changes_requested");
     expect(result.blocking_issues).toBe(1);
+  });
+});
+
+// ─── T012: MergeQueueItem table ─────────────────────────────────────────────
+
+/**
+ * Generate a minimal valid MergeQueueItem row.
+ *
+ * Requires a task_id and repository_id from pre-seeded parent rows.
+ */
+function makeMergeQueueItem(
+  taskId: string,
+  repositoryId: string,
+  overrides: Partial<typeof mergeQueueItems.$inferInsert> = {},
+) {
+  return {
+    mergeQueueItemId: randomUUID(),
+    taskId,
+    repositoryId,
+    status: "ENQUEUED",
+    position: 1,
+    ...overrides,
+  };
+}
+
+describe("T012 — MergeQueueItem table", () => {
+  let db: ReturnType<typeof openTestDb>["db"];
+  let sqlite: ReturnType<typeof openTestDb>["sqlite"];
+
+  /** Shared parent IDs for FK satisfaction. */
+  let projectId: string;
+  let repoId: string;
+  let taskId: string;
+
+  beforeEach(() => {
+    ({ db, sqlite } = openTestDb());
+    projectId = randomUUID();
+    repoId = randomUUID();
+    taskId = randomUUID();
+
+    db.insert(projects)
+      .values(makeProject({ projectId, name: `proj-${projectId.slice(0, 8)}` }))
+      .run();
+    db.insert(repositories)
+      .values(
+        makeRepository(projectId, {
+          repositoryId: repoId,
+          name: `repo-${repoId.slice(0, 8)}`,
+        }),
+      )
+      .run();
+    db.insert(tasks)
+      .values(makeTask(repoId, { taskId, title: `task-${taskId.slice(0, 8)}` }))
+      .run();
+  });
+
+  afterEach(() => {
+    sqlite.close();
+  });
+
+  /**
+   * @why Verifies the merge_queue_item table can store a minimal valid row
+   * with all required columns. If this fails, the table DDL is broken.
+   */
+  it("should insert and read back a merge queue item", () => {
+    const row = makeMergeQueueItem(taskId, repoId);
+    db.insert(mergeQueueItems).values(row).run();
+
+    const result = db
+      .select()
+      .from(mergeQueueItems)
+      .where(eq(mergeQueueItems.mergeQueueItemId, row.mergeQueueItemId))
+      .get();
+
+    expect(result).toBeDefined();
+    expect(result!.taskId).toBe(taskId);
+    expect(result!.repositoryId).toBe(repoId);
+    expect(result!.status).toBe("ENQUEUED");
+    expect(result!.position).toBe(1);
+  });
+
+  /**
+   * @why Verifies that enqueued_at defaults to the current Unix timestamp.
+   * The merge queue relies on enqueued_at for ordering and audit.
+   */
+  it("should set enqueued_at to current timestamp by default", () => {
+    const before = Math.floor(Date.now() / 1000);
+    const row = makeMergeQueueItem(taskId, repoId);
+    db.insert(mergeQueueItems).values(row).run();
+
+    const result = db
+      .select()
+      .from(mergeQueueItems)
+      .where(eq(mergeQueueItems.mergeQueueItemId, row.mergeQueueItemId))
+      .get();
+
+    expect(result).toBeDefined();
+    const ts =
+      result!.enqueuedAt instanceof Date
+        ? Math.floor(result!.enqueuedAt.getTime() / 1000)
+        : (result!.enqueuedAt as number);
+    expect(ts).toBeGreaterThanOrEqual(before);
+    expect(ts).toBeLessThanOrEqual(Math.floor(Date.now() / 1000) + 1);
+  });
+
+  /**
+   * @why approved_commit_sha, started_at, completed_at should be nullable —
+   * they are populated at different stages of the merge lifecycle.
+   */
+  it("should allow nullable optional fields", () => {
+    const row = makeMergeQueueItem(taskId, repoId, {
+      approvedCommitSha: null,
+      startedAt: null,
+      completedAt: null,
+    });
+    db.insert(mergeQueueItems).values(row).run();
+
+    const result = db
+      .select()
+      .from(mergeQueueItems)
+      .where(eq(mergeQueueItems.mergeQueueItemId, row.mergeQueueItemId))
+      .get();
+
+    expect(result).toBeDefined();
+    expect(result!.approvedCommitSha).toBeNull();
+    expect(result!.startedAt).toBeNull();
+    expect(result!.completedAt).toBeNull();
+  });
+
+  /**
+   * @why The approved_commit_sha is set when a task is approved for merge.
+   * The merge executor must verify this SHA before merging.
+   */
+  it("should store approved_commit_sha", () => {
+    const sha = "abc123def456";
+    const row = makeMergeQueueItem(taskId, repoId, { approvedCommitSha: sha });
+    db.insert(mergeQueueItems).values(row).run();
+
+    const result = db
+      .select()
+      .from(mergeQueueItems)
+      .where(eq(mergeQueueItems.mergeQueueItemId, row.mergeQueueItemId))
+      .get();
+
+    expect(result!.approvedCommitSha).toBe(sha);
+  });
+
+  /**
+   * @why FK constraint on task_id ensures referential integrity. Inserting
+   * a merge queue item for a non-existent task must fail.
+   */
+  it("should reject FK violation on task_id", () => {
+    const row = makeMergeQueueItem("nonexistent-task", repoId);
+    expect(() => db.insert(mergeQueueItems).values(row).run()).toThrow();
+  });
+
+  /**
+   * @why FK constraint on repository_id ensures referential integrity.
+   */
+  it("should reject FK violation on repository_id", () => {
+    const row = makeMergeQueueItem(taskId, "nonexistent-repo");
+    expect(() => db.insert(mergeQueueItems).values(row).run()).toThrow();
+  });
+
+  /**
+   * @why Multiple tasks can be enqueued in the same repository. The merge
+   * queue processes them in position order.
+   */
+  it("should support multiple items per repository with different positions", () => {
+    const taskId2 = randomUUID();
+    db.insert(tasks)
+      .values(makeTask(repoId, { taskId: taskId2, title: "task-2" }))
+      .run();
+
+    db.insert(mergeQueueItems)
+      .values(makeMergeQueueItem(taskId, repoId, { position: 1 }))
+      .run();
+    db.insert(mergeQueueItems)
+      .values(makeMergeQueueItem(taskId2, repoId, { position: 2 }))
+      .run();
+
+    const results = db
+      .select()
+      .from(mergeQueueItems)
+      .where(eq(mergeQueueItems.repositoryId, repoId))
+      .all();
+
+    expect(results).toHaveLength(2);
+  });
+
+  /**
+   * @why The (repository_id, status) index is critical for merge queue polling.
+   * Verify the index exists and the query it supports works correctly.
+   */
+  it("should support filtering by repository_id and status", () => {
+    db.insert(mergeQueueItems)
+      .values(
+        makeMergeQueueItem(taskId, repoId, {
+          status: "ENQUEUED",
+          position: 1,
+        }),
+      )
+      .run();
+
+    const results = sqlite
+      .prepare(`SELECT * FROM merge_queue_item WHERE repository_id = ? AND status = ?`)
+      .all(repoId, "ENQUEUED") as Array<Record<string, unknown>>;
+
+    expect(results).toHaveLength(1);
+  });
+});
+
+// ─── T012: ValidationRun table ──────────────────────────────────────────────
+
+/**
+ * Generate a minimal valid ValidationRun row.
+ *
+ * Requires a task_id from a pre-seeded parent row.
+ */
+function makeValidationRun(
+  taskId: string,
+  overrides: Partial<typeof validationRuns.$inferInsert> = {},
+) {
+  return {
+    validationRunId: randomUUID(),
+    taskId,
+    runScope: "pre-dev",
+    status: "pending",
+    ...overrides,
+  };
+}
+
+describe("T012 — ValidationRun table", () => {
+  let db: ReturnType<typeof openTestDb>["db"];
+  let sqlite: ReturnType<typeof openTestDb>["sqlite"];
+
+  let projectId: string;
+  let repoId: string;
+  let taskId: string;
+
+  beforeEach(() => {
+    ({ db, sqlite } = openTestDb());
+    projectId = randomUUID();
+    repoId = randomUUID();
+    taskId = randomUUID();
+
+    db.insert(projects)
+      .values(makeProject({ projectId, name: `proj-${projectId.slice(0, 8)}` }))
+      .run();
+    db.insert(repositories)
+      .values(
+        makeRepository(projectId, {
+          repositoryId: repoId,
+          name: `repo-${repoId.slice(0, 8)}`,
+        }),
+      )
+      .run();
+    db.insert(tasks)
+      .values(makeTask(repoId, { taskId, title: `task-${taskId.slice(0, 8)}` }))
+      .run();
+  });
+
+  afterEach(() => {
+    sqlite.close();
+  });
+
+  /**
+   * @why Verifies the validation_run table can store a minimal valid row.
+   * If this fails, the table DDL is broken.
+   */
+  it("should insert and read back a validation run", () => {
+    const row = makeValidationRun(taskId);
+    db.insert(validationRuns).values(row).run();
+
+    const result = db
+      .select()
+      .from(validationRuns)
+      .where(eq(validationRuns.validationRunId, row.validationRunId))
+      .get();
+
+    expect(result).toBeDefined();
+    expect(result!.taskId).toBe(taskId);
+    expect(result!.runScope).toBe("pre-dev");
+    expect(result!.status).toBe("pending");
+  });
+
+  /**
+   * @why started_at defaults to the current Unix timestamp. Validation
+   * runs track their start time for duration calculations.
+   */
+  it("should set started_at to current timestamp by default", () => {
+    const before = Math.floor(Date.now() / 1000);
+    const row = makeValidationRun(taskId);
+    db.insert(validationRuns).values(row).run();
+
+    const result = db
+      .select()
+      .from(validationRuns)
+      .where(eq(validationRuns.validationRunId, row.validationRunId))
+      .get();
+
+    expect(result).toBeDefined();
+    const ts =
+      result!.startedAt instanceof Date
+        ? Math.floor(result!.startedAt.getTime() / 1000)
+        : (result!.startedAt as number);
+    expect(ts).toBeGreaterThanOrEqual(before);
+    expect(ts).toBeLessThanOrEqual(Math.floor(Date.now() / 1000) + 1);
+  });
+
+  /**
+   * @why tool_name, summary, artifact_refs, completed_at are nullable —
+   * they are populated after the validation run completes.
+   */
+  it("should allow nullable optional fields", () => {
+    const row = makeValidationRun(taskId, {
+      toolName: null,
+      summary: null,
+      artifactRefs: null,
+      completedAt: null,
+    });
+    db.insert(validationRuns).values(row).run();
+
+    const result = db
+      .select()
+      .from(validationRuns)
+      .where(eq(validationRuns.validationRunId, row.validationRunId))
+      .get();
+
+    expect(result).toBeDefined();
+    expect(result!.toolName).toBeNull();
+    expect(result!.summary).toBeNull();
+    expect(result!.artifactRefs).toBeNull();
+    expect(result!.completedAt).toBeNull();
+  });
+
+  /**
+   * @why artifact_refs stores a JSON array of artifact identifiers.
+   * The validation gate and artifact service parse this for retrieval.
+   */
+  it("should store and retrieve artifact_refs as JSON", () => {
+    const refs = ["artifact-001", "artifact-002"];
+    const row = makeValidationRun(taskId, { artifactRefs: refs });
+    db.insert(validationRuns).values(row).run();
+
+    const result = db
+      .select()
+      .from(validationRuns)
+      .where(eq(validationRuns.validationRunId, row.validationRunId))
+      .get();
+
+    expect(result!.artifactRefs).toEqual(refs);
+  });
+
+  /**
+   * @why All five validation run scopes from the PRD must be storable.
+   * Gate-checking logic queries by scope.
+   */
+  it("should accept all valid run_scope values", () => {
+    const scopes = ["pre-dev", "during-dev", "pre-review", "pre-merge", "post-merge"];
+    for (const scope of scopes) {
+      const row = makeValidationRun(taskId, {
+        validationRunId: randomUUID(),
+        runScope: scope,
+      });
+      db.insert(validationRuns).values(row).run();
+    }
+
+    const results = db.select().from(validationRuns).where(eq(validationRuns.taskId, taskId)).all();
+
+    expect(results).toHaveLength(5);
+  });
+
+  /**
+   * @why tool_name records which validation tool ran (e.g. vitest, eslint).
+   * The validation runner populates this.
+   */
+  it("should store tool_name and summary", () => {
+    const row = makeValidationRun(taskId, {
+      toolName: "vitest",
+      summary: "42 tests passed, 0 failed",
+      status: "passed",
+    });
+    db.insert(validationRuns).values(row).run();
+
+    const result = db
+      .select()
+      .from(validationRuns)
+      .where(eq(validationRuns.validationRunId, row.validationRunId))
+      .get();
+
+    expect(result!.toolName).toBe("vitest");
+    expect(result!.summary).toBe("42 tests passed, 0 failed");
+    expect(result!.status).toBe("passed");
+  });
+
+  /**
+   * @why FK constraint on task_id ensures referential integrity.
+   */
+  it("should reject FK violation on task_id", () => {
+    const row = makeValidationRun("nonexistent-task");
+    expect(() => db.insert(validationRuns).values(row).run()).toThrow();
+  });
+
+  /**
+   * @why The (task_id, run_scope) composite index supports the gate-checking
+   * query "find all validation runs for this task at this scope."
+   */
+  it("should support querying by task_id and run_scope", () => {
+    db.insert(validationRuns)
+      .values(makeValidationRun(taskId, { runScope: "pre-merge", status: "passed" }))
+      .run();
+    db.insert(validationRuns)
+      .values(
+        makeValidationRun(taskId, {
+          validationRunId: randomUUID(),
+          runScope: "post-merge",
+          status: "pending",
+        }),
+      )
+      .run();
+
+    const results = sqlite
+      .prepare(`SELECT * FROM validation_run WHERE task_id = ? AND run_scope = ?`)
+      .all(taskId, "pre-merge") as Array<Record<string, unknown>>;
+
+    expect(results).toHaveLength(1);
+    expect(results[0]!["status"]).toBe("passed");
+  });
+});
+
+// ─── T012: Job table ────────────────────────────────────────────────────────
+
+/**
+ * Generate a minimal valid Job row.
+ */
+function makeJob(overrides: Partial<typeof jobs.$inferInsert> = {}) {
+  return {
+    jobId: randomUUID(),
+    jobType: "worker_dispatch",
+    status: "pending",
+    ...overrides,
+  };
+}
+
+describe("T012 — Job table", () => {
+  let db: ReturnType<typeof openTestDb>["db"];
+  let sqlite: ReturnType<typeof openTestDb>["sqlite"];
+
+  beforeEach(() => {
+    ({ db, sqlite } = openTestDb());
+  });
+
+  afterEach(() => {
+    sqlite.close();
+  });
+
+  /**
+   * @why Verifies the job table can store a minimal valid row with only
+   * required columns. If this fails, the table DDL is broken.
+   */
+  it("should insert and read back a minimal job", () => {
+    const row = makeJob();
+    db.insert(jobs).values(row).run();
+
+    const result = db.select().from(jobs).where(eq(jobs.jobId, row.jobId)).get();
+
+    expect(result).toBeDefined();
+    expect(result!.jobType).toBe("worker_dispatch");
+    expect(result!.status).toBe("pending");
+    expect(result!.attemptCount).toBe(0);
+  });
+
+  /**
+   * @why created_at and updated_at must default to the current Unix timestamp.
+   * The job queue relies on these for ordering and staleness detection.
+   */
+  it("should set created_at and updated_at to current timestamp by default", () => {
+    const before = Math.floor(Date.now() / 1000);
+    const row = makeJob();
+    db.insert(jobs).values(row).run();
+
+    const result = db.select().from(jobs).where(eq(jobs.jobId, row.jobId)).get();
+
+    expect(result).toBeDefined();
+    for (const field of [result!.createdAt, result!.updatedAt]) {
+      const ts = field instanceof Date ? Math.floor(field.getTime() / 1000) : (field as number);
+      expect(ts).toBeGreaterThanOrEqual(before);
+      expect(ts).toBeLessThanOrEqual(Math.floor(Date.now() / 1000) + 1);
+    }
+  });
+
+  /**
+   * @why attempt_count defaults to 0 and is incremented on each claim.
+   * Retry policy uses this to decide whether to retry or fail permanently.
+   */
+  it("should default attempt_count to 0", () => {
+    const row = makeJob();
+    db.insert(jobs).values(row).run();
+
+    const result = db.select().from(jobs).where(eq(jobs.jobId, row.jobId)).get();
+
+    expect(result!.attemptCount).toBe(0);
+  });
+
+  /**
+   * @why entity_type, entity_id, payload_json, run_after, lease_owner,
+   * parent_job_id, job_group_id, depends_on_job_ids are all nullable.
+   * They are populated at different stages or for different job types.
+   */
+  it("should allow nullable optional fields", () => {
+    const row = makeJob({
+      entityType: null,
+      entityId: null,
+      payloadJson: null,
+      runAfter: null,
+      leaseOwner: null,
+      parentJobId: null,
+      jobGroupId: null,
+      dependsOnJobIds: null,
+    });
+    db.insert(jobs).values(row).run();
+
+    const result = db.select().from(jobs).where(eq(jobs.jobId, row.jobId)).get();
+
+    expect(result).toBeDefined();
+    expect(result!.entityType).toBeNull();
+    expect(result!.entityId).toBeNull();
+    expect(result!.payloadJson).toBeNull();
+    expect(result!.runAfter).toBeNull();
+    expect(result!.leaseOwner).toBeNull();
+    expect(result!.parentJobId).toBeNull();
+    expect(result!.jobGroupId).toBeNull();
+    expect(result!.dependsOnJobIds).toBeNull();
+  });
+
+  /**
+   * @why payload_json stores job-type-specific input data. The job queue
+   * deserializes this when dispatching work to a worker.
+   */
+  it("should store and retrieve payload_json as JSON", () => {
+    const payload = { taskId: "task-123", workerPoolId: "pool-abc" };
+    const row = makeJob({ payloadJson: payload });
+    db.insert(jobs).values(row).run();
+
+    const result = db.select().from(jobs).where(eq(jobs.jobId, row.jobId)).get();
+
+    expect(result!.payloadJson).toEqual(payload);
+  });
+
+  /**
+   * @why depends_on_job_ids is a JSON array of job IDs. The queue poller
+   * checks this constraint before claiming a job.
+   */
+  it("should store and retrieve depends_on_job_ids as JSON array", () => {
+    const depIds = [randomUUID(), randomUUID()];
+    const row = makeJob({ dependsOnJobIds: depIds });
+    db.insert(jobs).values(row).run();
+
+    const result = db.select().from(jobs).where(eq(jobs.jobId, row.jobId)).get();
+
+    expect(result!.dependsOnJobIds).toEqual(depIds);
+  });
+
+  /**
+   * @why All eight job types from the PRD must be storable. The job queue
+   * dispatches to different handlers based on job_type.
+   */
+  it("should accept all valid job_type values", () => {
+    const types = [
+      "scheduler_tick",
+      "worker_dispatch",
+      "reviewer_dispatch",
+      "lead_review_consolidation",
+      "merge_dispatch",
+      "validation_execution",
+      "reconciliation_sweep",
+      "cleanup",
+    ];
+    for (const jt of types) {
+      db.insert(jobs)
+        .values(makeJob({ jobId: randomUUID(), jobType: jt }))
+        .run();
+    }
+
+    const results = db.select().from(jobs).all();
+    expect(results).toHaveLength(8);
+  });
+
+  /**
+   * @why All six job statuses from the PRD must be storable. The job
+   * lifecycle transitions through these statuses.
+   */
+  it("should accept all valid status values", () => {
+    const statuses = ["pending", "claimed", "running", "completed", "failed", "cancelled"];
+    for (const st of statuses) {
+      db.insert(jobs)
+        .values(makeJob({ jobId: randomUUID(), status: st }))
+        .run();
+    }
+
+    const results = db.select().from(jobs).all();
+    expect(results).toHaveLength(6);
+  });
+
+  /**
+   * @why entity_type + entity_id link a job to the domain entity it operates
+   * on. Used for audit correlation and job deduplication.
+   */
+  it("should store entity_type and entity_id", () => {
+    const row = makeJob({
+      entityType: "task",
+      entityId: "task-abc-123",
+    });
+    db.insert(jobs).values(row).run();
+
+    const result = db.select().from(jobs).where(eq(jobs.jobId, row.jobId)).get();
+
+    expect(result!.entityType).toBe("task");
+    expect(result!.entityId).toBe("task-abc-123");
+  });
+
+  /**
+   * @why lease_owner tracks which worker process holds the job. When a worker
+   * crashes, the reconciliation sweep identifies orphaned jobs by lease_owner.
+   */
+  it("should store lease_owner when a job is claimed", () => {
+    const row = makeJob({
+      status: "claimed",
+      leaseOwner: "worker-instance-1",
+      attemptCount: 1,
+    });
+    db.insert(jobs).values(row).run();
+
+    const result = db.select().from(jobs).where(eq(jobs.jobId, row.jobId)).get();
+
+    expect(result!.leaseOwner).toBe("worker-instance-1");
+    expect(result!.attemptCount).toBe(1);
+  });
+
+  /**
+   * @why parent_job_id enables job hierarchy tracking. A scheduler_tick
+   * spawns worker_dispatch jobs as children.
+   */
+  it("should store parent_job_id for child jobs", () => {
+    const parentRow = makeJob({ jobType: "scheduler_tick" });
+    db.insert(jobs).values(parentRow).run();
+
+    const childRow = makeJob({
+      jobType: "worker_dispatch",
+      parentJobId: parentRow.jobId,
+    });
+    db.insert(jobs).values(childRow).run();
+
+    const child = db.select().from(jobs).where(eq(jobs.jobId, childRow.jobId)).get();
+
+    expect(child!.parentJobId).toBe(parentRow.jobId);
+  });
+
+  /**
+   * @why job_group_id groups related jobs (e.g. all specialist reviewer
+   * jobs in one review cycle). The lead review consolidation job queries
+   * all jobs in its group.
+   */
+  it("should store job_group_id for grouped jobs", () => {
+    const groupId = randomUUID();
+    db.insert(jobs)
+      .values(makeJob({ jobType: "reviewer_dispatch", jobGroupId: groupId }))
+      .run();
+    db.insert(jobs)
+      .values(
+        makeJob({
+          jobId: randomUUID(),
+          jobType: "reviewer_dispatch",
+          jobGroupId: groupId,
+        }),
+      )
+      .run();
+
+    const results = sqlite
+      .prepare(`SELECT * FROM job WHERE job_group_id = ?`)
+      .all(groupId) as Array<Record<string, unknown>>;
+
+    expect(results).toHaveLength(2);
+  });
+
+  /**
+   * @why The (status, run_after) composite index is the hot-path query for
+   * the scheduler tick loop: "find all pending jobs whose run_after has
+   * passed." This test verifies the index supports the query.
+   */
+  it("should support queue polling by status and run_after", () => {
+    const pastTime = new Date(Date.now() - 60_000);
+    const futureTime = new Date(Date.now() + 60_000);
+
+    db.insert(jobs)
+      .values(makeJob({ status: "pending", runAfter: pastTime }))
+      .run();
+    db.insert(jobs)
+      .values(
+        makeJob({
+          jobId: randomUUID(),
+          status: "pending",
+          runAfter: futureTime,
+        }),
+      )
+      .run();
+    db.insert(jobs)
+      .values(
+        makeJob({
+          jobId: randomUUID(),
+          status: "completed",
+          runAfter: pastTime,
+        }),
+      )
+      .run();
+
+    const now = Math.floor(Date.now() / 1000);
+    const results = sqlite
+      .prepare(
+        `SELECT * FROM job WHERE status = 'pending' AND (run_after IS NULL OR run_after <= ?)`,
+      )
+      .all(now) as Array<Record<string, unknown>>;
+
+    expect(results).toHaveLength(1);
+    expect(results[0]!["status"]).toBe("pending");
+  });
+
+  /**
+   * @why run_after supports delayed job execution. A job with run_after
+   * in the future should not be dispatched yet.
+   */
+  it("should store run_after timestamp for delayed execution", () => {
+    const futureTime = new Date(Date.now() + 3600_000);
+    const row = makeJob({ runAfter: futureTime });
+    db.insert(jobs).values(row).run();
+
+    const result = db.select().from(jobs).where(eq(jobs.jobId, row.jobId)).get();
+
+    expect(result).toBeDefined();
+    const ts =
+      result!.runAfter instanceof Date
+        ? Math.floor(result!.runAfter.getTime() / 1000)
+        : (result!.runAfter as number);
+    expect(ts).toBeGreaterThan(Math.floor(Date.now() / 1000));
+  });
+});
+
+// ─── T012: Cross-table relationships ────────────────────────────────────────
+
+describe("T012 — Cross-table relationships", () => {
+  let db: ReturnType<typeof openTestDb>["db"];
+  let sqlite: ReturnType<typeof openTestDb>["sqlite"];
+
+  let projectId: string;
+  let repoId: string;
+  let taskId: string;
+
+  beforeEach(() => {
+    ({ db, sqlite } = openTestDb());
+    projectId = randomUUID();
+    repoId = randomUUID();
+    taskId = randomUUID();
+
+    db.insert(projects)
+      .values(makeProject({ projectId, name: `proj-${projectId.slice(0, 8)}` }))
+      .run();
+    db.insert(repositories)
+      .values(
+        makeRepository(projectId, {
+          repositoryId: repoId,
+          name: `repo-${repoId.slice(0, 8)}`,
+        }),
+      )
+      .run();
+    db.insert(tasks)
+      .values(makeTask(repoId, { taskId, title: `task-${taskId.slice(0, 8)}` }))
+      .run();
+  });
+
+  afterEach(() => {
+    sqlite.close();
+  });
+
+  /**
+   * @why A task queued for merge should have both a merge queue item
+   * and validation runs. This join validates that the FK relationships
+   * between task → merge_queue_item and task → validation_run work.
+   */
+  it("should join task with merge_queue_item and validation_run", () => {
+    db.insert(mergeQueueItems)
+      .values(makeMergeQueueItem(taskId, repoId, { status: "VALIDATING" }))
+      .run();
+    db.insert(validationRuns)
+      .values(
+        makeValidationRun(taskId, {
+          runScope: "pre-merge",
+          status: "passed",
+          toolName: "vitest",
+        }),
+      )
+      .run();
+
+    const result = sqlite
+      .prepare(
+        `SELECT
+           t.title AS task_title,
+           mqi.status AS merge_status,
+           vr.run_scope,
+           vr.status AS validation_status,
+           vr.tool_name
+         FROM task t
+         JOIN merge_queue_item mqi ON mqi.task_id = t.task_id
+         JOIN validation_run vr ON vr.task_id = t.task_id
+         WHERE t.task_id = ?`,
+      )
+      .get(taskId) as {
+      task_title: string;
+      merge_status: string;
+      run_scope: string;
+      validation_status: string;
+      tool_name: string;
+    };
+
+    expect(result.merge_status).toBe("VALIDATING");
+    expect(result.run_scope).toBe("pre-merge");
+    expect(result.validation_status).toBe("passed");
+    expect(result.tool_name).toBe("vitest");
+  });
+
+  /**
+   * @why A job dispatched for a task should be joinable to the task entity
+   * through entity_type/entity_id columns. This is not a DB FK but an
+   * application-level correlation.
+   */
+  it("should correlate jobs to tasks via entity_type and entity_id", () => {
+    db.insert(jobs)
+      .values(
+        makeJob({
+          jobType: "worker_dispatch",
+          entityType: "task",
+          entityId: taskId,
+          status: "completed",
+        }),
+      )
+      .run();
+
+    const result = sqlite
+      .prepare(
+        `SELECT t.title, j.job_type, j.status AS job_status
+         FROM job j
+         JOIN task t ON j.entity_id = t.task_id
+         WHERE j.entity_type = 'task' AND j.entity_id = ?`,
+      )
+      .get(taskId) as {
+      title: string;
+      job_type: string;
+      job_status: string;
+    };
+
+    expect(result.job_type).toBe("worker_dispatch");
+    expect(result.job_status).toBe("completed");
+  });
+
+  /**
+   * @why Review cycle coordination: specialist reviewer jobs share a
+   * job_group_id, and the lead review consolidation job depends on them.
+   * This test validates the coordination pattern described in PRD 002 §2.3.
+   */
+  it("should support review cycle job coordination pattern", () => {
+    const groupId = randomUUID();
+
+    const specialistJob1 = makeJob({
+      jobType: "reviewer_dispatch",
+      jobGroupId: groupId,
+      status: "completed",
+    });
+    const specialistJob2 = makeJob({
+      jobId: randomUUID(),
+      jobType: "reviewer_dispatch",
+      jobGroupId: groupId,
+      status: "completed",
+    });
+
+    db.insert(jobs).values(specialistJob1).run();
+    db.insert(jobs).values(specialistJob2).run();
+
+    const leadJob = makeJob({
+      jobType: "lead_review_consolidation",
+      jobGroupId: groupId,
+      dependsOnJobIds: [specialistJob1.jobId, specialistJob2.jobId],
+      status: "pending",
+    });
+    db.insert(jobs).values(leadJob).run();
+
+    const result = db.select().from(jobs).where(eq(jobs.jobId, leadJob.jobId)).get();
+
+    expect(result!.dependsOnJobIds).toEqual([specialistJob1.jobId, specialistJob2.jobId]);
+
+    const groupJobs = sqlite
+      .prepare(`SELECT * FROM job WHERE job_group_id = ?`)
+      .all(groupId) as Array<Record<string, unknown>>;
+
+    expect(groupJobs).toHaveLength(3);
   });
 });
