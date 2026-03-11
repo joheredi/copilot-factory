@@ -412,3 +412,37 @@ Created ReverseDependencyService in `packages/application` that automatically re
 
 - T044 (Worker Supervisor) is now unblocked — depends on T030 ✅, T039 ✅, T040 ✅, T043 ✅
 - T041 (workspace cleanup for terminal states) and T042 (ReconcileWorkspacesCommand) can proceed
+
+## T044: Implement Worker Supervisor — Done
+
+**Date:** 2026-03-11
+**What was done:**
+
+- Created `packages/application/src/ports/worker-supervisor.ports.ts` with port interfaces for worker entity CRUD, workspace provisioning, packet mounting, runtime adapter, and heartbeat forwarding
+- Created `packages/application/src/services/worker-supervisor.service.ts` with full implementation of `createWorkerSupervisorService` factory function
+- Created `packages/application/src/services/worker-supervisor.service.test.ts` with 19 tests covering the full spawn lifecycle, cancellation, heartbeat forwarding, error handling, and domain events
+- Added `WorkerStatusChangedEvent` to domain events in `packages/application/src/events/domain-events.ts`
+- Exported all new types and services from `packages/application/src/index.ts`
+
+**Patterns used:**
+
+- Factory function pattern (consistent with LeaseService, HeartbeatService, etc.)
+- Port-based decoupling — all infrastructure dependencies abstracted behind application-layer ports
+- Unit of work for transactional Worker entity mutations
+- Domain event emission after each status transition
+- Injectable clock for deterministic testing
+- Best-effort cleanup on failure (cancel → collect → finalize runtime before updating Worker to failed)
+
+**Key design decisions:**
+
+- Placed in application layer (not infrastructure) because it orchestrates domain operations and coordinates infrastructure adapters
+- Worker entity status is tracked independently from lease status — they represent different lifecycle dimensions
+- Runtime adapter types are re-declared in supervisor ports to avoid application→infrastructure dependency
+- Terminal heartbeat is sent after stream ends to signal completion to the lease service
+
+**What the next loop should know:**
+
+- T044 unblocks T045 (Copilot CLI adapter), T046 (output capture/validation), and T106 (test harness)
+- The `WorkerEntityStatus` type is defined in the supervisor ports, not in `@factory/domain` enums — a future task may want to move it there
+- The supervisor does NOT own task or lease state transitions — those remain with TransitionService and LeaseService
+- `RuntimeAdapterPort` mirrors `WorkerRuntime` from infrastructure — when implementing T045, the Copilot CLI adapter should satisfy both interfaces

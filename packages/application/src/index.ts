@@ -65,6 +65,7 @@ export type {
   TaskLeaseTransitionedEvent,
   ReviewCycleTransitionedEvent,
   MergeQueueItemTransitionedEvent,
+  WorkerStatusChangedEvent,
   DomainEvent,
 } from "./events/domain-events.js";
 
@@ -231,3 +232,43 @@ export type {
   RecalculationResult,
   ReverseDependencyService,
 } from "./services/reverse-dependency.service.js";
+
+// Ports — worker supervisor interfaces
+export type {
+  WorkerEntityStatus,
+  SupervisedWorker,
+  CreateWorkerData,
+  UpdateWorkerData,
+  WorkerSupervisorRepositoryPort,
+  SupervisorWorkspaceLayout,
+  SupervisorWorkspaceResult,
+  WorkspaceProviderPort,
+  SupervisorMountInput,
+  PacketMounterPort,
+  SupervisorWorkspacePaths,
+  SupervisorTimeoutSettings,
+  SupervisorOutputSchemaExpectation,
+  SupervisorRunContext,
+  SupervisorPreparedRun,
+  SupervisorRunOutputStream,
+  SupervisorCancelResult,
+  SupervisorCollectedArtifacts,
+  SupervisorRunLogEntry,
+  SupervisorRunStatus,
+  SupervisorFinalizeResult,
+  RuntimeAdapterPort,
+  HeartbeatForwarderPort,
+  WorkerSupervisorTransactionRepositories,
+  WorkerSupervisorUnitOfWork,
+} from "./ports/worker-supervisor.ports.js";
+
+// Services — worker supervisor for process lifecycle management
+export { createWorkerSupervisorService } from "./services/worker-supervisor.service.js";
+export type {
+  SpawnWorkerParams,
+  SpawnWorkerResult,
+  CancelWorkerParams,
+  CancelWorkerResult,
+  WorkerSupervisorService,
+  WorkerSupervisorDependencies,
+} from "./services/worker-supervisor.service.js";

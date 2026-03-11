@@ -18,6 +18,8 @@ import type {
   MergeQueueItemStatus,
 } from "@factory/domain";
 
+import type { WorkerEntityStatus } from "../ports/worker-supervisor.ports.js";
+
 /**
  * Information about the actor who triggered the transition.
  */
@@ -86,10 +88,27 @@ export interface MergeQueueItemTransitionedEvent extends BaseDomainEvent {
 }
 
 /**
+ * Emitted when a worker entity changes operational status.
+ *
+ * Worker status changes are distinct from lease transitions — they track
+ * the process-level lifecycle (starting → running → completing → terminal)
+ * managed by the Worker Supervisor.
+ *
+ * @see docs/prd/010-integration-contracts.md §10.4.3 — Worker Lifecycle
+ */
+export interface WorkerStatusChangedEvent extends BaseDomainEvent {
+  readonly type: "worker.status-changed";
+  readonly entityType: "worker";
+  readonly fromStatus: WorkerEntityStatus;
+  readonly toStatus: WorkerEntityStatus;
+}
+
+/**
  * Union of all domain events the transition service can emit.
  */
 export type DomainEvent =
   | TaskTransitionedEvent
   | TaskLeaseTransitionedEvent
   | ReviewCycleTransitionedEvent
-  | MergeQueueItemTransitionedEvent;
+  | MergeQueueItemTransitionedEvent
+  | WorkerStatusChangedEvent;
