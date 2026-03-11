@@ -12,6 +12,7 @@ import { Module } from "@nestjs/common";
 
 import { AuditModule } from "./audit/audit.module.js";
 import { HealthModule } from "./health/health.module.js";
+import { DatabaseModule } from "./infrastructure/database/database.module.js";
 import { MergeModule } from "./merge/merge.module.js";
 import { PolicyModule } from "./policy/policy.module.js";
 import { ProjectsModule } from "./projects/projects.module.js";
@@ -36,6 +37,7 @@ import { WorkersModule } from "./workers/workers.module.js";
  */
 @Module({
   imports: [
+    DatabaseModule,
     HealthModule,
     ProjectsModule,
     TasksModule,
