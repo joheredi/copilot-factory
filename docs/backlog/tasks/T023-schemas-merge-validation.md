@@ -5,7 +5,7 @@
 | **ID**                    | T023                                                                                                                                                               |
 | **Epic**                  | [E004: Packet Schemas & Validation](../epics/E004-packet-schemas.md)                                                                                               |
 | **Type**                  | foundation                                                                                                                                                         |
-| **Status**                | pending                                                                                                                                                            |
+| **Status**                | done                                                                                                                                                               |
 | **Priority**              | P0                                                                                                                                                                 |
 | **Owner**                 | backend-engineer                                                                                                                                                   |
 | **AI Executable**         | Yes                                                                                                                                                                |
@@ -55,9 +55,9 @@ The implementing agent should read these files before starting:
 
 ## Acceptance Criteria
 
-- [ ] All five schemas defined and tested
-- [ ] Spec example data validates
-- [ ] Invalid data rejected
+- [x] All five schemas defined and tested
+- [x] Spec example data validates
+- [x] Invalid data rejected
 
 ## Definition of Done
 

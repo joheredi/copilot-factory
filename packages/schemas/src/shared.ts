@@ -20,6 +20,7 @@ import {
   IssueSeverity,
   ValidationCheckType,
   ValidationCheckStatus,
+  ValidationRunScope,
   PacketType,
   PacketStatus,
   ReviewVerdict,
@@ -134,6 +135,16 @@ export const PostMergeAnalysisRecommendationSchema = zodEnumFromConst(
  * @see {@link file://docs/prd/008-packet-and-schema-spec.md} §8.8
  */
 export const MergeStrategySchema = zodEnumFromConst(MergeStrategy);
+
+/**
+ * Zod schema for {@link ValidationRunScope} enum values.
+ *
+ * Identifies when in the workflow a validation run was triggered:
+ * pre-dev, during-dev, pre-review, pre-merge, or post-merge.
+ *
+ * @see {@link file://docs/prd/008-packet-and-schema-spec.md} §8.10
+ */
+export const ValidationRunScopeSchema = zodEnumFromConst(ValidationRunScope);
 
 /**
  * Zod schema for {@link TaskType} enum values.

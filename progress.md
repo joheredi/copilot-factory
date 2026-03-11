@@ -1,5 +1,36 @@
 # Progress Log
 
+## T023: Define remaining packet schemas
+
+**Status:** Done
+**Date:** 2026-03-11
+
+### What was done
+
+- Created 5 new Zod schemas in `packages/schemas/src/`:
+  - `merge-packet.ts` — MergePacket (PRD 008 §8.8) with nested MergePacketDetails
+  - `merge-assist-packet.ts` — MergeAssistPacket (PRD 008 §8.9) with MergeAssistFileAffected
+  - `validation-result-packet.ts` — ValidationResultPacket (PRD 008 §8.10) with ValidationResultPacketDetails
+  - `post-merge-analysis-packet.ts` — PostMergeAnalysisPacket (PRD 008 §8.11) with SuggestedRevertScope
+  - `policy-snapshot.ts` — PolicySnapshot (PRD 009 §9.2) with 8 sub-policy schemas
+- Added `ValidationRunScopeSchema` to `shared.ts` (needed by ValidationResultPacket)
+- Created comprehensive test files for all 5 schemas (107 new tests, 368 total in schemas package)
+- Updated `index.ts` to export all new schemas and types
+
+### Patterns used
+
+- One file per schema, matching existing pattern (review-packet.ts, dev-result-packet.ts, etc.)
+- Each schema uses `zodEnumFromConst()` helper for domain enum conversion
+- All sub-policies in PolicySnapshot are optional (resolved policy may omit inapplicable policies)
+- `nullable()` used for PostMergeAnalysisPacket fields that are conditionally required (cross-field validation deferred to T024)
+- Test files use spec examples from PRD as primary correctness tests
+
+### Next loop should know
+
+- T024 (cross-field validation) is now unblocked — it needs to add `.refine()` or `.superRefine()` for cross-field invariants like: MergeAssist low confidence requires reject_to_dev/escalate, PostMergeAnalysis low confidence requires escalate, PostMergeAnalysis revert requires suggested_revert_scope
+- All 5 new schemas follow the same file-per-schema pattern; look at existing schemas for reference
+- `ValidationRunScopeSchema` was added to shared.ts — it's exported from index.ts
+
 ## T011: Create migrations for TaskLease, ReviewCycle, ReviewPacket, LeadReviewDecision tables
 
 **Status:** Done  
