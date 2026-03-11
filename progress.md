@@ -480,3 +480,41 @@
 - All state transitions in downstream tasks (T018, T019, T030, etc.) should go through this service.
 - The UnitOfWork port needs a concrete implementation in `apps/control-plane` that wraps `connection.writeTransaction()`.
 - Repository ports need adapter implementations that delegate to the existing Drizzle repository factories.
+
+## 2026-03-11 — T018: Implement atomic transition + audit persistence
+
+**Status:** Done
+
+**What was done:**
+
+- Created `SqliteUnitOfWork` in `apps/control-plane/src/infrastructure/unit-of-work/sqlite-unit-of-work.ts` — concrete implementation of the `UnitOfWork` port that delegates to `DatabaseConnection.writeTransaction` (BEGIN IMMEDIATE).
+- Created repository port adapters in `apps/control-plane/src/infrastructure/unit-of-work/repository-adapters.ts` — bridges 5 narrow application-layer ports to the full infrastructure repositories:
+  - `createTaskPortAdapter` — version-based optimistic concurrency, re-throws infra `VersionConflictError` as application-layer `VersionConflictError`
+  - `createTaskLeasePortAdapter` — status-based optimistic concurrency
+  - `createReviewCyclePortAdapter` — status-based optimistic concurrency
+  - `createMergeQueueItemPortAdapter` — status-based optimistic concurrency
+  - `createAuditEventPortAdapter` — maps between port's `NewAuditEvent` and infra's Drizzle schema (handles `mode: "json"` serialization)
+- Created 15 integration tests in `sqlite-unit-of-work.integration.test.ts` proving:
+  - State change + audit event persisted atomically on success (all 4 entity types)
+  - Failed transitions leave no partial state (rollback is complete)
+  - Entity not found throws cleanly with no side effects
+  - Sequential transitions increment versions correctly
+  - Metadata round-trips through audit events
+  - Status-based concurrency rejection for leases
+  - Audit write failure triggers full rollback (entity state reverted)
+  - Stale version detection via optimistic concurrency
+- Added `@factory/application` and `@factory/domain` as dependencies of `@factory/control-plane`
+- Added project references in `apps/control-plane/tsconfig.json`
+
+**Key patterns:**
+
+- `createSqliteUnitOfWork(conn)` creates a UnitOfWork that can be injected into `createTransitionService`.
+- The adapter pattern (narrow port ← full repo) keeps the application layer decoupled from Drizzle/SQLite details.
+- For status-based entities, the adapter reads current status and verifies before updating — safe within BEGIN IMMEDIATE.
+- The infra task repo's `VersionConflictError` is caught and re-thrown as the application-layer `VersionConflictError` to maintain type compatibility.
+
+**For next loops:**
+
+- T019 (optimistic concurrency) can build on this — the version and status-based concurrency is already implemented and tested.
+- T073 (audit event recording) is unblocked — the audit event infrastructure is fully integrated.
+- The `createSqliteUnitOfWork` + `createTransitionService` wiring is ready for use in the control-plane bootstrap (T080).
