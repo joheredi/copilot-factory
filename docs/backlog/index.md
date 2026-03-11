@@ -156,7 +156,7 @@ See [phase documents](phases/) for details.
 | [T033](tasks/T033-lease-reclaim.md)                 | Implement stale lease reclaim and retry/escalation                                    | E006 | P0       | feature    | pending |
 | [T034](tasks/T034-crash-recovery-artifacts.md)      | Implement crash recovery with partial artifact capture                                | E006 | P1       | feature    | pending |
 | [T035](tasks/T035-dag-validation.md)                | Implement DAG validation with circular dependency detection                           | E007 | P0       | feature    | done    |
-| [T036](tasks/T036-readiness-computation.md)         | Implement readiness computation                                                       | E007 | P0       | feature    | pending |
+| [T036](tasks/T036-readiness-computation.md)         | Implement readiness computation                                                       | E007 | P0       | feature    | done    |
 | [T037](tasks/T037-reverse-dep-recalc.md)            | Implement reverse-dependency recalculation                                            | E007 | P0       | feature    | pending |
 | [T038](tasks/T038-dep-reconciliation.md)            | Implement dependency reconciliation loop                                              | E007 | P1       | feature    | pending |
 | [T039](tasks/T039-worktree-creation.md)             | Implement git worktree creation per task                                              | E008 | P0       | feature    | pending |

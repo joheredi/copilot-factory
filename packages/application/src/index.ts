@@ -188,3 +188,27 @@ export type {
   AcceptResultResult,
   GracefulCompletionService,
 } from "./services/graceful-completion.service.js";
+
+// Ports — readiness computation interfaces
+export type {
+  ReadinessTask,
+  ReadinessDependencyEdge,
+  ReadinessTaskRepositoryPort,
+  ReadinessTaskDependencyRepositoryPort,
+  ReadinessTransactionRepositories,
+  ReadinessUnitOfWork,
+} from "./ports/readiness.ports.js";
+
+// Services — readiness computation based on hard-block dependencies
+export { createReadinessService } from "./services/readiness.service.js";
+export type {
+  BlockingReason,
+  ReadinessResultReady,
+  ReadinessResultBlocked,
+  ReadinessResult,
+  ChildBlockingReason,
+  ParentReadinessResultComplete,
+  ParentReadinessResultIncomplete,
+  ParentReadinessResult,
+  ReadinessService,
+} from "./services/readiness.service.js";
