@@ -1,5 +1,52 @@
 # Progress Log
 
+## T064: Rebase-and-Merge Execution — Done
+
+**What was implemented:**
+
+- Created `packages/application/src/ports/merge-executor.ports.ts`:
+  - `MergeGitOperationsPort` for fetch, rebase, push, getHeadSha, getCurrentBranch
+  - `MergeValidationPort` for running merge-gate validation
+  - `ConflictClassifierPort` for classifying rebase conflicts (reworkable/non_reworkable)
+  - `MergeArtifactPort` for persisting MergePacket artifacts
+  - `MergeExecutorUnitOfWork` with narrow task and item repository ports
+  - `RebaseResult` type with success flag and conflict file list
+
+- Created `packages/application/src/services/merge-executor.service.ts`:
+  - `createMergeExecutorService()` factory with full DI: unitOfWork, eventEmitter, gitOps, validation, conflictClassifier, artifactStore, clock
+  - `executeMerge`: orchestrates full rebase-and-merge pipeline through 7 phases
+  - Phase 1: Load and validate item (PREPARING) and task (QUEUED_FOR_MERGE)
+  - Phase 2: Transition item PREPARING→REBASING, task QUEUED_FOR_MERGE→MERGING
+  - Phase 3: git fetch + rebase, with conflict classification on failure
+  - Phase 4: Transition item REBASING→VALIDATING, run merge-gate validation
+  - Phase 5: Transition item VALIDATING→MERGING, git push
+  - Phase 6: Transition item MERGING→MERGED, task MERGING→POST_MERGE_VALIDATION
+  - Phase 7: Build and persist MergePacket with schema validation
+  - Custom errors: `MergeItemNotPreparingError`, `TaskNotQueuedForMergeError`
+  - Discriminated union result: `MergeSuccessResult | RebaseConflictResult | ValidationFailedResult | PushFailedResult`
+  - Maps ValidationCheckOutcome to schema-compatible types (check_type enum mapping, status normalization)
+
+- Created 18 tests covering: happy path pipeline, MergePacket correctness, audit events for all transitions, domain event emission, artifact persistence, non-reworkable rebase conflict (FAILED), reworkable rebase conflict (CHANGES_REQUESTED/REQUEUED), conflict details in audit, validation failure, push failure, entity not found, wrong item status, wrong task status, missing task, git fetch before rebase, correct branch push, metadata propagation
+
+- Updated barrel exports in `packages/application/src/index.ts`
+
+**Patterns used:**
+
+- Factory function with explicit dependency injection (matching all other services)
+- Port abstraction for git ops, validation, conflict classification, artifact store
+- Domain state machine validation before every transition
+- Atomic transactions with audit events for each transition
+- Domain events emitted after transaction commits
+- `ConflictClassifierPort` prepared for T066 implementation
+- Schema validation via Zod safeParse before artifact persistence
+
+**Next loop should know:**
+
+- T064 unblocks T065 (squash/merge-commit strategies), T066 (conflict classification), T067 (post-merge failure)
+- The `ConflictClassifierPort` is the extension point for T066 — implement the classify() method with policy-based rules
+- The validation failure path does NOT transition the task (stays MERGING) — T067 handles post-merge-failure task transitions
+- The service is async (git ops + validation are Promise-based) unlike most other sync services
+
 ## T063: Merge Queue with Ordering Contract — Done
 
 **What was implemented:**

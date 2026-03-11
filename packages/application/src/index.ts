@@ -470,3 +470,37 @@ export type {
   ReviewerDispatchService,
   ReviewerDispatchDependencies,
 } from "./services/reviewer-dispatch.service.js";
+
+// Ports — merge executor interfaces (PRD 010 §10.10, T064)
+export type {
+  MergeExecutorTask,
+  MergeExecutorItem,
+  RebaseResult,
+  MergeGitOperationsPort,
+  MergeValidationPort,
+  ConflictClassification,
+  ConflictClassifierPort,
+  MergeArtifactPort,
+  MergeExecutorTaskRepositoryPort,
+  MergeExecutorItemRepositoryPort,
+  MergeExecutorTransactionRepositories,
+  MergeExecutorUnitOfWork,
+} from "./ports/merge-executor.ports.js";
+
+// Services — merge executor for rebase-and-merge strategy (PRD 010 §10.10, T064)
+export {
+  createMergeExecutorService,
+  MergeItemNotPreparingError,
+  TaskNotQueuedForMergeError,
+} from "./services/merge-executor.service.js";
+export type {
+  ExecuteMergeParams,
+  MergeOutcome,
+  MergeSuccessResult,
+  RebaseConflictResult,
+  ValidationFailedResult,
+  PushFailedResult,
+  ExecuteMergeResult,
+  MergeExecutorService,
+  MergeExecutorDependencies,
+} from "./services/merge-executor.service.js";
