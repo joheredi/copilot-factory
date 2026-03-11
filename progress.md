@@ -1,5 +1,37 @@
 # Progress Log
 
+## T019 — Implement optimistic concurrency control (2026-03-11)
+
+### What was done
+
+- Created `packages/domain/src/conflict-priority.ts` — pure domain functions for conflict resolution priority classification per §10.2.3:
+  - `ConflictPriority` enum: OPERATOR (3) > LEASE_EXPIRY (2) > AUTOMATED (1)
+  - `getConflictPriority(actorType, targetStatus)` — classifies actor priority
+  - `shouldRetryOnConflict(actorType, targetStatus)` — retry decision helper
+  - `isWithinGracePeriod(leaseExpiredAt, resultReceivedAt, gracePeriodSeconds)` — grace period check for late worker results
+- Created `packages/application/src/services/optimistic-retry.service.ts` — priority-aware retry wrapper:
+  - `OptimisticRetryService` with `transitionTaskWithPriority()` method
+  - Operator/lease-monitor actors retry on VersionConflictError (up to maxRetries)
+  - Automated actors (worker, scheduler) yield immediately (no retry)
+  - Configurable maxRetries (default 3)
+- Created design decision doc at `docs/design-decisions/conflict-resolution-priority.md`
+- 56 new tests (31 domain + 25 application) covering all priority scenarios, retry exhaustion, grace period edge cases, concurrent race simulations
+- All 1,089 tests pass, build clean
+
+### Key design decisions
+
+- **Domain classification + application retry** (vs embedding retry in transition service): Keeps transition service focused on single atomic transitions; retry orchestration is a separate concern at the application layer. See `docs/design-decisions/conflict-resolution-priority.md`.
+- **Priority enum with numeric values**: Enables simple comparison (`>`) for retry decisions. Three levels match the §10.2.3 rules exactly.
+- **Operator actor types**: 'operator' and 'admin' get OPERATOR priority. 'system' gets OPERATOR only when targeting ESCALATED/CANCELLED (operator-intent signals).
+- **Lease monitor actors**: 'lease-monitor' and 'reconciliation' get LEASE_EXPIRY priority only when targeting FAILED.
+- **Grace period as pure function**: Not coupled to retry logic — callers check grace period separately before deciding whether to accept a late worker result.
+
+### Next loop should know
+
+- The existing OCC mechanism (version check + increment + VersionConflictError) was already fully implemented in T017/T018. T019 added the priority resolution layer on top.
+- `isWithinGracePeriod()` is available but not yet wired into any orchestration flow. The lease reclaim service (T033) or worker supervisor (T044) will need to use it when handling late worker results.
+- The retry service only wraps `transitionTask` (not lease/review/merge transitions). Other entity types use status-based concurrency which doesn't need priority-based retry.
+
 ## T030 — Implement lease acquisition with exclusivity (2026-03-11)
 
 ### What was done

@@ -76,3 +76,10 @@ export type {
   MergeQueueItemTransitionContext,
   MergeQueueItemTransitionResult,
 } from "./state-machines/merge-queue-item-state-machine.js";
+
+export {
+  ConflictPriority,
+  getConflictPriority,
+  shouldRetryOnConflict,
+  isWithinGracePeriod,
+} from "./conflict-priority.js";

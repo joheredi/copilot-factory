@@ -139,7 +139,7 @@ See [phase documents](phases/) for details.
 | [T016](tasks/T016-supporting-state-machines.md)     | Implement supporting state machines                                                   | E003 | P0       | foundation | done    |
 | [T017](tasks/T017-transition-service.md)            | Build centralized State Transition Service                                            | E003 | P0       | foundation | done    |
 | [T018](tasks/T018-atomic-transition-audit.md)       | Implement atomic transition + audit persistence                                       | E003 | P0       | foundation | done    |
-| [T019](tasks/T019-optimistic-concurrency.md)        | Implement optimistic concurrency control                                              | E003 | P0       | foundation | pending |
+| [T019](tasks/T019-optimistic-concurrency.md)        | Implement optimistic concurrency control                                              | E003 | P0       | foundation | done    |
 | [T020](tasks/T020-shared-zod-types.md)              | Define shared Zod types for packets                                                   | E004 | P0       | foundation | pending |
 | [T021](tasks/T021-schemas-task-dev.md)              | Define TaskPacket and DevResultPacket Zod schemas                                     | E004 | P0       | foundation | pending |
 | [T022](tasks/T022-schemas-review.md)                | Define ReviewPacket and LeadReviewDecisionPacket schemas                              | E004 | P0       | foundation | pending |

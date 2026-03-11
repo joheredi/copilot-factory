@@ -63,3 +63,11 @@ export type {
   LeaseAcquisitionResult,
   LeaseService,
 } from "./services/lease.service.js";
+
+// Services — optimistic retry with conflict resolution priority
+export { createOptimisticRetryService } from "./services/optimistic-retry.service.js";
+export type {
+  PriorityTransitionOptions,
+  PriorityTransitionResult,
+  OptimisticRetryService,
+} from "./services/optimistic-retry.service.js";
