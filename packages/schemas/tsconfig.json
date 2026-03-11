@@ -5,6 +5,7 @@
     "outDir": "dist",
     "rootDir": "src"
   },
+  "references": [{ "path": "../domain" }],
   "include": ["src"],
   "exclude": ["src/**/*.test.ts", "src/**/*.spec.ts"]
 }

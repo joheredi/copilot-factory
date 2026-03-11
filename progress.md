@@ -350,3 +350,15 @@
 - T019 (optimistic concurrency) can build on this — the version and status-based concurrency is already implemented and tested.
 - T073 (audit event recording) is unblocked — the audit event infrastructure is fully integrated.
 - The `createSqliteUnitOfWork` + `createTransitionService` wiring is ready for use in the control-plane bootstrap (T080).
+
+## T020: Define shared Zod types for packets — DONE (2026-03-11)
+
+- Created `packages/schemas/src/shared.ts` with three shared Zod schemas:
+  - `FileChangeSummarySchema` — file change description (path, change_type, summary)
+  - `IssueSchema` — review/validation issue (severity, code, title, description, file_path?, line?, blocking)
+  - `ValidationCheckResultSchema` — validation check outcome (check_type, tool_name, command, status, duration_ms, summary, artifact_refs?)
+- Created 13 Zod enum schemas re-exported from `@factory/domain` const-objects via a `zodEnumFromConst()` helper
+- All schemas export both Zod schema objects (`*Schema`) and inferred TypeScript types
+- Added `zod` and `@factory/domain` as dependencies to `@factory/schemas`
+- 116 tests covering spec examples, all enum values, boundary conditions (empty strings, negative numbers, fractional values), and type inference
+- Pattern: use `zodEnumFromConst()` to convert domain `{ KEY: "value" } as const` objects to `z.enum()`

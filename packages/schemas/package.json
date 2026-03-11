@@ -15,6 +15,10 @@
   "files": [
     "dist"
   ],
+  "dependencies": {
+    "@factory/domain": "workspace:*",
+    "zod": "^3.24.4"
+  },
   "scripts": {
     "build": "tsc --build",
     "test": "vitest run --project @factory/schemas",
