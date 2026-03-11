@@ -374,3 +374,24 @@ Created LeadReviewConsolidationService in `packages/application` that assembles 
 - Post-commit domain event emission
 - Defense-in-depth specialist job terminal check (even though T026 handles this at claim time)
 - Review history assembly with chronological ordering for multi-rework scenarios
+
+## T073 — Implement audit event recording on state transitions
+
+### Task
+
+T073 - Implement audit event recording on state transitions (Epic E015: Audit & Event System)
+
+### What was done
+
+Verified that T073 was already fully implemented by T018 (atomic transition + audit persistence). The TransitionService in `packages/application/src/services/transition.service.ts` already creates an AuditEvent record atomically within the same BEGIN IMMEDIATE transaction for every state transition across all 4 entity types (Task, TaskLease, ReviewCycle, MergeQueueItem). All acceptance criteria are met:
+
+- Every state transition creates an audit event (structural guarantee — no conditional logic)
+- Audit events capture entity_type, entity_id, event_type, actor_type, actor_id, old_state, new_state, metadata
+- Atomicity enforced via BEGIN IMMEDIATE transactions (audit + state change in same tx)
+- Tests verify: rollback on audit failure, no partial state, correct fields for all entity types
+
+### Notes for next loop
+
+- T074 (Audit query service) is now unblocked
+- T100 (UI audit explorer) is also unblocked
+- Actor types are string-based (`ActorInfo.type: string`). If stronger typing is needed, consider adding an `ActorType` union type in the domain layer.
