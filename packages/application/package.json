@@ -17,6 +17,9 @@
   ],
   "scripts": {
     "build": "tsc --build",
+    "test": "vitest run --project @factory/application",
+    "test:watch": "vitest --project @factory/application",
+    "test:coverage": "vitest run --project @factory/application --coverage",
     "clean": "rm -rf dist tsconfig.tsbuildinfo"
   }
 }

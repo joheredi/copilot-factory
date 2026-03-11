@@ -15,6 +15,9 @@
   "files": ["dist"],
   "scripts": {
     "build": "tsc --build",
+    "test": "vitest run --project @factory/control-plane",
+    "test:watch": "vitest --project @factory/control-plane",
+    "test:coverage": "vitest run --project @factory/control-plane --coverage",
     "clean": "rm -rf dist tsconfig.tsbuildinfo"
   }
 }

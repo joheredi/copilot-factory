@@ -15,6 +15,9 @@
   "files": ["dist"],
   "scripts": {
     "build": "tsc --build",
+    "test": "vitest run --project @factory/ui-components",
+    "test:watch": "vitest --project @factory/ui-components",
+    "test:coverage": "vitest run --project @factory/ui-components --coverage",
     "clean": "rm -rf dist tsconfig.tsbuildinfo"
   }
 }

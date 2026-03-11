@@ -52,3 +52,35 @@
 - T004: Set up Vitest testing framework.
 - T005: Create CI pipeline with GitHub Actions.
 - T006: Set up SQLite with Drizzle ORM and migrations (depends on T002 ✅).
+
+## 2026-03-11 — T004: Set up Vitest testing framework
+
+**Status:** Done
+
+**What was done:**
+- Installed `vitest@4.0.18` and `@vitest/coverage-v8` as root devDependencies.
+- Created `vitest.workspace.ts` at repo root referencing `packages/*` and `apps/*` globs.
+- Created `vitest.config.ts` in all 11 workspaces using `defineProject` with unique `name` and `environment: "node"`.
+- Updated root `package.json` test scripts: `test` → `vitest run` (single-process workspace mode), added `test:watch` and `test:coverage`.
+- Added `test`, `test:watch`, `test:coverage` scripts to all 11 workspace `package.json` files using `--project` flag for scoped execution.
+- Updated all 11 workspace `tsconfig.json` files to exclude `*.test.ts` and `*.spec.ts` from compilation (keeps test files out of `dist/`).
+- Added test utilities to `packages/testing/src/index.ts`: `createTestId()`, `createSequentialId()`, `sleep()` — all with JSDoc.
+- Created `packages/testing/src/index.test.ts` with 8 tests covering all exported helpers.
+
+**Design decisions:**
+- Root `pnpm test` runs `vitest run` directly (single vitest instance in workspace mode) instead of `pnpm -r run test`. This is more efficient than spawning 11 separate vitest processes.
+- Per-workspace test scripts use `--project @factory/<name>` to filter to a single workspace when running from a subdirectory. Vitest walks up to find root `vitest.workspace.ts`.
+- `defineProject` (vitest 4.x API) is used for per-workspace configs instead of the removed `defineWorkspace`.
+- Test files live alongside source in `src/` (e.g., `src/foo.test.ts`) and are excluded from `tsconfig.json` compilation via `exclude` patterns.
+
+**Patterns established:**
+- Test files: `src/**/*.test.ts` or `src/**/*.spec.ts` (co-located with source).
+- Import vitest APIs explicitly: `import { describe, it, expect } from "vitest"` (no globals).
+- Use `.js` extensions in test imports (ESM + NodeNext).
+- Coverage via `pnpm test:coverage` (v8 provider).
+- Per-workspace scoped tests: `cd packages/domain && pnpm test`.
+
+**Next steps:**
+- T003: Set up ESLint and Prettier.
+- T005: Create CI pipeline (depends on T003 + T004 ✅).
+- T006: Set up SQLite with Drizzle ORM and migrations.

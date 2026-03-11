@@ -5,7 +5,7 @@
 | **ID** | T004 |
 | **Epic** | [E001: Repository & Platform Foundation](../epics/E001-platform-foundation.md) |
 | **Type** | foundation |
-| **Status** | pending |
+| **Status** | done |
 | **Priority** | P0 |
 | **Owner** | platform-engineer |
 | **AI Executable** | Yes |

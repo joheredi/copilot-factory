@@ -19,12 +19,24 @@ The repository is a pnpm monorepo. Root-level scripts delegate to workspaces via
 ```bash
 pnpm install          # Install all dependencies (run after cloning or adding deps)
 pnpm build            # Build all packages (delegates to workspace build scripts)
-pnpm test             # Run tests in all packages (delegates to workspace test scripts)
+pnpm test             # Run all tests via vitest workspace mode (single process)
+pnpm test:watch       # Run tests in watch mode
+pnpm test:coverage    # Run tests with v8 coverage reporting
 pnpm lint             # Lint all packages (delegates to workspace lint scripts)
 pnpm format           # Format all packages (delegates to workspace format scripts)
 ```
 
-> **Note:** Individual workspace build/test/lint scripts are added by subsequent tasks (T002–T004). Until those are complete, root-level `pnpm build`, `pnpm test`, and `pnpm lint` will succeed vacuously (no workspace scripts to run yet).
+> **Note:** Individual workspace lint/format scripts are added by T003. Until that is complete, `pnpm lint` and `pnpm format` succeed vacuously.
+
+## Testing
+
+- **Framework:** Vitest 4.x in workspace mode (`vitest.workspace.ts` at root).
+- **Per-workspace config:** Each workspace has `vitest.config.ts` using `defineProject`.
+- **Test files:** Co-located with source as `src/**/*.test.ts` or `src/**/*.spec.ts`.
+- **Imports:** Explicit `import { describe, it, expect } from "vitest"` (no globals).
+- **Coverage:** `pnpm test:coverage` uses `@vitest/coverage-v8`.
+- **Scoped tests:** From a workspace directory, `pnpm test` runs only that workspace's tests via `--project` flag.
+- **Shared helpers:** `@factory/testing` exports `createTestId()`, `createSequentialId()`, `sleep()` for use in tests.
 
 # TypeScript configuration
 
