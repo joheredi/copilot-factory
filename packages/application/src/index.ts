@@ -419,3 +419,27 @@ export type {
   RoutingDecision,
   RoutingRationaleEntry,
 } from "./services/review-router.service.js";
+
+// Ports — reviewer dispatch interfaces (PRD 010 §10.6, T059)
+export type {
+  ReviewDispatchTask,
+  ReviewDispatchCycle,
+  ReviewDispatchJob,
+  ReviewDispatchAuditEvent,
+  NewReviewCycleData,
+  ReviewDispatchTaskRepositoryPort,
+  ReviewDispatchCycleRepositoryPort,
+  ReviewDispatchJobRepositoryPort,
+  ReviewDispatchAuditRepositoryPort,
+  ReviewDispatchTransactionRepositories,
+  ReviewerDispatchUnitOfWork,
+} from "./ports/reviewer-dispatch.ports.js";
+
+// Services — specialist reviewer dispatch (PRD 010 §10.6, T059)
+export { createReviewerDispatchService } from "./services/reviewer-dispatch.service.js";
+export type {
+  DispatchReviewersParams,
+  DispatchReviewersResult,
+  ReviewerDispatchService,
+  ReviewerDispatchDependencies,
+} from "./services/reviewer-dispatch.service.js";

@@ -1,5 +1,34 @@
 # Progress Log
 
+## T059: Specialist Reviewer Job Dispatch — Done
+
+**What was implemented:**
+
+- Created `packages/application/src/ports/reviewer-dispatch.ports.ts`:
+  - `ReviewDispatchTaskRepositoryPort`, `ReviewDispatchCycleRepositoryPort`, `ReviewDispatchJobRepositoryPort`, `ReviewDispatchAuditRepositoryPort`
+  - `ReviewerDispatchUnitOfWork` with `ReviewDispatchTransactionRepositories`
+  - Narrow entity shapes: `ReviewDispatchTask`, `ReviewDispatchCycle`, `ReviewDispatchJob`, `ReviewDispatchAuditEvent`
+- Created `packages/application/src/services/reviewer-dispatch.service.ts`:
+  - `createReviewerDispatchService()` factory function
+  - Orchestrates: routing → cycle creation → job fan-out → task transition
+  - All mutations atomic within single transaction (per §10.3)
+  - Domain events emitted after commit
+  - Uses domain state machine validators directly (`validateTransition`, `validateReviewCycleTransition`)
+- Created 18 tests covering: happy path (single + multiple reviewers), state machine validation, review cycle creation, task update, audit events, domain events, router integration, edge cases, atomicity
+- Updated `packages/application/src/index.ts` to export all new types and service
+
+**Design decision:** Dedicated service with own UnitOfWork (not composing TransitionService + JobQueueService) because SQLite doesn't support nested transactions and §10.3 requires cross-entity atomicity.
+
+**Patterns:**
+
+- Same factory function pattern as all other application services
+- Injected `idGenerator` and `clock` for testability
+- Job fan-out uses `jobGroupId` = reviewCycleId for coordinator pattern
+- Lead review job uses `dependsOnJobIds` to wait for all specialists
+- Fake repository implementations in tests (no real DB needed)
+
+**Also fixed:** Updated `docs/backlog/index.md` to mark T057 and T069 as done (task files already said done but index was stale).
+
 ## T069: Filesystem Artifact Storage — Done
 
 **What was implemented:**
