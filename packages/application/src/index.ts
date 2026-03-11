@@ -1,7 +1,13 @@
 /** @module @factory/application — Commands, queries, orchestrators, and use cases. */
 
 // Errors
-export { EntityNotFoundError, InvalidTransitionError, VersionConflictError } from "./errors.js";
+export {
+  EntityNotFoundError,
+  InvalidTransitionError,
+  VersionConflictError,
+  ExclusivityViolationError,
+  TaskNotReadyForLeaseError,
+} from "./errors.js";
 
 // Ports — repository interfaces
 export type {
@@ -17,6 +23,18 @@ export type {
   MergeQueueItemRepositoryPort,
   AuditEventRepositoryPort,
 } from "./ports/repository.ports.js";
+
+// Ports — lease acquisition interfaces
+export type {
+  LeaseAcquisitionTask,
+  ActiveLeaseInfo,
+  NewLeaseData,
+  CreatedLease,
+  LeaseTaskRepositoryPort,
+  LeaseRepositoryPort,
+  LeaseTransactionRepositories,
+  LeaseUnitOfWork,
+} from "./ports/lease.ports.js";
 
 // Ports — unit of work
 export type { TransactionRepositories, UnitOfWork } from "./ports/unit-of-work.port.js";
@@ -34,6 +52,14 @@ export type {
   DomainEvent,
 } from "./events/domain-events.js";
 
-// Services
+// Services — transition
 export { createTransitionService } from "./services/transition.service.js";
 export type { TransitionResult, TransitionService } from "./services/transition.service.js";
+
+// Services — lease acquisition
+export { createLeaseService } from "./services/lease.service.js";
+export type {
+  AcquireLeaseParams,
+  LeaseAcquisitionResult,
+  LeaseService,
+} from "./services/lease.service.js";

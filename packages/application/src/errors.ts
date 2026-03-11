@@ -80,3 +80,50 @@ export class VersionConflictError extends Error {
     this.expectedVersion = expectedVersion;
   }
 }
+
+/**
+ * Thrown when lease acquisition fails because the task already has an active lease.
+ *
+ * This enforces the one-active-lease-per-task invariant from PRD §2.1.
+ * An active lease is one with status in (LEASED, STARTING, RUNNING,
+ * HEARTBEATING, COMPLETING). The caller should not retry — the existing
+ * lease must complete or be reclaimed before a new one can be acquired.
+ *
+ * @see docs/prd/002-data-model.md §2.1 — "only one active development lease per task"
+ */
+export class ExclusivityViolationError extends Error {
+  public readonly taskId: string;
+  public readonly existingLeaseId: string;
+
+  constructor(taskId: string, existingLeaseId: string) {
+    super(
+      `Lease exclusivity violation for Task ${taskId}: active lease ${existingLeaseId} already exists`,
+    );
+    this.name = "ExclusivityViolationError";
+    this.taskId = taskId;
+    this.existingLeaseId = existingLeaseId;
+  }
+}
+
+/**
+ * Thrown when lease acquisition is attempted on a task whose current state
+ * does not permit lease acquisition.
+ *
+ * Lease-eligible states are: READY, CHANGES_REQUESTED, ESCALATED.
+ * Any other state (e.g., BACKLOG, IN_DEVELOPMENT, DONE) rejects acquisition.
+ *
+ * @see docs/prd/002-data-model.md §2.1 — Transitions to ASSIGNED
+ */
+export class TaskNotReadyForLeaseError extends Error {
+  public readonly taskId: string;
+  public readonly currentStatus: string;
+
+  constructor(taskId: string, currentStatus: string) {
+    super(
+      `Task ${taskId} is not eligible for lease acquisition: current status is ${currentStatus}`,
+    );
+    this.name = "TaskNotReadyForLeaseError";
+    this.taskId = taskId;
+    this.currentStatus = currentStatus;
+  }
+}
