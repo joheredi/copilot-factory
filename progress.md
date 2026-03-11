@@ -1,5 +1,50 @@
 # Progress Log
 
+## T032: Implement graceful completion protocol
+
+**Status:** Done
+**Date:** 2026-03-11
+
+### What was done
+
+- **Modified `packages/application/src/ports/heartbeat.ports.ts`** — Extended `updateHeartbeat` method with optional `newExpiresAt` parameter for grace period extension on terminal heartbeats.
+- **Modified `packages/application/src/services/heartbeat.service.ts`** — Added `gracePeriodSeconds` to `ReceiveHeartbeatParams`. When `completing=true` and `gracePeriodSeconds > 0`, extends `expiresAt` to `max(current, now + gracePeriodSeconds)`. Audit event now includes expiresAt in old/new state for traceability.
+- **Created `packages/application/src/ports/graceful-completion.ports.ts`** — Port interfaces for result acceptance:
+  - `CompletionLease` — minimal lease record for result validation
+  - `CompletionLeaseRepositoryPort` — read-only findById
+  - `CompletionUnitOfWork` — transaction boundary
+- **Created `packages/application/src/services/graceful-completion.service.ts`** — Result acceptance service with:
+  - `acceptResult(params)` — validates worker ID match, checks lease is COMPLETING or TIMED_OUT, enforces grace deadline, records audit events for both accepted and rejected results
+  - `computeGraceDeadline(lease, gracePeriodSeconds)` — pure function: COMPLETING uses expiresAt (already extended), TIMED_OUT uses expiresAt + gracePeriodSeconds
+- **Created `packages/application/src/services/graceful-completion.service.test.ts`** — 24 tests covering:
+  - Normal acceptance (COMPLETING within window, boundary, audit, domain events, metadata)
+  - Late acceptance (TIMED_OUT within grace, boundary, distinct audit event type)
+  - Rejections (not found, worker mismatch, all non-accepting states: RUNNING/HEARTBEATING/CRASHED/RECLAIMED/IDLE/LEASED/STARTING)
+  - Grace period expiry (COMPLETING past expiresAt, TIMED_OUT past grace, zero grace, diagnostic fields, rejection audit)
+  - Validation order (worker mismatch before state, state before grace)
+  - Integration scenarios (full completion flow, race condition acceptance, race condition rejection)
+- **Added 6 grace period extension tests** to existing heartbeat.service.test.ts
+- **Added 3 new error types** to errors.ts: `LeaseNotAcceptingResultsError`, `GracePeriodExpiredError`, `WorkerMismatchError`
+- **Updated barrel exports** in `packages/application/src/index.ts`
+
+### Patterns used
+
+- Same factory function pattern (createGracefulCompletionService) as lease and heartbeat services
+- Injectable clock for deterministic time-based testing
+- Separate port file per service (graceful-completion.ports.ts)
+- Read-only lease access — service validates but doesn't mutate lease state
+- Audit events for both accepted AND rejected results (audit trail completeness)
+- Distinct audit event types: `lease.result-accepted`, `lease.result-accepted-late`, `lease.result-rejected`
+
+### Notes for next loop
+
+- T032 unblocks T046 (structured output capture and validation) which handles actual result packet validation
+- The grace period logic has two paths: COMPLETING (expiresAt already extended by terminal heartbeat) and TIMED_OUT (expiresAt + gracePeriodSeconds for race conditions)
+- Worker ID matching is checked before lease state to prevent leaking state info to impersonators
+- The service does NOT mutate lease status — downstream T046 handles result ingestion and state transitions
+- For TIMED_OUT late acceptance, the lease stays TIMED_OUT; the acceptance is recorded via audit event
+- T033 (stale lease reclaim) is the next task in the E006 lease chain
+
 ## T031: Implement heartbeat receive and staleness detection
 
 **Status:** Done

@@ -11,6 +11,9 @@ export {
   CyclicDependencyError,
   DuplicateDependencyError,
   SelfDependencyError,
+  LeaseNotAcceptingResultsError,
+  GracePeriodExpiredError,
+  WorkerMismatchError,
 } from "./errors.js";
 
 // Ports — repository interfaces
@@ -166,3 +169,22 @@ export type {
   DetectStaleLeasesResult,
   HeartbeatService,
 } from "./services/heartbeat.service.js";
+
+// Ports — graceful completion interfaces
+export type {
+  CompletionLease,
+  CompletionLeaseRepositoryPort,
+  CompletionTransactionRepositories,
+  CompletionUnitOfWork,
+} from "./ports/graceful-completion.ports.js";
+
+// Services — graceful completion with grace period result acceptance
+export {
+  createGracefulCompletionService,
+  computeGraceDeadline,
+} from "./services/graceful-completion.service.js";
+export type {
+  AcceptResultParams,
+  AcceptResultResult,
+  GracefulCompletionService,
+} from "./services/graceful-completion.service.js";

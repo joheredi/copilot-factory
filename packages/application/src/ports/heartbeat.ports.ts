@@ -83,13 +83,26 @@ export interface HeartbeatLeaseRepositoryPort {
    * Used for both regular heartbeats (status may or may not change) and
    * terminal heartbeats (status transitions to COMPLETING).
    *
+   * When `newExpiresAt` is provided, the lease's `expires_at` is also updated
+   * atomically. This is used during the graceful completion protocol to extend
+   * the TTL by the configured grace period, giving the worker time to deliver
+   * its result packet after sending the terminal heartbeat.
+   *
+   * @param leaseId - The lease to update
+   * @param expectedStatus - Optimistic concurrency guard; must match current status
+   * @param newStatus - The target status after the heartbeat
+   * @param heartbeatAt - The new heartbeat timestamp
+   * @param newExpiresAt - Optional new expiry time (used for grace period extension)
    * @throws VersionConflictError if expectedStatus does not match
+   *
+   * @see docs/prd/002-data-model.md §2.8 — Graceful Completion
    */
   updateHeartbeat(
     leaseId: string,
     expectedStatus: WorkerLeaseStatus,
     newStatus: WorkerLeaseStatus,
     heartbeatAt: Date,
+    newExpiresAt?: Date,
   ): HeartbeatableLease;
 
   /**

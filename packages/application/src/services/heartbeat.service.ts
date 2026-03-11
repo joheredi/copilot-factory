@@ -72,6 +72,17 @@ export interface ReceiveHeartbeatParams {
    * @see docs/prd/009-policy-and-enforcement-spec.md §9.8 — Graceful Completion Protocol
    */
   readonly completing?: boolean;
+  /**
+   * Grace period in seconds to extend the lease's expiry when a terminal
+   * heartbeat (`completing: true`) is received. This gives the worker time
+   * to deliver its result packet after signalling completion.
+   *
+   * Only used when `completing` is `true`. Ignored for regular heartbeats.
+   * The new expiry is `max(current_expires_at, now + gracePeriodSeconds)`.
+   *
+   * @see docs/prd/002-data-model.md §2.8 — Graceful Completion
+   */
+  readonly gracePeriodSeconds?: number;
   /** Optional metadata from the worker (e.g., progress, resource usage). */
   readonly workerMetadata?: Record<string, unknown>;
   /** Who is sending the heartbeat. */
@@ -280,7 +291,7 @@ export function createHeartbeatService(
 ): HeartbeatService {
   return {
     receiveHeartbeat(params: ReceiveHeartbeatParams): ReceiveHeartbeatResult {
-      const { leaseId, completing = false, workerMetadata, actor } = params;
+      const { leaseId, completing = false, gracePeriodSeconds, workerMetadata, actor } = params;
 
       const transactionResult = unitOfWork.runInTransaction((repos) => {
         // Step 1: Fetch the lease
@@ -310,11 +321,27 @@ export function createHeartbeatService(
           );
         }
 
-        // Step 5: Update heartbeat timestamp and status atomically
+        // Step 5: Compute grace-period-extended expiry for terminal heartbeats.
+        // When completing, extend expiresAt to give the worker time to deliver
+        // its result packet. Uses max(current, now + grace) to never shorten the TTL.
         const now = clock();
-        const updatedLease = repos.lease.updateHeartbeat(leaseId, lease.status, targetStatus, now);
+        let newExpiresAt: Date | undefined;
+        if (completing && gracePeriodSeconds !== undefined && gracePeriodSeconds > 0) {
+          const graceDeadline = new Date(now.getTime() + gracePeriodSeconds * 1000);
+          newExpiresAt =
+            graceDeadline.getTime() > lease.expiresAt.getTime() ? graceDeadline : lease.expiresAt;
+        }
 
-        // Step 6: Record audit event
+        // Step 6: Update heartbeat timestamp, status, and optionally expiresAt atomically
+        const updatedLease = repos.lease.updateHeartbeat(
+          leaseId,
+          lease.status,
+          targetStatus,
+          now,
+          newExpiresAt,
+        );
+
+        // Step 7: Record audit event
         const auditEvent = repos.auditEvent.create({
           entityType: "task-lease",
           entityId: leaseId,
@@ -324,10 +351,12 @@ export function createHeartbeatService(
           oldState: JSON.stringify({
             status: lease.status,
             heartbeatAt: lease.heartbeatAt?.toISOString() ?? null,
+            expiresAt: lease.expiresAt.toISOString(),
           }),
           newState: JSON.stringify({
             status: updatedLease.status,
             heartbeatAt: updatedLease.heartbeatAt?.toISOString() ?? null,
+            expiresAt: updatedLease.expiresAt.toISOString(),
           }),
           metadata: workerMetadata ? JSON.stringify(workerMetadata) : null,
         });

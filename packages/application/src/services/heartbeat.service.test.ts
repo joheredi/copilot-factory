@@ -116,6 +116,7 @@ function createMockLeaseRepo(
       expectedStatus: WorkerLeaseStatus,
       newStatus: WorkerLeaseStatus,
       heartbeatAt: Date,
+      newExpiresAt?: Date,
     ): HeartbeatableLease {
       const idx = leases.findIndex((l) => l.leaseId === leaseId);
       if (idx === -1) {
@@ -131,6 +132,7 @@ function createMockLeaseRepo(
         ...current,
         status: newStatus,
         heartbeatAt,
+        ...(newExpiresAt !== undefined ? { expiresAt: newExpiresAt } : {}),
       };
       leases[idx] = updated;
       return updated;
@@ -368,6 +370,160 @@ describe("HeartbeatService.receiveHeartbeat", () => {
           actor: WORKER_ACTOR,
         }),
       ).toThrow(InvalidTransitionError);
+    });
+  });
+
+  // ── Grace Period Extension on Terminal Heartbeat ─────────────────────────
+
+  describe("grace period extension on terminal heartbeat", () => {
+    /**
+     * When a terminal heartbeat includes gracePeriodSeconds, the lease's
+     * expiresAt is extended to give the worker time to deliver results.
+     * This is the core mechanism preventing race conditions between
+     * staleness detection and result delivery.
+     *
+     * @see docs/prd/002-data-model.md §2.8 — Graceful Completion
+     */
+    it("extends expiresAt by gracePeriodSeconds on terminal heartbeat", () => {
+      const now = new Date("2025-01-15T10:00:00Z");
+      const originalExpiry = dateOffset(now, 60); // expires in 60s
+      const lease = createTestLease({
+        status: WorkerLeaseStatus.HEARTBEATING,
+        expiresAt: originalExpiry,
+      });
+      const { service, leaseRepo } = createHarness([lease], [], now);
+
+      service.receiveHeartbeat({
+        leaseId: "lease-001",
+        completing: true,
+        gracePeriodSeconds: 30,
+        actor: WORKER_ACTOR,
+      });
+
+      // Grace deadline = now + 30s = 10:00:30, which is before originalExpiry (10:01:00)
+      // So expiresAt should stay at originalExpiry (max of the two)
+      expect(leaseRepo.leases[0]!.expiresAt).toEqual(originalExpiry);
+    });
+
+    /**
+     * When the grace-extended deadline exceeds the current expiresAt,
+     * the expiresAt is updated to the new deadline.
+     */
+    it("extends expiresAt when grace deadline exceeds current expiry", () => {
+      const now = new Date("2025-01-15T10:00:00Z");
+      const originalExpiry = dateOffset(now, 10); // expires in only 10s
+      const lease = createTestLease({
+        status: WorkerLeaseStatus.HEARTBEATING,
+        expiresAt: originalExpiry,
+      });
+      const { service, leaseRepo } = createHarness([lease], [], now);
+
+      service.receiveHeartbeat({
+        leaseId: "lease-001",
+        completing: true,
+        gracePeriodSeconds: 30,
+        actor: WORKER_ACTOR,
+      });
+
+      // Grace deadline = now + 30s = 10:00:30, exceeds original 10:00:10
+      const expectedExpiry = dateOffset(now, 30);
+      expect(leaseRepo.leases[0]!.expiresAt).toEqual(expectedExpiry);
+    });
+
+    /**
+     * Regular (non-terminal) heartbeats do not extend expiresAt,
+     * even if gracePeriodSeconds is provided. This parameter is
+     * only relevant for terminal heartbeats.
+     */
+    it("does not extend expiresAt for regular heartbeats", () => {
+      const now = new Date("2025-01-15T10:00:00Z");
+      const originalExpiry = dateOffset(now, 10);
+      const lease = createTestLease({
+        status: WorkerLeaseStatus.RUNNING,
+        expiresAt: originalExpiry,
+      });
+      const { service, leaseRepo } = createHarness([lease], [], now);
+
+      service.receiveHeartbeat({
+        leaseId: "lease-001",
+        completing: false,
+        gracePeriodSeconds: 300,
+        actor: WORKER_ACTOR,
+      });
+
+      expect(leaseRepo.leases[0]!.expiresAt).toEqual(originalExpiry);
+    });
+
+    /**
+     * When gracePeriodSeconds is not provided on a terminal heartbeat,
+     * expiresAt is not modified. The service tolerates the missing field.
+     */
+    it("does not extend expiresAt when gracePeriodSeconds is undefined", () => {
+      const now = new Date("2025-01-15T10:00:00Z");
+      const originalExpiry = dateOffset(now, 10);
+      const lease = createTestLease({
+        status: WorkerLeaseStatus.HEARTBEATING,
+        expiresAt: originalExpiry,
+      });
+      const { service, leaseRepo } = createHarness([lease], [], now);
+
+      service.receiveHeartbeat({
+        leaseId: "lease-001",
+        completing: true,
+        // gracePeriodSeconds not provided
+        actor: WORKER_ACTOR,
+      });
+
+      expect(leaseRepo.leases[0]!.expiresAt).toEqual(originalExpiry);
+    });
+
+    /**
+     * Zero gracePeriodSeconds is treated as no extension.
+     */
+    it("does not extend expiresAt when gracePeriodSeconds is zero", () => {
+      const now = new Date("2025-01-15T10:00:00Z");
+      const originalExpiry = dateOffset(now, 10);
+      const lease = createTestLease({
+        status: WorkerLeaseStatus.HEARTBEATING,
+        expiresAt: originalExpiry,
+      });
+      const { service, leaseRepo } = createHarness([lease], [], now);
+
+      service.receiveHeartbeat({
+        leaseId: "lease-001",
+        completing: true,
+        gracePeriodSeconds: 0,
+        actor: WORKER_ACTOR,
+      });
+
+      expect(leaseRepo.leases[0]!.expiresAt).toEqual(originalExpiry);
+    });
+
+    /**
+     * The audit event for a terminal heartbeat with grace extension
+     * includes both old and new expiresAt values for traceability.
+     */
+    it("audit event includes expiresAt in old and new state", () => {
+      const now = new Date("2025-01-15T10:00:00Z");
+      const originalExpiry = dateOffset(now, 10);
+      const lease = createTestLease({
+        status: WorkerLeaseStatus.HEARTBEATING,
+        expiresAt: originalExpiry,
+      });
+      const { service, auditRepo } = createHarness([lease], [], now);
+
+      service.receiveHeartbeat({
+        leaseId: "lease-001",
+        completing: true,
+        gracePeriodSeconds: 30,
+        actor: WORKER_ACTOR,
+      });
+
+      const event = auditRepo.events[0]!;
+      const oldState = JSON.parse(event.oldState!) as Record<string, unknown>;
+      const newState = JSON.parse(event.newState!) as Record<string, unknown>;
+      expect(oldState.expiresAt).toBe(originalExpiry.toISOString());
+      expect(newState.expiresAt).toBe(dateOffset(now, 30).toISOString());
     });
   });
 

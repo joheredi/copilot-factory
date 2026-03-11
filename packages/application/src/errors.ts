@@ -214,3 +214,73 @@ export class TaskNotReadyForLeaseError extends Error {
     this.currentStatus = currentStatus;
   }
 }
+
+/**
+ * Thrown when a result is submitted for a lease that is not in a state
+ * capable of accepting results (neither COMPLETING nor within the grace
+ * period after TIMED_OUT).
+ *
+ * Valid result-accepting states: COMPLETING (normal), TIMED_OUT (within grace).
+ * Any other state (e.g., RUNNING, HEARTBEATING, CRASHED, RECLAIMED) rejects results.
+ *
+ * @see docs/prd/002-data-model.md §2.8 — Graceful Completion
+ */
+export class LeaseNotAcceptingResultsError extends Error {
+  public readonly leaseId: string;
+  public readonly currentStatus: string;
+
+  constructor(leaseId: string, currentStatus: string) {
+    super(`Lease ${leaseId} is not accepting results: current status is ${currentStatus}`);
+    this.name = "LeaseNotAcceptingResultsError";
+    this.leaseId = leaseId;
+    this.currentStatus = currentStatus;
+  }
+}
+
+/**
+ * Thrown when a result is submitted past the grace period deadline.
+ *
+ * For COMPLETING leases, the grace deadline is `expiresAt` (which was
+ * extended by `gracePeriodSeconds` when the terminal heartbeat was received).
+ * For TIMED_OUT leases, the grace deadline is `expiresAt + gracePeriodSeconds`.
+ *
+ * @see docs/prd/002-data-model.md §2.8 — Graceful Completion
+ */
+export class GracePeriodExpiredError extends Error {
+  public readonly leaseId: string;
+  public readonly graceDeadline: Date;
+  public readonly receivedAt: Date;
+
+  constructor(leaseId: string, graceDeadline: Date, receivedAt: Date) {
+    super(
+      `Grace period expired for lease ${leaseId}: deadline was ${graceDeadline.toISOString()}, result received at ${receivedAt.toISOString()}`,
+    );
+    this.name = "GracePeriodExpiredError";
+    this.leaseId = leaseId;
+    this.graceDeadline = graceDeadline;
+    this.receivedAt = receivedAt;
+  }
+}
+
+/**
+ * Thrown when a result is submitted by a worker that does not match the
+ * worker assigned to the lease. This prevents impersonation and ensures
+ * only the lease holder can submit results.
+ *
+ * @see docs/prd/002-data-model.md §2.8 — "Verify IDs match"
+ */
+export class WorkerMismatchError extends Error {
+  public readonly leaseId: string;
+  public readonly expectedWorkerId: string;
+  public readonly actualWorkerId: string;
+
+  constructor(leaseId: string, expectedWorkerId: string, actualWorkerId: string) {
+    super(
+      `Worker mismatch for lease ${leaseId}: expected ${expectedWorkerId}, got ${actualWorkerId}`,
+    );
+    this.name = "WorkerMismatchError";
+    this.leaseId = leaseId;
+    this.expectedWorkerId = expectedWorkerId;
+    this.actualWorkerId = actualWorkerId;
+  }
+}
