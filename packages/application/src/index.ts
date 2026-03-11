@@ -343,6 +343,24 @@ export type {
   ValidationRunnerService,
 } from "./services/validation-runner.service.js";
 
+// Ports — validation packet emission interfaces (PRD 008 §8.10)
+export type {
+  ValidationPacketArtifactPort,
+  EmitValidationPacketParams,
+  EmitValidationPacketResult,
+} from "./ports/validation-packet-emitter.ports.js";
+
+// Services — validation packet emission (PRD 008 §8.10)
+export {
+  createValidationPacketEmitterService,
+  ValidationPacketSchemaError,
+  mapCheckOutcomeToResult,
+} from "./services/validation-packet-emitter.service.js";
+export type {
+  ValidationPacketEmitterService,
+  ValidationPacketEmitterDependencies,
+} from "./services/validation-packet-emitter.service.js";
+
 // Ports — policy snapshot generation interfaces (PRD 009 §9.2)
 export type {
   PolicySnapshotContext,

@@ -1,5 +1,29 @@
 # Progress Log
 
+## T056: Implement ValidationResultPacket emission (2026-03-11)
+
+**What was done:**
+
+- Created `packages/application/src/ports/validation-packet-emitter.ports.ts` — port for artifact persistence (`ValidationPacketArtifactPort`) and emission params/result types.
+- Created `packages/application/src/services/validation-packet-emitter.service.ts` — service that assembles a `ValidationResultPacket` from a `ValidationRunResult`, validates it against the Zod schema, and persists it via the artifact store port.
+- Created `packages/application/src/services/validation-packet-emitter.service.test.ts` — 34 tests covering: packet assembly, run_scope mapping (all 5 values), check outcome mapping (check_type resolution, tool_name extraction, status mapping including error→failed), overall status mapping (passed→success, failed→failed), schema validation, artifact persistence, mixed check statuses, post-merge runs, and error propagation.
+- Updated `packages/application/src/index.ts` — added exports for the new port types and service.
+
+**Key patterns:**
+
+- Separate emitter service (not extending the runner) follows single-responsibility principle matching existing patterns (e.g., PolicySnapshotService).
+- Check name → check_type mapping: known names (test, lint, build, typecheck, security, schema, policy) map directly; unknown names default to "policy".
+- Tool name extracted as first whitespace-delimited token of the command string.
+- Runner status "error" collapsed to schema status "failed" since the packet schema only supports passed/failed/skipped.
+- Runner overall status "passed" maps to packet status "success" per PRD 008 §8.2.3.
+- Zod validation runs BEFORE persistence; only the Zod-parsed packet is persisted.
+- `mapCheckOutcomeToResult` is exported for direct unit testing of the mapping logic.
+
+**Next loop should know:**
+
+- T057 (validation gate checking for state transitions) is now unblocked by T056.
+- The emitter produces a `ValidationResultPacket` that T057 can inspect for gating decisions.
+
 ## T055: Implement test/lint/build command execution (2026-03-11)
 
 **What was done:**
