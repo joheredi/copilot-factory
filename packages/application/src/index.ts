@@ -342,3 +342,22 @@ export type {
   RunValidationParams,
   ValidationRunnerService,
 } from "./services/validation-runner.service.js";
+
+// Ports — policy snapshot generation interfaces (PRD 009 §9.2)
+export type {
+  PolicySnapshotContext,
+  ConfigLayerLoaderPort,
+  PolicySnapshotArtifactPort,
+} from "./ports/policy-snapshot.ports.js";
+
+// Services — policy snapshot generation (PRD 009 §9.2)
+export {
+  createPolicySnapshotService,
+  PolicySnapshotValidationError,
+  ConfigLayerLoadError,
+} from "./services/policy-snapshot.service.js";
+export type {
+  GeneratePolicySnapshotResult,
+  PolicySnapshotService,
+  PolicySnapshotServiceDependencies,
+} from "./services/policy-snapshot.service.js";

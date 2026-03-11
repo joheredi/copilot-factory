@@ -1,5 +1,26 @@
 # Progress Log
 
+## T053: Implement effective policy snapshot generation (2026-03-11)
+
+**What was done:**
+
+- Created `packages/application/src/ports/policy-snapshot.ports.ts` — defines `ConfigLayerLoaderPort` for loading ordered config layers, `PolicySnapshotArtifactPort` for persisting snapshots, and `PolicySnapshotContext` for identifying the task/pool/run.
+- Created `packages/application/src/services/policy-snapshot.service.ts` — the `PolicySnapshotService` that loads config layers, resolves them via `@factory/config`'s hierarchical resolver, assembles a `PolicySnapshot` mapping domain types to schema types, validates against the Zod schema, and persists as an immutable run-level artifact.
+- Created 26 tests covering: system-defaults-only generation, custom layer overrides, source tracking metadata, artifact persistence, error handling (loader failures, persistence failures), snapshot structure validation, deterministic output, and error class behavior.
+- Added `@factory/config` as a dependency of `@factory/application` (package.json + tsconfig project reference).
+- Updated `packages/application/src/index.ts` with all new exports.
+
+**Key patterns:**
+
+- The service bridges domain types (e.g., `AllowedCommand` with `arg_prefixes`) to schema types (e.g., `allowed_args_prefixes`) in the `assembleSnapshot` function.
+- `derivePolicySetId` walks layers from highest to lowest precedence to find the most specific source identifier.
+- Typed errors `PolicySnapshotValidationError` and `ConfigLayerLoadError` provide structured diagnostics.
+
+**Next loop should know:**
+
+- The `@factory/application` package now depends on `@factory/config` for the hierarchical resolver.
+- The `assembleSnapshot` function handles the domain↔schema type mapping for command policy fields. If new fields are added to the domain or schema types, this function must be updated.
+
 ## T054: Implement validation runner abstraction (2026-03-11)
 
 **What was done:**

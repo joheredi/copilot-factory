@@ -103,6 +103,9 @@ importers:
 
   packages/application:
     dependencies:
+      '@factory/config':
+        specifier: workspace:*
+        version: link:../config
       '@factory/domain':
         specifier: workspace:*
         version: link:../domain

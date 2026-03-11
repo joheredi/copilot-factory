@@ -25,6 +25,7 @@
     "format": "prettier --write ."
   },
   "dependencies": {
+    "@factory/config": "workspace:*",
     "@factory/domain": "workspace:*",
     "@factory/schemas": "workspace:*",
     "zod": "^3.24.4"

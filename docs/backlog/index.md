@@ -173,7 +173,7 @@ See [phase documents](phases/) for details.
 | [T050](tasks/T050-validation-policy.md)             | Implement validation policy with profile selection                                    | E010 | P0       | feature    | done    |
 | [T051](tasks/T051-retry-escalation-policy.md)       | Implement retry and escalation policy evaluation                                      | E010 | P0       | feature    | done    |
 | [T052](tasks/T052-hierarchical-config.md)           | Implement hierarchical configuration resolution                                       | E010 | P0       | feature    | done    |
-| [T053](tasks/T053-policy-snapshot.md)               | Implement effective policy snapshot generation                                        | E010 | P0       | feature    | pending |
+| [T053](tasks/T053-policy-snapshot.md)               | Implement effective policy snapshot generation                                        | E010 | P0       | feature    | done    |
 | [T054](tasks/T054-validation-runner-abstraction.md) | Implement validation runner abstraction                                               | E011 | P0       | feature    | done    |
 | [T055](tasks/T055-validation-command-exec.md)       | Implement test/lint/build command execution                                           | E011 | P0       | feature    | pending |
 | [T056](tasks/T056-validation-packet-emission.md)    | Implement ValidationResultPacket emission                                             | E011 | P0       | feature    | pending |
