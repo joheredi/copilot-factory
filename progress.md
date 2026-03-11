@@ -395,3 +395,58 @@ Verified that T073 was already fully implemented by T018 (atomic transition + au
 - T074 (Audit query service) is now unblocked
 - T100 (UI audit explorer) is also unblocked
 - Actor types are string-based (`ActorInfo.type: string`). If stronger typing is needed, consider adding an `ActorType` union type in the domain layer.
+
+## T081 — Implement Project and Repository CRUD endpoints
+
+### Task
+
+T081 - Implement Project and Repository CRUD endpoints (Epic E017: REST API Layer)
+
+### What was done
+
+Implemented full CRUD endpoints for Projects and Repositories in the NestJS control-plane app:
+
+- **DatabaseModule**: Global NestJS module providing `DatabaseConnection` via `DATABASE_CONNECTION` injection token
+- **ProjectsController**: POST/GET/PUT/DELETE `/projects` with pagination, 201/204/404/409 status codes
+- **RepositoriesController**: POST/GET nested under `/projects/:projectId/repositories`, plus GET/PUT/DELETE at `/repositories/:id`
+- **ProjectsService & RepositoriesService**: Use existing repository factory functions with write transactions
+- **DTOs**: 5 Zod-validated DTOs (CreateProject, UpdateProject, CreateRepository, UpdateRepository, PaginationQuery)
+- **Tests**: 4 test files — controller tests (mocked services via NestJS testing module), service integration tests (in-memory SQLite with migrations)
+
+### Key fixes from code review
+
+- SQL-level LIMIT/OFFSET for repository pagination (instead of in-memory slicing)
+- FOREIGN KEY constraint error handling in RepositoriesService.create (throws BadRequestException)
+- Additional pagination edge case tests (page 2, out-of-range page)
+
+### Files created
+
+- `apps/control-plane/src/infrastructure/database/database.module.ts`
+- `apps/control-plane/src/projects/dtos/` (5 DTOs + barrel index)
+- `apps/control-plane/src/projects/projects.service.ts`
+- `apps/control-plane/src/projects/repositories.service.ts`
+- `apps/control-plane/src/projects/projects.controller.ts`
+- `apps/control-plane/src/projects/repositories.controller.ts`
+- `apps/control-plane/src/projects/projects.service.test.ts`
+- `apps/control-plane/src/projects/repositories.service.test.ts`
+- `apps/control-plane/src/projects/projects.controller.test.ts`
+- `apps/control-plane/src/projects/repositories.controller.test.ts`
+
+### Files modified
+
+- `apps/control-plane/src/projects/projects.module.ts` (wired controllers + services)
+- `apps/control-plane/src/app.module.ts` (imported DatabaseModule)
+
+### Patterns
+
+- Global NestJS module with custom provider for database connection injection
+- Zod DTOs with static `schema` property for automatic validation via global pipe
+- Service layer delegates to repository factory functions; writes wrapped in `writeTransaction`
+- `PaginatedResponse<T>` with `{ data, meta: { page, limit, total, totalPages } }` shape
+- SQLite UNIQUE/FK constraint errors mapped to appropriate HTTP exceptions
+
+### Notes for next loop
+
+- T089 (React SPA init) is now unblocked by T081
+- The DatabaseModule is Global so all future feature modules get DB access automatically
+- PaginationQueryDto and PaginatedResponse can be reused by T082-T085

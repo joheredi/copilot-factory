@@ -76,7 +76,7 @@ describe("ProjectsService", () => {
   });
 
   /**
-   * Validates paginated listing returns correct metadata.
+   * Validates paginated listing returns correct metadata for page 1.
    */
   it("should list projects with pagination", () => {
     service.create({ name: "P1", owner: "alice" });
@@ -89,6 +89,34 @@ describe("ProjectsService", () => {
     expect(result.meta.total).toBe(3);
     expect(result.meta.totalPages).toBe(2);
     expect(result.meta.page).toBe(1);
+  });
+
+  /**
+   * Validates that page 2 returns the remaining items.
+   * Ensures offset calculation (page - 1) * limit is correct.
+   */
+  it("should return correct data for page 2", () => {
+    service.create({ name: "P1", owner: "alice" });
+    service.create({ name: "P2", owner: "alice" });
+    service.create({ name: "P3", owner: "alice" });
+
+    const result = service.findAll(2, 2);
+
+    expect(result.data).toHaveLength(1);
+    expect(result.meta.total).toBe(3);
+    expect(result.meta.page).toBe(2);
+  });
+
+  /**
+   * Validates that out-of-range pages return empty data with correct total.
+   */
+  it("should return empty data for out-of-range page", () => {
+    service.create({ name: "P1", owner: "alice" });
+
+    const result = service.findAll(100, 20);
+
+    expect(result.data).toHaveLength(0);
+    expect(result.meta.total).toBe(1);
   });
 
   /**

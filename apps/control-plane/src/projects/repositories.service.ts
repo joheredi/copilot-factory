@@ -7,7 +7,7 @@
  *
  * @module @factory/control-plane
  */
-import { ConflictException, Inject, Injectable } from "@nestjs/common";
+import { BadRequestException, ConflictException, Inject, Injectable } from "@nestjs/common";
 import { count, eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 
@@ -54,6 +54,9 @@ export class RepositoriesService {
         });
       });
     } catch (error: unknown) {
+      if (error instanceof Error && error.message.includes("FOREIGN KEY constraint failed")) {
+        throw new BadRequestException(`Project with ID "${projectId}" does not exist`);
+      }
       if (error instanceof Error && error.message.includes("UNIQUE constraint failed")) {
         throw new ConflictException(`A repository with conflicting unique fields already exists`);
       }
@@ -63,6 +66,9 @@ export class RepositoriesService {
 
   /**
    * List repositories for a project with page-based pagination.
+   *
+   * Uses SQL-level LIMIT/OFFSET for efficient pagination rather than
+   * fetching all rows and slicing in memory.
    *
    * @param projectId Parent project UUID.
    * @param page 1-based page number.
@@ -79,11 +85,15 @@ export class RepositoriesService {
       .get();
     const total = totalResult?.count ?? 0;
 
-    const repo = createRepositoryRepository(this.conn.db);
-    const allForProject = repo.findByProjectId(projectId);
-
-    // Apply pagination manually since findByProjectId doesn't support it
-    const data = allForProject.slice(offset, offset + limit);
+    // Use direct Drizzle query with SQL-level pagination instead of
+    // fetching all rows via repository.findByProjectId() and slicing.
+    const data = this.conn.db
+      .select()
+      .from(repositories)
+      .where(eq(repositories.projectId, projectId))
+      .limit(limit)
+      .offset(offset)
+      .all();
 
     return {
       data,

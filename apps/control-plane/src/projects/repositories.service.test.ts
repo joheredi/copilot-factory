@@ -10,6 +10,7 @@
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { BadRequestException } from "@nestjs/common";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { ProjectsService } from "./projects.service.js";
@@ -87,7 +88,7 @@ describe("RepositoriesService", () => {
   });
 
   /**
-   * Validates that listing repositories returns correct pagination.
+   * Validates that listing repositories returns correct pagination for page 1.
    */
   it("should list repositories by project with pagination", () => {
     service.create(projectId, { ...repoDto, name: "R1" });
@@ -99,6 +100,44 @@ describe("RepositoriesService", () => {
     expect(result.data).toHaveLength(2);
     expect(result.meta.total).toBe(3);
     expect(result.meta.totalPages).toBe(2);
+  });
+
+  /**
+   * Validates that page 2 returns the remaining items with correct offset.
+   * Ensures the SQL-level LIMIT/OFFSET is computed correctly.
+   */
+  it("should return correct data for page 2", () => {
+    service.create(projectId, { ...repoDto, name: "R1" });
+    service.create(projectId, { ...repoDto, name: "R2" });
+    service.create(projectId, { ...repoDto, name: "R3" });
+
+    const result = service.findByProjectId(projectId, 2, 2);
+
+    expect(result.data).toHaveLength(1);
+    expect(result.meta.total).toBe(3);
+    expect(result.meta.page).toBe(2);
+  });
+
+  /**
+   * Validates that requesting a page beyond available data returns empty array.
+   * Guards against off-by-one errors in pagination logic.
+   */
+  it("should return empty data for out-of-range page", () => {
+    service.create(projectId, { ...repoDto, name: "R1" });
+
+    const result = service.findByProjectId(projectId, 100, 20);
+
+    expect(result.data).toHaveLength(0);
+    expect(result.meta.total).toBe(1);
+  });
+
+  /**
+   * Validates that creating a repository with a non-existent project ID
+   * throws a BadRequestException rather than a raw database error.
+   * This tests the FOREIGN KEY constraint error handling path.
+   */
+  it("should throw BadRequestException for non-existent project", () => {
+    expect(() => service.create("non-existent-id", repoDto)).toThrow(BadRequestException);
   });
 
   /**
