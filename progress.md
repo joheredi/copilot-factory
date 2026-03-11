@@ -1,5 +1,25 @@
 # Progress Log
 
+## T055: Implement test/lint/build command execution (2026-03-11)
+
+**What was done:**
+
+- Created `packages/infrastructure/src/validation/check-executor.ts` — concrete `CheckExecutorPort` implementation that executes validation commands (test, lint, build) via the policy-aware command wrapper from T047.
+- Created `packages/infrastructure/src/validation/check-executor.test.ts` — 21 tests covering: passed (exit 0), failed (non-zero exit), killed by signal/timeout, policy violations, workspace path forwarding, config forwarding (timeout, maxOutputBytes, maxOutputChars), output truncation, unexpected errors, and combined stdout/stderr output.
+- Created `packages/infrastructure/src/validation/index.ts` — barrel export.
+- Updated `packages/infrastructure/src/index.ts` — added validation module exports.
+
+**Key patterns:**
+
+- Infrastructure must NOT depend on `@factory/application` (layered architecture). The `CheckExecutorPort` interface is defined structurally in infrastructure; TypeScript's structural typing ensures compatibility.
+- Status mapping: exit 0 → "passed", non-zero exit → "failed", policy violation → "error", unexpected exception → "error". The "failed" vs "error" distinction matters for the validation runner's aggregation logic.
+- Uses `setProcessRunner` / `restoreDefaultProcessRunner` from command-wrapper for test isolation (no real process spawning).
+
+**Next loop should know:**
+
+- T056 (ValidationResultPacket emission) is now unblocked and depends on this executor.
+- The `createCheckExecutor()` factory requires a `CommandPolicy` and returns a `CheckExecutorPort`. The validation runner service (T054) consumes it.
+
 ## T053: Implement effective policy snapshot generation (2026-03-11)
 
 **What was done:**

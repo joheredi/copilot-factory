@@ -87,3 +87,13 @@ export {
   setProcessRunner,
   restoreDefaultProcessRunner,
 } from "./policy/index.js";
+
+// ─── Validation ──────────────────────────────────────────────────────────────
+export type {
+  CheckExecutorConfig,
+  CheckExecutorPort as InfraCheckExecutorPort,
+  CheckExecutionResult as InfraCheckExecutionResult,
+  ExecuteCheckParams as InfraExecuteCheckParams,
+} from "./validation/index.js";
+
+export { createCheckExecutor } from "./validation/index.js";
