@@ -27,7 +27,7 @@
  * @see docs/backlog/tasks/T069-artifact-storage.md
  */
 
-import { join, dirname, relative } from "node:path";
+import { join, dirname, relative, resolve, normalize } from "node:path";
 
 import type { FileSystem } from "../workspace/types.js";
 
@@ -77,6 +77,41 @@ export class ArtifactNotFoundError extends Error {
     this.name = "ArtifactNotFoundError";
     this.artifactPath = artifactPath;
   }
+}
+
+/**
+ * Thrown when an artifact path attempts to escape the artifact root via
+ * directory traversal (e.g., `../../etc/passwd`).
+ *
+ * This is a security error — callers should never construct paths that
+ * leave the artifact root boundary.
+ */
+export class PathTraversalError extends Error {
+  /** The offending relative path that attempted traversal. */
+  readonly artifactPath: string;
+
+  constructor(artifactPath: string) {
+    super(`Path traversal detected: "${artifactPath}" escapes the artifact root`);
+    this.name = "PathTraversalError";
+    this.artifactPath = artifactPath;
+  }
+}
+
+// ─── Artifact Entry ────────────────────────────────────────────────────────────
+
+/**
+ * Represents a single entry in an artifact directory listing.
+ *
+ * Used by {@link ArtifactStore.listArtifacts} and {@link ArtifactStore.listRunArtifacts}
+ * to describe the contents of an artifact directory tree.
+ */
+export interface ArtifactEntry {
+  /** Path relative to the artifact root. Can be used directly with readArtifact/readJSON. */
+  readonly relativePath: string;
+  /** The filename (leaf name) of the entry. */
+  readonly name: string;
+  /** Whether this entry is a file or a directory. */
+  readonly type: "file" | "directory";
 }
 
 // ─── Path Builders ─────────────────────────────────────────────────────────────
@@ -469,5 +504,193 @@ export class ArtifactStore {
    */
   toRelativePath(absolutePath: string): string {
     return relative(this.artifactRoot, absolutePath);
+  }
+
+  // ─── Retrieval Operations ──────────────────────────────────────────────────
+
+  /**
+   * Validate that a relative path does not escape the artifact root.
+   *
+   * Resolves the path against the artifact root and verifies the resulting
+   * absolute path is still within the root directory. This prevents directory
+   * traversal attacks (e.g., `../../etc/passwd`).
+   *
+   * @param relativePath - Relative path to validate.
+   * @throws {PathTraversalError} If the resolved path escapes the artifact root.
+   */
+  private validatePath(relativePath: string): void {
+    const normalized = normalize(relativePath);
+    const absPath = resolve(this.artifactRoot, normalized);
+    const normalizedRoot = resolve(this.artifactRoot);
+    if (!absPath.startsWith(normalizedRoot + "/") && absPath !== normalizedRoot) {
+      throw new PathTraversalError(relativePath);
+    }
+  }
+
+  /**
+   * Retrieve an artifact's raw content by entity reference path.
+   *
+   * Resolves the artifact reference to the correct location within the task's
+   * artifact directory. Returns `null` if the artifact does not exist, rather
+   * than throwing, to support graceful degradation in callers.
+   *
+   * @param repoId - Repository identifier.
+   * @param taskId - Task identifier.
+   * @param artifactRef - Relative reference within the task's artifact directory
+   *   (e.g., `packets/dev_result_packet-run-001.json` or `runs/run-001/logs/stdout.log`).
+   * @returns The artifact content as a string, or `null` if not found.
+   * @throws {PathTraversalError} If the resolved path escapes the artifact root.
+   * @throws {ArtifactStorageError} If reading fails for a reason other than "not found".
+   *
+   * @see docs/backlog/tasks/T070-artifact-retrieval.md
+   */
+  async getArtifact(repoId: string, taskId: string, artifactRef: string): Promise<string | null> {
+    const relativePath = join(taskBasePath(repoId, taskId), artifactRef);
+    this.validatePath(relativePath);
+
+    const absPath = join(this.artifactRoot, relativePath);
+    const fileExists = await this.fs.exists(absPath);
+    if (!fileExists) {
+      return null;
+    }
+
+    try {
+      return await this.fs.readFile(absPath);
+    } catch (err: unknown) {
+      throw new ArtifactStorageError(relativePath, err);
+    }
+  }
+
+  /**
+   * Retrieve and parse a JSON artifact by entity reference path.
+   *
+   * Combines {@link getArtifact} with JSON parsing and optional schema version
+   * handling. Returns `null` if the artifact does not exist.
+   *
+   * For schema version handling: if the parsed JSON contains a `schema_version`
+   * field, it is preserved as-is. Callers can inspect the version to apply
+   * migration logic if needed.
+   *
+   * @param repoId - Repository identifier.
+   * @param taskId - Task identifier.
+   * @param artifactRef - Relative reference within the task's artifact directory
+   *   (e.g., `packets/dev_result_packet-run-001.json`).
+   * @returns The parsed JSON value, or `null` if not found.
+   * @throws {PathTraversalError} If the resolved path escapes the artifact root.
+   * @throws {ArtifactStorageError} If reading or parsing fails.
+   *
+   * @see docs/backlog/tasks/T070-artifact-retrieval.md
+   */
+  async getJSONArtifact<T = unknown>(
+    repoId: string,
+    taskId: string,
+    artifactRef: string,
+  ): Promise<T | null> {
+    const content = await this.getArtifact(repoId, taskId, artifactRef);
+    if (content === null) {
+      return null;
+    }
+
+    const relativePath = join(taskBasePath(repoId, taskId), artifactRef);
+    try {
+      return JSON.parse(content) as T;
+    } catch (err: unknown) {
+      throw new ArtifactStorageError(relativePath, err);
+    }
+  }
+
+  /**
+   * List all artifacts for a task as a flat list of entries.
+   *
+   * Recursively walks the task's artifact directory and returns every file
+   * and directory found. Returns an empty array if the task directory does
+   * not exist (graceful handling for tasks that have no artifacts yet).
+   *
+   * @param repoId - Repository identifier.
+   * @param taskId - Task identifier.
+   * @returns Array of {@link ArtifactEntry} objects describing the directory tree.
+   * @throws {ArtifactStorageError} If reading the directory tree fails.
+   *
+   * @see docs/backlog/tasks/T070-artifact-retrieval.md
+   */
+  async listArtifacts(repoId: string, taskId: string): Promise<ArtifactEntry[]> {
+    const basePath = taskBasePath(repoId, taskId);
+    const absBase = join(this.artifactRoot, basePath);
+
+    const dirExists = await this.fs.exists(absBase);
+    if (!dirExists) {
+      return [];
+    }
+
+    try {
+      return await this.walkDirectory(absBase, basePath);
+    } catch (err: unknown) {
+      throw new ArtifactStorageError(basePath, err);
+    }
+  }
+
+  /**
+   * List artifacts for a specific run within a task.
+   *
+   * Returns all files and directories under `runs/{runId}/` (logs, outputs,
+   * validation results). Returns an empty array if the run directory does
+   * not exist.
+   *
+   * @param repoId - Repository identifier.
+   * @param taskId - Task identifier.
+   * @param runId - Worker run identifier.
+   * @returns Array of {@link ArtifactEntry} objects for the run.
+   * @throws {ArtifactStorageError} If reading the directory tree fails.
+   *
+   * @see docs/backlog/tasks/T070-artifact-retrieval.md
+   */
+  async listRunArtifacts(repoId: string, taskId: string, runId: string): Promise<ArtifactEntry[]> {
+    const basePath = join(taskBasePath(repoId, taskId), "runs", runId);
+    const absBase = join(this.artifactRoot, basePath);
+
+    const dirExists = await this.fs.exists(absBase);
+    if (!dirExists) {
+      return [];
+    }
+
+    try {
+      return await this.walkDirectory(absBase, basePath);
+    } catch (err: unknown) {
+      throw new ArtifactStorageError(basePath, err);
+    }
+  }
+
+  /**
+   * Recursively walk a directory and collect all entries.
+   *
+   * @param absDir - Absolute path to the directory to walk.
+   * @param relativeBase - Relative path from the artifact root to this directory.
+   * @returns Flat array of all entries (files and directories) found.
+   */
+  private async walkDirectory(absDir: string, relativeBase: string): Promise<ArtifactEntry[]> {
+    const entries = await this.fs.readdir(absDir);
+    const results: ArtifactEntry[] = [];
+
+    for (const entry of entries) {
+      const entryRelPath = join(relativeBase, entry.name);
+
+      if (entry.isDirectory) {
+        results.push({
+          relativePath: entryRelPath,
+          name: entry.name,
+          type: "directory",
+        });
+        const children = await this.walkDirectory(join(absDir, entry.name), entryRelPath);
+        results.push(...children);
+      } else {
+        results.push({
+          relativePath: entryRelPath,
+          name: entry.name,
+          type: "file",
+        });
+      }
+    }
+
+    return results;
   }
 }

@@ -213,4 +213,15 @@ export interface FileSystem {
    * @param newPath - Absolute path for the renamed file.
    */
   rename(oldPath: string, newPath: string): Promise<void>;
+
+  /**
+   * Read the entries of a directory.
+   *
+   * Each entry includes the name and whether it is a file or directory.
+   * Returns an empty array if the directory does not exist.
+   *
+   * @param path - Absolute directory path to read.
+   * @returns Array of directory entries with name and type.
+   */
+  readdir(path: string): Promise<Array<{ name: string; isDirectory: boolean }>>;
 }

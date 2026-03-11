@@ -1,5 +1,35 @@
 # Progress Log
 
+## 2026-03-11 — T070: Implement artifact reference resolution and retrieval
+
+**Status:** Done
+
+**What was done:**
+
+- Extended `FileSystem` interface with `readdir` method for directory listing
+- Updated `createNodeFileSystem` production implementation with `readdir` (using `withFileTypes`)
+- Added to `ArtifactStore`: `getArtifact()`, `getJSONArtifact()`, `listArtifacts()`, `listRunArtifacts()`
+- Added `PathTraversalError` — blocks directory traversal attacks (paths escaping artifact root)
+- Added `ArtifactEntry` type for directory listing results
+- Added `ArtifactRetrievalPort` in `@factory/application` for hexagonal architecture compliance
+- Graceful null returns for missing artifacts (no throwing for not-found cases)
+- JSON deserialization preserves `schema_version` for version-aware consumers
+- Recursive directory walking via `walkDirectory` private method
+- 26 new tests covering retrieval, listing, traversal security, error handling
+- All 2821 tests passing, build clean
+
+**Patterns used:**
+
+- Same FakeFileSystem pattern for tests, extended with `readdir` that introspects the in-memory file/dir maps
+- Path traversal protection via `normalize()` + `resolve()` boundary check
+- Graceful degradation: return null/empty array instead of throwing for missing resources
+
+**Next loop should know:**
+
+- `FakeFileSystem` in both `artifact-store.test.ts` and `copilot-cli-adapter.test.ts` now has `readdir`
+- `ArtifactRetrievalPort` in application layer is ready for service implementations
+- T084 (API artifacts/reviews) is unblocked by T070 completion
+
 ## 2026-03-11 — T082: Implement Task management endpoints
 
 **Status:** Done

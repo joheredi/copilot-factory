@@ -211,6 +211,39 @@ class FakeFileSystem implements FileSystem {
     this.files.delete(oldPath);
     this.files.set(newPath, content);
   }
+
+  async readdir(path: string): Promise<Array<{ name: string; isDirectory: boolean }>> {
+    const prefix = path.endsWith("/") ? path : path + "/";
+    const entries = new Map<string, boolean>();
+
+    for (const filePath of this.files.keys()) {
+      if (filePath.startsWith(prefix)) {
+        const rest = filePath.slice(prefix.length);
+        const slashIndex = rest.indexOf("/");
+        if (slashIndex === -1) {
+          entries.set(rest, false);
+        } else {
+          entries.set(rest.slice(0, slashIndex), true);
+        }
+      }
+    }
+
+    for (const dirPath of this.dirs) {
+      if (dirPath.startsWith(prefix)) {
+        const rest = dirPath.slice(prefix.length);
+        const slashIndex = rest.indexOf("/");
+        if (slashIndex === -1 && rest.length > 0) {
+          entries.set(rest, true);
+        } else if (slashIndex > 0) {
+          entries.set(rest.slice(0, slashIndex), true);
+        }
+      }
+    }
+
+    return Array.from(entries.entries())
+      .map(([name, isDirectory]) => ({ name, isDirectory }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
 }
 
 /**

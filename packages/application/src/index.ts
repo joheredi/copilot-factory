@@ -392,6 +392,9 @@ export type {
   PolicySnapshotArtifactPort,
 } from "./ports/policy-snapshot.ports.js";
 
+// Ports — artifact retrieval interfaces (PRD 007 §7.6, §7.11)
+export type { ArtifactEntryDto, ArtifactRetrievalPort } from "./ports/artifact-retrieval.ports.js";
+
 // Services — policy snapshot generation (PRD 009 §9.2)
 export {
   createPolicySnapshotService,

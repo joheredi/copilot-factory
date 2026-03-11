@@ -11,9 +11,14 @@
 
 // ─── Store ─────────────────────────────────────────────────────────────────────
 
-export { ArtifactStore, ArtifactStorageError, ArtifactNotFoundError } from "./artifact-store.js";
+export {
+  ArtifactStore,
+  ArtifactStorageError,
+  ArtifactNotFoundError,
+  PathTraversalError,
+} from "./artifact-store.js";
 
-export type { ArtifactStoreConfig } from "./artifact-store.js";
+export type { ArtifactStoreConfig, ArtifactEntry } from "./artifact-store.js";
 
 // ─── Path Builders ─────────────────────────────────────────────────────────────
 

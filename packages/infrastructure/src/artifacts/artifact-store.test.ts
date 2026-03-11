@@ -28,6 +28,7 @@ import {
   ArtifactStore,
   ArtifactStorageError,
   ArtifactNotFoundError,
+  PathTraversalError,
   taskBasePath,
   packetPath,
   runLogPath,
@@ -38,7 +39,7 @@ import {
   summaryPath,
 } from "./artifact-store.js";
 
-import type { ArtifactStoreConfig } from "./artifact-store.js";
+import type { ArtifactStoreConfig, ArtifactEntry } from "./artifact-store.js";
 
 // ─── In-Memory Fake FileSystem ─────────────────────────────────────────────────
 
@@ -60,8 +61,17 @@ class FakeFileSystem implements FileSystem {
   renameError: Error | null = null;
   readError: Error | null = null;
 
-  async mkdir(path: string, _options?: { recursive?: boolean }): Promise<void> {
+  async mkdir(path: string, options?: { recursive?: boolean }): Promise<void> {
     this.dirs.add(path);
+    if (options?.recursive) {
+      let parent = path;
+      while (true) {
+        const idx = parent.lastIndexOf("/");
+        if (idx <= 0) break;
+        parent = parent.slice(0, idx);
+        this.dirs.add(parent);
+      }
+    }
   }
 
   async exists(path: string): Promise<boolean> {
@@ -102,6 +112,42 @@ class FakeFileSystem implements FileSystem {
     this.renameLog.push({ oldPath, newPath });
     this.files.delete(oldPath);
     this.files.set(newPath, content);
+  }
+
+  async readdir(path: string): Promise<Array<{ name: string; isDirectory: boolean }>> {
+    if (this.readError) {
+      throw this.readError;
+    }
+    const prefix = path.endsWith("/") ? path : path + "/";
+    const entries = new Map<string, boolean>();
+
+    for (const filePath of this.files.keys()) {
+      if (filePath.startsWith(prefix)) {
+        const rest = filePath.slice(prefix.length);
+        const slashIndex = rest.indexOf("/");
+        if (slashIndex === -1) {
+          entries.set(rest, false);
+        } else {
+          entries.set(rest.slice(0, slashIndex), true);
+        }
+      }
+    }
+
+    for (const dirPath of this.dirs) {
+      if (dirPath.startsWith(prefix)) {
+        const rest = dirPath.slice(prefix.length);
+        const slashIndex = rest.indexOf("/");
+        if (slashIndex === -1 && rest.length > 0) {
+          entries.set(rest, true);
+        } else if (slashIndex > 0) {
+          entries.set(rest.slice(0, slashIndex), true);
+        }
+      }
+    }
+
+    return Array.from(entries.entries())
+      .map(([name, isDirectory]) => ({ name, isDirectory }))
+      .sort((a, b) => a.name.localeCompare(b.name));
   }
 }
 
@@ -606,6 +652,304 @@ describe("ArtifactStore", () => {
       const parsed = await store.readJSON("nullish.json");
       // undefined is stripped by JSON.stringify
       expect(parsed).toEqual({ value: null });
+    });
+  });
+
+  // ─── getArtifact ───────────────────────────────────────────────────────────
+
+  describe("getArtifact", () => {
+    /**
+     * Tests retrieving artifact content by entity reference path.
+     * This is the primary retrieval method used by the API and UI.
+     * It returns null for missing artifacts instead of throwing,
+     * which enables graceful degradation in callers.
+     */
+
+    it("returns content of an existing artifact by ref within a task", async () => {
+      const packet = { packet_type: "dev_result_packet", status: "success" };
+      await store.storePacket(REPO_ID, TASK_ID, "dev_result_packet", RUN_ID, packet);
+
+      const content = await store.getArtifact(
+        REPO_ID,
+        TASK_ID,
+        `packets/dev_result_packet-${RUN_ID}.json`,
+      );
+      expect(content).not.toBeNull();
+      expect(JSON.parse(content!)).toEqual(packet);
+    });
+
+    it("returns null for a non-existent artifact (graceful handling)", async () => {
+      const result = await store.getArtifact(REPO_ID, TASK_ID, "packets/nonexistent.json");
+      expect(result).toBeNull();
+    });
+
+    it("returns null when task directory does not exist", async () => {
+      const result = await store.getArtifact("no-repo", "no-task", "packets/test.json");
+      expect(result).toBeNull();
+    });
+
+    it("retrieves log artifacts by ref", async () => {
+      await store.storeLog(REPO_ID, TASK_ID, RUN_ID, "stdout", "log line 1\nlog line 2");
+
+      const content = await store.getArtifact(REPO_ID, TASK_ID, `runs/${RUN_ID}/logs/stdout.log`);
+      expect(content).toBe("log line 1\nlog line 2");
+    });
+
+    it("retrieves review artifacts by ref", async () => {
+      await store.storeReviewArtifact(
+        REPO_ID,
+        TASK_ID,
+        REVIEW_CYCLE_ID,
+        "feedback.json",
+        '{"verdict":"approved"}',
+      );
+
+      const content = await store.getArtifact(
+        REPO_ID,
+        TASK_ID,
+        `reviews/${REVIEW_CYCLE_ID}/feedback.json`,
+      );
+      expect(content).toBe('{"verdict":"approved"}');
+    });
+
+    it("throws PathTraversalError for traversal attempts", async () => {
+      await expect(
+        store.getArtifact(REPO_ID, TASK_ID, "../../../../../etc/passwd"),
+      ).rejects.toThrow(PathTraversalError);
+    });
+
+    it("throws PathTraversalError for absolute path injection", async () => {
+      await expect(
+        store.getArtifact(REPO_ID, TASK_ID, "../../../../../../outside"),
+      ).rejects.toThrow(PathTraversalError);
+    });
+
+    it("throws ArtifactStorageError on filesystem read errors", async () => {
+      await store.storeArtifact(
+        join("repositories", REPO_ID, "tasks", TASK_ID, "packets", "test.json"),
+        "content",
+      );
+      fakeFs.readError = new Error("EIO: i/o error");
+
+      await expect(store.getArtifact(REPO_ID, TASK_ID, "packets/test.json")).rejects.toThrow(
+        ArtifactStorageError,
+      );
+    });
+  });
+
+  // ─── getJSONArtifact ───────────────────────────────────────────────────────
+
+  describe("getJSONArtifact", () => {
+    /**
+     * Tests JSON artifact retrieval with parsing. This is the most common
+     * retrieval pattern since packets and validation results are all JSON.
+     * Returns null for missing artifacts and throws on parse errors.
+     */
+
+    it("returns parsed JSON for an existing packet", async () => {
+      const packet = { packet_type: "dev_result_packet", schema_version: "1.0", status: "success" };
+      await store.storePacket(REPO_ID, TASK_ID, "dev_result_packet", RUN_ID, packet);
+
+      const result = await store.getJSONArtifact<typeof packet>(
+        REPO_ID,
+        TASK_ID,
+        `packets/dev_result_packet-${RUN_ID}.json`,
+      );
+      expect(result).toEqual(packet);
+    });
+
+    it("returns null for non-existent artifacts", async () => {
+      const result = await store.getJSONArtifact(REPO_ID, TASK_ID, "packets/missing.json");
+      expect(result).toBeNull();
+    });
+
+    it("preserves schema_version field for version-aware consumers", async () => {
+      const packet = { schema_version: "2.1", packet_type: "test", data: [1, 2, 3] };
+      await store.storePacket(REPO_ID, TASK_ID, "test", "p1", packet);
+
+      const result = await store.getJSONArtifact<typeof packet>(
+        REPO_ID,
+        TASK_ID,
+        "packets/test-p1.json",
+      );
+      expect(result).not.toBeNull();
+      expect(result!.schema_version).toBe("2.1");
+    });
+
+    it("throws ArtifactStorageError for invalid JSON content", async () => {
+      await store.storeArtifact(
+        join("repositories", REPO_ID, "tasks", TASK_ID, "packets", "bad.json"),
+        "not valid json{{{",
+      );
+
+      await expect(store.getJSONArtifact(REPO_ID, TASK_ID, "packets/bad.json")).rejects.toThrow(
+        ArtifactStorageError,
+      );
+    });
+
+    it("throws PathTraversalError for traversal attempts", async () => {
+      await expect(
+        store.getJSONArtifact(REPO_ID, TASK_ID, "../../../../../secrets.json"),
+      ).rejects.toThrow(PathTraversalError);
+    });
+  });
+
+  // ─── listArtifacts ─────────────────────────────────────────────────────────
+
+  describe("listArtifacts", () => {
+    /**
+     * Tests listing all artifacts for a task. The listing walks the directory
+     * tree recursively and returns a flat array of entries. This is critical
+     * for the API and UI to show artifact trees for a task.
+     * Returns an empty array for non-existent tasks (graceful handling).
+     */
+
+    it("returns empty array for a task with no artifacts", async () => {
+      const entries = await store.listArtifacts("no-repo", "no-task");
+      expect(entries).toEqual([]);
+    });
+
+    it("lists all artifacts in a task directory tree", async () => {
+      await store.storePacket(REPO_ID, TASK_ID, "dev_result_packet", RUN_ID, { v: 1 });
+      await store.storeLog(REPO_ID, TASK_ID, RUN_ID, "stdout", "log content");
+      await store.storeSummary(REPO_ID, TASK_ID, "final.md", "# Summary");
+
+      const entries = await store.listArtifacts(REPO_ID, TASK_ID);
+
+      const fileEntries = entries.filter((e: ArtifactEntry) => e.type === "file");
+      const dirEntries = entries.filter((e: ArtifactEntry) => e.type === "directory");
+
+      expect(fileEntries.length).toBeGreaterThanOrEqual(3);
+      expect(dirEntries.length).toBeGreaterThanOrEqual(1);
+
+      // Verify specific files exist in the listing
+      const paths = entries.map((e: ArtifactEntry) => e.relativePath);
+      expect(paths).toContain(packetPath(REPO_ID, TASK_ID, "dev_result_packet", RUN_ID));
+      expect(paths).toContain(runLogPath(REPO_ID, TASK_ID, RUN_ID, "stdout"));
+      expect(paths).toContain(summaryPath(REPO_ID, TASK_ID, "final.md"));
+    });
+
+    it("includes both files and directories in results", async () => {
+      await store.storePacket(REPO_ID, TASK_ID, "test", "p1", { data: true });
+
+      const entries = await store.listArtifacts(REPO_ID, TASK_ID);
+      const types = new Set(entries.map((e: ArtifactEntry) => e.type));
+      expect(types.has("file")).toBe(true);
+      expect(types.has("directory")).toBe(true);
+    });
+
+    it("entry relativePaths are usable with readArtifact", async () => {
+      await store.storePacket(REPO_ID, TASK_ID, "dev_result_packet", RUN_ID, { check: true });
+
+      const entries = await store.listArtifacts(REPO_ID, TASK_ID);
+      const jsonFiles = entries.filter(
+        (e: ArtifactEntry) => e.type === "file" && e.name.endsWith(".json"),
+      );
+      expect(jsonFiles.length).toBeGreaterThan(0);
+
+      // Every file entry's relativePath should be readable
+      for (const entry of jsonFiles) {
+        const content = await store.readArtifact(entry.relativePath);
+        expect(content).toBeTruthy();
+      }
+    });
+
+    it("throws ArtifactStorageError on filesystem errors during listing", async () => {
+      // Store something so the dir exists
+      await store.storePacket(REPO_ID, TASK_ID, "test", "p1", {});
+      fakeFs.readError = new Error("EIO: i/o error");
+
+      await expect(store.listArtifacts(REPO_ID, TASK_ID)).rejects.toThrow(ArtifactStorageError);
+    });
+  });
+
+  // ─── listRunArtifacts ──────────────────────────────────────────────────────
+
+  describe("listRunArtifacts", () => {
+    /**
+     * Tests listing artifacts for a specific run within a task. This scopes
+     * the listing to runs/{runId}/ and only returns artifacts from that run.
+     * Used by the UI to show logs/outputs/validation for a specific worker run.
+     */
+
+    it("returns empty array for a non-existent run", async () => {
+      const entries = await store.listRunArtifacts(REPO_ID, TASK_ID, "no-such-run");
+      expect(entries).toEqual([]);
+    });
+
+    it("lists only artifacts for the specified run", async () => {
+      // Store artifacts in two different runs
+      await store.storeLog(REPO_ID, TASK_ID, "run-001", "stdout", "run 1 output");
+      await store.storeLog(REPO_ID, TASK_ID, "run-002", "stdout", "run 2 output");
+
+      const run1Entries = await store.listRunArtifacts(REPO_ID, TASK_ID, "run-001");
+      const run1Paths = run1Entries.map((e: ArtifactEntry) => e.relativePath);
+
+      // Should contain run-001 artifacts
+      expect(run1Paths).toContain(runLogPath(REPO_ID, TASK_ID, "run-001", "stdout"));
+      // Should NOT contain run-002 artifacts
+      const hasRun2 = run1Paths.some((p: string) => p.includes("run-002"));
+      expect(hasRun2).toBe(false);
+    });
+
+    it("includes logs, outputs, and validation results", async () => {
+      await store.storeLog(REPO_ID, TASK_ID, RUN_ID, "stdout", "output");
+      await store.storeValidationResult(REPO_ID, TASK_ID, RUN_ID, "vr-001", { passed: true });
+
+      const entries = await store.listRunArtifacts(REPO_ID, TASK_ID, RUN_ID);
+      const paths = entries.map((e: ArtifactEntry) => e.relativePath);
+
+      expect(paths).toContain(runLogPath(REPO_ID, TASK_ID, RUN_ID, "stdout"));
+      expect(paths).toContain(runValidationPath(REPO_ID, TASK_ID, RUN_ID, "vr-001.json"));
+    });
+
+    it("throws ArtifactStorageError on filesystem errors during listing", async () => {
+      await store.storeLog(REPO_ID, TASK_ID, RUN_ID, "stdout", "data");
+      fakeFs.readError = new Error("permission denied");
+
+      await expect(store.listRunArtifacts(REPO_ID, TASK_ID, RUN_ID)).rejects.toThrow(
+        ArtifactStorageError,
+      );
+    });
+  });
+
+  // ─── Path traversal security ───────────────────────────────────────────────
+
+  describe("path traversal security", () => {
+    /**
+     * Tests that directory traversal attacks are blocked. This is critical
+     * security validation — without it, a malicious artifactRef could read
+     * arbitrary files on the filesystem.
+     */
+
+    it("blocks simple parent traversal", async () => {
+      await expect(
+        store.getArtifact(REPO_ID, TASK_ID, "../../../../../etc/passwd"),
+      ).rejects.toThrow(PathTraversalError);
+    });
+
+    it("blocks deeply nested traversal", async () => {
+      await expect(
+        store.getArtifact(REPO_ID, TASK_ID, "../../../../../../root/.ssh/id_rsa"),
+      ).rejects.toThrow(PathTraversalError);
+    });
+
+    it("allows legitimate nested paths", async () => {
+      await store.storeLog(REPO_ID, TASK_ID, RUN_ID, "stdout", "safe content");
+
+      // This should NOT throw — it's a legitimate nested path
+      const content = await store.getArtifact(REPO_ID, TASK_ID, `runs/${RUN_ID}/logs/stdout.log`);
+      expect(content).toBe("safe content");
+    });
+
+    it("PathTraversalError includes the offending path", async () => {
+      try {
+        await store.getArtifact(REPO_ID, TASK_ID, "../../../../../evil");
+        expect.fail("should have thrown");
+      } catch (err: unknown) {
+        expect(err).toBeInstanceOf(PathTraversalError);
+        expect((err as PathTraversalError).artifactPath).toContain("evil");
+      }
     });
   });
 });

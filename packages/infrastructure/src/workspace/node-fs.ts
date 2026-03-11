@@ -3,7 +3,7 @@
  * Production {@link FileSystem} implementation using Node.js `fs/promises`.
  */
 
-import { mkdir, access, writeFile, readFile, unlink, rename } from "node:fs/promises";
+import { mkdir, access, writeFile, readFile, readdir, unlink, rename } from "node:fs/promises";
 
 import type { FileSystem } from "./types.js";
 
@@ -56,6 +56,25 @@ export function createNodeFileSystem(): FileSystem {
 
     async rename(oldPath: string, newPath: string): Promise<void> {
       await rename(oldPath, newPath);
+    },
+
+    async readdir(path: string): Promise<Array<{ name: string; isDirectory: boolean }>> {
+      try {
+        const entries = await readdir(path, { withFileTypes: true });
+        return entries.map((entry) => ({
+          name: entry.name,
+          isDirectory: entry.isDirectory(),
+        }));
+      } catch (err: unknown) {
+        if (
+          err instanceof Error &&
+          "code" in err &&
+          (err as NodeJS.ErrnoException).code === "ENOENT"
+        ) {
+          return [];
+        }
+        throw err;
+      }
     },
   };
 }
