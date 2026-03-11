@@ -60,3 +60,13 @@ export type {
 export { DevResultPacketSchema, DevResultPacketResultSchema } from "./dev-result-packet.js";
 
 export type { DevResultPacket, DevResultPacketResult } from "./dev-result-packet.js";
+
+// ─── ReviewPacket (PRD 008 §8.6) ────────────────────────────────────────────
+export { ReviewPacketSchema } from "./review-packet.js";
+
+export type { ReviewPacket } from "./review-packet.js";
+
+// ─── LeadReviewDecisionPacket (PRD 008 §8.7) ────────────────────────────────
+export { LeadReviewDecisionPacketSchema } from "./lead-review-decision-packet.js";
+
+export type { LeadReviewDecisionPacket } from "./lead-review-decision-packet.js";

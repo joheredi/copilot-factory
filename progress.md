@@ -1,5 +1,28 @@
 # Progress Log
 
+## T022 — Define ReviewPacket and LeadReviewDecisionPacket schemas (2026-03-11)
+
+### What was done
+
+- Created `packages/schemas/src/review-packet.ts` — ReviewPacket schema (§8.6) with all fields from the canonical shape: packet_type, schema_version, created_at, task_id, repository_id, review_cycle_id, reviewer_pool_id, reviewer_type, verdict, summary, blocking_issues, non_blocking_issues, confidence, follow_up_task_refs, risks, open_questions
+- Created `packages/schemas/src/lead-review-decision-packet.ts` — LeadReviewDecisionPacket schema (§8.7) with all fields: packet_type, schema_version, created_at, task_id, repository_id, review_cycle_id, decision, summary, blocking_issues, non_blocking_suggestions, deduplication_notes, follow_up_task_refs, risks, open_questions
+- Updated index.ts barrel exports for both new schemas and types
+- 21 ReviewPacket tests + 18 LeadReviewDecisionPacket tests = 39 new tests
+- All 1,448 tests pass, build clean, lint clean
+- Fixed stale backlog index for T021 (was pending, task file says done) and T030 (same)
+
+### Design decisions
+
+- `reviewer_type` is a free-form `z.string().min(1)` rather than enum because the spec example uses "security" and the domain doesn't define a fixed set of reviewer types — new types can be added without schema changes
+- `non_blocking_suggestions` on LeadReviewDecisionPacket uses `z.array(z.string())` (not IssueSchema) because the spec §8.7.2 shows plain strings, unlike `blocking_issues` which uses Issue objects
+- Cross-field invariants (e.g., "blocking_issues must be empty when verdict is approved") are NOT enforced here — they belong in T024 per the task scope boundary
+- Renamed the imported `LeadReviewDecisionSchema` to `LeadReviewDecisionEnumSchema` locally to avoid shadowing with the packet schema name
+
+### Patterns for next loops
+
+- T023 (remaining packet schemas: MergePacket, MergeAssistPacket, ValidationResultPacket, PostMergeAnalysisPacket) follows the same pattern — one file per packet, spec example as primary test case
+- T024 (cross-field validation) should use Zod `.superRefine()` to add the invariants from §8.13
+
 ## T021 — Define TaskPacket and DevResultPacket Zod schemas (2026-03-11)
 
 ### What was done

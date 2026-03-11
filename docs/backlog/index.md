@@ -141,8 +141,8 @@ See [phase documents](phases/) for details.
 | [T018](tasks/T018-atomic-transition-audit.md)       | Implement atomic transition + audit persistence                                       | E003 | P0       | foundation | done    |
 | [T019](tasks/T019-optimistic-concurrency.md)        | Implement optimistic concurrency control                                              | E003 | P0       | foundation | done    |
 | [T020](tasks/T020-shared-zod-types.md)              | Define shared Zod types for packets                                                   | E004 | P0       | foundation | done    |
-| [T021](tasks/T021-schemas-task-dev.md)              | Define TaskPacket and DevResultPacket Zod schemas                                     | E004 | P0       | foundation | pending |
-| [T022](tasks/T022-schemas-review.md)                | Define ReviewPacket and LeadReviewDecisionPacket schemas                              | E004 | P0       | foundation | pending |
+| [T021](tasks/T021-schemas-task-dev.md)              | Define TaskPacket and DevResultPacket Zod schemas                                     | E004 | P0       | foundation | done    |
+| [T022](tasks/T022-schemas-review.md)                | Define ReviewPacket and LeadReviewDecisionPacket schemas                              | E004 | P0       | foundation | done    |
 | [T023](tasks/T023-schemas-merge-validation.md)      | Define remaining packet schemas                                                       | E004 | P0       | foundation | pending |
 | [T024](tasks/T024-schema-cross-validation.md)       | Implement cross-field validation and schema versioning                                | E004 | P0       | foundation | pending |
 | [T025](tasks/T025-job-queue-core.md)                | Implement DB-backed job queue                                                         | E005 | P0       | foundation | done    |
@@ -150,7 +150,7 @@ See [phase documents](phases/) for details.
 | [T027](tasks/T027-scheduler-service.md)             | Implement Scheduler service                                                           | E005 | P0       | feature    | pending |
 | [T028](tasks/T028-scheduler-tick-loop.md)           | Implement scheduler tick loop                                                         | E005 | P1       | feature    | pending |
 | [T029](tasks/T029-reconciliation-sweep.md)          | Implement reconciliation sweep job                                                    | E005 | P1       | feature    | pending |
-| [T030](tasks/T030-lease-acquisition.md)             | Implement lease acquisition with exclusivity                                          | E006 | P0       | feature    | pending |
+| [T030](tasks/T030-lease-acquisition.md)             | Implement lease acquisition with exclusivity                                          | E006 | P0       | feature    | done    |
 | [T031](tasks/T031-heartbeat-staleness.md)           | Implement heartbeat receive and staleness detection                                   | E006 | P0       | feature    | pending |
 | [T032](tasks/T032-graceful-completion.md)           | Implement graceful completion protocol                                                | E006 | P0       | feature    | pending |
 | [T033](tasks/T033-lease-reclaim.md)                 | Implement stale lease reclaim and retry/escalation                                    | E006 | P0       | feature    | pending |
