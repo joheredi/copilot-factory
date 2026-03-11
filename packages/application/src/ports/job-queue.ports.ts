@@ -67,6 +67,8 @@ export interface CreateJobData {
  *
  * Operations are designed for atomic queue semantics:
  * - `findById` for status checks and validation
+ * - `findByIds` for bulk lookups (dependency resolution)
+ * - `findByGroupId` for group coordination queries
  * - `create` for enqueueing new jobs
  * - `claimNextByType` atomically selects and claims the oldest eligible job
  * - `updateStatus` for completing or failing a claimed job
@@ -78,6 +80,29 @@ export interface JobQueueRepositoryPort {
    * @returns The job record, or undefined if not found.
    */
   findById(jobId: string): QueuedJob | undefined;
+
+  /**
+   * Find multiple jobs by their IDs.
+   *
+   * Used for dependency resolution — checking whether all dependency
+   * jobs have reached terminal status before allowing a dependent job
+   * to be claimed.
+   *
+   * @param jobIds - IDs of jobs to look up.
+   * @returns The found job records (may be fewer than requested if some IDs don't exist).
+   */
+  findByIds(jobIds: string[]): QueuedJob[];
+
+  /**
+   * Find all jobs belonging to a job group.
+   *
+   * Job groups coordinate related jobs — e.g., all specialist reviewer
+   * jobs in one review cycle share the same `job_group_id`.
+   *
+   * @param groupId - The group identifier.
+   * @returns All jobs with matching `jobGroupId`, in creation order.
+   */
+  findByGroupId(groupId: string): QueuedJob[];
 
   /**
    * Insert a new job into the queue.
@@ -104,6 +129,8 @@ export interface JobQueueRepositoryPort {
    * "Eligible" means:
    * - status is PENDING
    * - run_after is null or <= `now`
+   * - all jobs listed in `depends_on_job_ids` are in terminal status
+   *   (`completed` or `failed`), or `depends_on_job_ids` is null/empty
    *
    * The claim sets:
    * - status to CLAIMED

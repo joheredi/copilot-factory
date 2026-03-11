@@ -46,18 +46,46 @@ const FIXED_NOW = new Date("2025-06-15T12:00:00Z");
  *
  * This mock stores jobs in a plain array and performs status-based
  * optimistic concurrency checks, matching the contract the real
- * SQLite repository provides.
+ * SQLite repository provides. The claim operation filters out jobs
+ * with unmet dependencies (dependsOnJobIds not all in terminal status).
  */
 function createMockJobRepo(
   initialJobs: QueuedJob[] = [],
 ): JobQueueRepositoryPort & { jobs: QueuedJob[] } {
   const jobs = [...initialJobs];
 
+  /**
+   * Check whether all dependency jobs for a given job are in terminal status.
+   * Terminal statuses: completed, failed.
+   */
+  function areDependenciesMet(job: QueuedJob): boolean {
+    const deps = Array.isArray(job.dependsOnJobIds) ? job.dependsOnJobIds : [];
+    if (deps.length === 0) return true;
+
+    return deps.every((depId: string) => {
+      const depJob = jobs.find((j) => j.jobId === depId);
+      return (
+        depJob !== undefined &&
+        (depJob.status === JobStatus.COMPLETED || depJob.status === JobStatus.FAILED)
+      );
+    });
+  }
+
   return {
     jobs,
 
     findById(jobId: string): QueuedJob | undefined {
       return jobs.find((j) => j.jobId === jobId);
+    },
+
+    findByIds(jobIds: string[]): QueuedJob[] {
+      return jobs.filter((j) => jobIds.includes(j.jobId));
+    },
+
+    findByGroupId(groupId: string): QueuedJob[] {
+      return jobs
+        .filter((j) => j.jobGroupId === groupId)
+        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
     },
 
     create(data: {
@@ -94,13 +122,15 @@ function createMockJobRepo(
     },
 
     claimNextByType(jobType: JobType, leaseOwner: string, now: Date): QueuedJob | undefined {
-      // Find the oldest eligible job: PENDING, runAfter <= now or null, matching type
+      // Find the oldest eligible job: PENDING, runAfter <= now or null, matching type,
+      // and all dependencies in terminal status
       const eligible = jobs
         .filter(
           (j) =>
             j.status === JobStatus.PENDING &&
             j.jobType === jobType &&
-            (j.runAfter === null || j.runAfter <= now),
+            (j.runAfter === null || j.runAfter <= now) &&
+            areDependenciesMet(j),
         )
         .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
 
@@ -936,6 +966,644 @@ describe("JobQueueService", () => {
       }
 
       expect(results.every((r) => r === null)).toBe(true);
+    });
+  });
+
+  // ─── Job Dependency Tests ───────────────────────────────────────────────────
+
+  /**
+   * Tests for job dependency enforcement.
+   *
+   * Jobs with `dependsOnJobIds` must not be claimable until all dependency
+   * jobs reach terminal status (completed or failed). This is the core
+   * invariant for review fan-out coordination: lead reviewer jobs must wait
+   * for all specialist reviewer jobs to finish.
+   *
+   * @see docs/prd/002-data-model.md — Job coordination rules
+   */
+  describe("job dependency enforcement", () => {
+    let service: JobQueueService;
+    let jobRepo: JobQueueRepositoryPort & { jobs: QueuedJob[] };
+
+    beforeEach(() => {
+      mockIdCounter = 0;
+      jobRepo = createMockJobRepo();
+      const uow = createMockUnitOfWork(jobRepo);
+      service = createJobQueueService(uow, createMockIdGenerator(), createMockClock(FIXED_NOW));
+    });
+
+    /**
+     * A job with unmet dependencies must not be claimable.
+     * This prevents premature execution of dependent jobs.
+     */
+    it("should not claim a job when dependency jobs are still pending", () => {
+      const depJob = makePendingJob({ jobId: "dep-1", jobType: JobType.REVIEWER_DISPATCH });
+      const dependentJob = makePendingJob({
+        jobId: "dependent-1",
+        jobType: JobType.LEAD_REVIEW_CONSOLIDATION,
+        dependsOnJobIds: ["dep-1"],
+      });
+      jobRepo.jobs.push(depJob, dependentJob);
+
+      const result = service.claimJob(JobType.LEAD_REVIEW_CONSOLIDATION, "worker-1");
+      expect(result).toBeNull();
+    });
+
+    /**
+     * A job becomes claimable once all its dependency jobs reach terminal
+     * status (completed). This is the happy path for dependency resolution.
+     */
+    it("should claim a job when all dependency jobs are completed", () => {
+      const depJob: QueuedJob = {
+        ...makePendingJob({ jobId: "dep-1", jobType: JobType.REVIEWER_DISPATCH }),
+        status: JobStatus.COMPLETED,
+      };
+      const dependentJob = makePendingJob({
+        jobId: "dependent-1",
+        jobType: JobType.LEAD_REVIEW_CONSOLIDATION,
+        dependsOnJobIds: ["dep-1"],
+      });
+      jobRepo.jobs.push(depJob, dependentJob);
+
+      const result = service.claimJob(JobType.LEAD_REVIEW_CONSOLIDATION, "worker-1");
+      expect(result).not.toBeNull();
+      expect(result!.job.jobId).toBe("dependent-1");
+    });
+
+    /**
+     * Failed dependency jobs also satisfy the dependency constraint.
+     * Per the PRD: "all listed jobs reach terminal status (completed or failed)".
+     */
+    it("should claim a job when dependency jobs are failed (terminal)", () => {
+      const depJob: QueuedJob = {
+        ...makePendingJob({ jobId: "dep-1", jobType: JobType.REVIEWER_DISPATCH }),
+        status: JobStatus.FAILED,
+      };
+      const dependentJob = makePendingJob({
+        jobId: "dependent-1",
+        jobType: JobType.LEAD_REVIEW_CONSOLIDATION,
+        dependsOnJobIds: ["dep-1"],
+      });
+      jobRepo.jobs.push(depJob, dependentJob);
+
+      const result = service.claimJob(JobType.LEAD_REVIEW_CONSOLIDATION, "worker-1");
+      expect(result).not.toBeNull();
+      expect(result!.job.jobId).toBe("dependent-1");
+    });
+
+    /**
+     * When a job has multiple dependencies, ALL must be in terminal status.
+     * Even one non-terminal dependency blocks the job.
+     */
+    it("should not claim when only some dependencies are met", () => {
+      const dep1: QueuedJob = {
+        ...makePendingJob({ jobId: "dep-1", jobType: JobType.REVIEWER_DISPATCH }),
+        status: JobStatus.COMPLETED,
+      };
+      const dep2 = makePendingJob({ jobId: "dep-2", jobType: JobType.REVIEWER_DISPATCH });
+      const dep3: QueuedJob = {
+        ...makePendingJob({ jobId: "dep-3", jobType: JobType.REVIEWER_DISPATCH }),
+        status: JobStatus.COMPLETED,
+      };
+      const dependentJob = makePendingJob({
+        jobId: "dependent-1",
+        jobType: JobType.LEAD_REVIEW_CONSOLIDATION,
+        dependsOnJobIds: ["dep-1", "dep-2", "dep-3"],
+      });
+      jobRepo.jobs.push(dep1, dep2, dep3, dependentJob);
+
+      const result = service.claimJob(JobType.LEAD_REVIEW_CONSOLIDATION, "worker-1");
+      expect(result).toBeNull();
+    });
+
+    /**
+     * When all multiple dependencies are satisfied, the job becomes claimable.
+     */
+    it("should claim when all multiple dependencies are met", () => {
+      const dep1: QueuedJob = {
+        ...makePendingJob({ jobId: "dep-1", jobType: JobType.REVIEWER_DISPATCH }),
+        status: JobStatus.COMPLETED,
+      };
+      const dep2: QueuedJob = {
+        ...makePendingJob({ jobId: "dep-2", jobType: JobType.REVIEWER_DISPATCH }),
+        status: JobStatus.FAILED,
+      };
+      const dep3: QueuedJob = {
+        ...makePendingJob({ jobId: "dep-3", jobType: JobType.REVIEWER_DISPATCH }),
+        status: JobStatus.COMPLETED,
+      };
+      const dependentJob = makePendingJob({
+        jobId: "dependent-1",
+        jobType: JobType.LEAD_REVIEW_CONSOLIDATION,
+        dependsOnJobIds: ["dep-1", "dep-2", "dep-3"],
+      });
+      jobRepo.jobs.push(dep1, dep2, dep3, dependentJob);
+
+      const result = service.claimJob(JobType.LEAD_REVIEW_CONSOLIDATION, "worker-1");
+      expect(result).not.toBeNull();
+      expect(result!.job.jobId).toBe("dependent-1");
+    });
+
+    /**
+     * Jobs with null dependsOnJobIds have no dependencies and should
+     * be claimable normally (backward compatibility).
+     */
+    it("should claim jobs with null dependsOnJobIds (no dependencies)", () => {
+      const job = makePendingJob({
+        jobId: "no-deps",
+        jobType: JobType.WORKER_DISPATCH,
+        dependsOnJobIds: null,
+      });
+      jobRepo.jobs.push(job);
+
+      const result = service.claimJob(JobType.WORKER_DISPATCH, "worker-1");
+      expect(result).not.toBeNull();
+      expect(result!.job.jobId).toBe("no-deps");
+    });
+
+    /**
+     * Jobs with an empty dependsOnJobIds array have no dependencies
+     * and should be claimable normally.
+     */
+    it("should claim jobs with empty dependsOnJobIds array", () => {
+      const job = makePendingJob({
+        jobId: "empty-deps",
+        jobType: JobType.WORKER_DISPATCH,
+        dependsOnJobIds: [] as string[],
+      });
+      jobRepo.jobs.push(job);
+
+      const result = service.claimJob(JobType.WORKER_DISPATCH, "worker-1");
+      expect(result).not.toBeNull();
+      expect(result!.job.jobId).toBe("empty-deps");
+    });
+
+    /**
+     * A dependency on a non-existent job ID blocks the dependent job.
+     * Missing dependencies are treated as unmet — this prevents jobs
+     * from running when their dependency data is inconsistent.
+     */
+    it("should not claim when a dependency job does not exist", () => {
+      const dependentJob = makePendingJob({
+        jobId: "dependent-1",
+        jobType: JobType.LEAD_REVIEW_CONSOLIDATION,
+        dependsOnJobIds: ["nonexistent-job"],
+      });
+      jobRepo.jobs.push(dependentJob);
+
+      const result = service.claimJob(JobType.LEAD_REVIEW_CONSOLIDATION, "worker-1");
+      expect(result).toBeNull();
+    });
+
+    /**
+     * Dependencies in CLAIMED or RUNNING status are not terminal and
+     * must block the dependent job.
+     */
+    it("should not claim when dependencies are in non-terminal status (claimed/running)", () => {
+      const claimedDep: QueuedJob = {
+        ...makePendingJob({ jobId: "dep-claimed", jobType: JobType.REVIEWER_DISPATCH }),
+        status: JobStatus.CLAIMED,
+        leaseOwner: "worker-x",
+      };
+      const runningDep: QueuedJob = {
+        ...makePendingJob({ jobId: "dep-running", jobType: JobType.REVIEWER_DISPATCH }),
+        status: JobStatus.RUNNING,
+        leaseOwner: "worker-y",
+      };
+      const dependentJob = makePendingJob({
+        jobId: "dependent-1",
+        jobType: JobType.LEAD_REVIEW_CONSOLIDATION,
+        dependsOnJobIds: ["dep-claimed", "dep-running"],
+      });
+      jobRepo.jobs.push(claimedDep, runningDep, dependentJob);
+
+      const result = service.claimJob(JobType.LEAD_REVIEW_CONSOLIDATION, "worker-1");
+      expect(result).toBeNull();
+    });
+
+    /**
+     * When multiple jobs of the same type exist and only one has met
+     * dependencies, only that one should be claimed. Jobs with unmet
+     * deps are skipped in favor of eligible ones.
+     */
+    it("should skip jobs with unmet deps and claim the first eligible one", () => {
+      const dep1 = makePendingJob({ jobId: "dep-1", jobType: JobType.REVIEWER_DISPATCH });
+      const dep2: QueuedJob = {
+        ...makePendingJob({ jobId: "dep-2", jobType: JobType.REVIEWER_DISPATCH }),
+        status: JobStatus.COMPLETED,
+      };
+
+      // Job A depends on dep-1 (pending) → blocked
+      const jobA = makePendingJob({
+        jobId: "job-a",
+        jobType: JobType.LEAD_REVIEW_CONSOLIDATION,
+        dependsOnJobIds: ["dep-1"],
+        createdAt: new Date("2025-06-15T09:00:00Z"),
+      });
+      // Job B depends on dep-2 (completed) → eligible
+      const jobB = makePendingJob({
+        jobId: "job-b",
+        jobType: JobType.LEAD_REVIEW_CONSOLIDATION,
+        dependsOnJobIds: ["dep-2"],
+        createdAt: new Date("2025-06-15T09:01:00Z"),
+      });
+      jobRepo.jobs.push(dep1, dep2, jobA, jobB);
+
+      const result = service.claimJob(JobType.LEAD_REVIEW_CONSOLIDATION, "worker-1");
+      expect(result).not.toBeNull();
+      expect(result!.job.jobId).toBe("job-b");
+    });
+  });
+
+  // ─── areJobDependenciesMet Tests ──────────────────────────────────────────
+
+  /**
+   * Tests for the areJobDependenciesMet service method.
+   *
+   * This method is used by higher-level orchestration (e.g., scheduler) to
+   * inspect dependency status without attempting a claim. It returns detailed
+   * information about which dependencies are pending or missing.
+   */
+  describe("areJobDependenciesMet", () => {
+    let service: JobQueueService;
+    let jobRepo: JobQueueRepositoryPort & { jobs: QueuedJob[] };
+
+    beforeEach(() => {
+      mockIdCounter = 0;
+      jobRepo = createMockJobRepo();
+      const uow = createMockUnitOfWork(jobRepo);
+      service = createJobQueueService(uow, createMockIdGenerator(), createMockClock(FIXED_NOW));
+    });
+
+    /**
+     * Jobs with no dependencies always have met dependencies.
+     */
+    it("should return met=true for jobs with no dependencies", () => {
+      const job = makePendingJob({ jobId: "no-deps", dependsOnJobIds: null });
+      jobRepo.jobs.push(job);
+
+      const result = service.areJobDependenciesMet("no-deps");
+      expect(result.met).toBe(true);
+      expect(result.pendingDependencyIds).toEqual([]);
+      expect(result.missingDependencyIds).toEqual([]);
+    });
+
+    /**
+     * Jobs with empty dependency arrays have met dependencies.
+     */
+    it("should return met=true for jobs with empty dependsOnJobIds", () => {
+      const job = makePendingJob({ jobId: "empty-deps", dependsOnJobIds: [] as string[] });
+      jobRepo.jobs.push(job);
+
+      const result = service.areJobDependenciesMet("empty-deps");
+      expect(result.met).toBe(true);
+      expect(result.pendingDependencyIds).toEqual([]);
+      expect(result.missingDependencyIds).toEqual([]);
+    });
+
+    /**
+     * Reports pending dependencies — jobs that exist but are not yet terminal.
+     */
+    it("should report pending dependencies", () => {
+      const dep = makePendingJob({ jobId: "dep-1", jobType: JobType.REVIEWER_DISPATCH });
+      const job = makePendingJob({
+        jobId: "dependent",
+        dependsOnJobIds: ["dep-1"],
+      });
+      jobRepo.jobs.push(dep, job);
+
+      const result = service.areJobDependenciesMet("dependent");
+      expect(result.met).toBe(false);
+      expect(result.pendingDependencyIds).toEqual(["dep-1"]);
+      expect(result.missingDependencyIds).toEqual([]);
+    });
+
+    /**
+     * Reports missing dependencies — job IDs that don't exist in the database.
+     */
+    it("should report missing dependencies", () => {
+      const job = makePendingJob({
+        jobId: "dependent",
+        dependsOnJobIds: ["nonexistent"],
+      });
+      jobRepo.jobs.push(job);
+
+      const result = service.areJobDependenciesMet("dependent");
+      expect(result.met).toBe(false);
+      expect(result.pendingDependencyIds).toEqual([]);
+      expect(result.missingDependencyIds).toEqual(["nonexistent"]);
+    });
+
+    /**
+     * Reports both pending and missing when dependencies are mixed.
+     */
+    it("should report both pending and missing dependencies", () => {
+      const dep1 = makePendingJob({ jobId: "dep-1", jobType: JobType.REVIEWER_DISPATCH });
+      const dep2: QueuedJob = {
+        ...makePendingJob({ jobId: "dep-2", jobType: JobType.REVIEWER_DISPATCH }),
+        status: JobStatus.COMPLETED,
+      };
+      const job = makePendingJob({
+        jobId: "dependent",
+        dependsOnJobIds: ["dep-1", "dep-2", "dep-missing"],
+      });
+      jobRepo.jobs.push(dep1, dep2, job);
+
+      const result = service.areJobDependenciesMet("dependent");
+      expect(result.met).toBe(false);
+      expect(result.pendingDependencyIds).toEqual(["dep-1"]);
+      expect(result.missingDependencyIds).toEqual(["dep-missing"]);
+    });
+
+    /**
+     * Returns met=true when all dependencies are completed.
+     */
+    it("should return met=true when all dependencies are completed", () => {
+      const dep1: QueuedJob = {
+        ...makePendingJob({ jobId: "dep-1", jobType: JobType.REVIEWER_DISPATCH }),
+        status: JobStatus.COMPLETED,
+      };
+      const dep2: QueuedJob = {
+        ...makePendingJob({ jobId: "dep-2", jobType: JobType.REVIEWER_DISPATCH }),
+        status: JobStatus.COMPLETED,
+      };
+      const job = makePendingJob({
+        jobId: "dependent",
+        dependsOnJobIds: ["dep-1", "dep-2"],
+      });
+      jobRepo.jobs.push(dep1, dep2, job);
+
+      const result = service.areJobDependenciesMet("dependent");
+      expect(result.met).toBe(true);
+      expect(result.pendingDependencyIds).toEqual([]);
+      expect(result.missingDependencyIds).toEqual([]);
+    });
+
+    /**
+     * Returns met=true when dependencies are a mix of completed and failed
+     * (both are terminal).
+     */
+    it("should return met=true when dependencies are mixed completed/failed", () => {
+      const dep1: QueuedJob = {
+        ...makePendingJob({ jobId: "dep-1", jobType: JobType.REVIEWER_DISPATCH }),
+        status: JobStatus.COMPLETED,
+      };
+      const dep2: QueuedJob = {
+        ...makePendingJob({ jobId: "dep-2", jobType: JobType.REVIEWER_DISPATCH }),
+        status: JobStatus.FAILED,
+      };
+      const job = makePendingJob({
+        jobId: "dependent",
+        dependsOnJobIds: ["dep-1", "dep-2"],
+      });
+      jobRepo.jobs.push(dep1, dep2, job);
+
+      const result = service.areJobDependenciesMet("dependent");
+      expect(result.met).toBe(true);
+    });
+
+    /**
+     * Throws EntityNotFoundError for non-existent job IDs.
+     */
+    it("should throw EntityNotFoundError for unknown job", () => {
+      expect(() => service.areJobDependenciesMet("nonexistent")).toThrow(EntityNotFoundError);
+    });
+  });
+
+  // ─── findJobsByGroup Tests ────────────────────────────────────────────────
+
+  /**
+   * Tests for the findJobsByGroup service method.
+   *
+   * Job groups coordinate related jobs for fan-out/fan-in patterns.
+   * The primary use case is review cycles: specialist reviewer jobs share
+   * a group ID, enabling queries like "what's the status of all reviewers
+   * in this cycle?"
+   *
+   * @see docs/prd/002-data-model.md — Job coordination rules
+   */
+  describe("findJobsByGroup", () => {
+    let service: JobQueueService;
+    let jobRepo: JobQueueRepositoryPort & { jobs: QueuedJob[] };
+
+    beforeEach(() => {
+      mockIdCounter = 0;
+      jobRepo = createMockJobRepo();
+      const uow = createMockUnitOfWork(jobRepo);
+      service = createJobQueueService(uow, createMockIdGenerator(), createMockClock(FIXED_NOW));
+    });
+
+    /**
+     * Returns all jobs belonging to the specified group.
+     */
+    it("should return all jobs in a group", () => {
+      const job1 = makePendingJob({
+        jobId: "r1",
+        jobGroupId: "review-cycle-1",
+        jobType: JobType.REVIEWER_DISPATCH,
+      });
+      const job2 = makePendingJob({
+        jobId: "r2",
+        jobGroupId: "review-cycle-1",
+        jobType: JobType.REVIEWER_DISPATCH,
+      });
+      const job3 = makePendingJob({
+        jobId: "r3",
+        jobGroupId: "review-cycle-2",
+        jobType: JobType.REVIEWER_DISPATCH,
+      });
+      jobRepo.jobs.push(job1, job2, job3);
+
+      const result = service.findJobsByGroup("review-cycle-1");
+      expect(result.jobs).toHaveLength(2);
+      expect(result.jobs.map((j) => j.jobId)).toEqual(["r1", "r2"]);
+    });
+
+    /**
+     * Returns empty array for non-existent group.
+     */
+    it("should return empty array for unknown group", () => {
+      const result = service.findJobsByGroup("nonexistent-group");
+      expect(result.jobs).toEqual([]);
+    });
+
+    /**
+     * Returns jobs in all statuses — the group query is status-agnostic.
+     */
+    it("should return jobs regardless of status", () => {
+      const pending = makePendingJob({
+        jobId: "r1",
+        jobGroupId: "group-1",
+        jobType: JobType.REVIEWER_DISPATCH,
+      });
+      const completed: QueuedJob = {
+        ...makePendingJob({
+          jobId: "r2",
+          jobGroupId: "group-1",
+          jobType: JobType.REVIEWER_DISPATCH,
+        }),
+        status: JobStatus.COMPLETED,
+      };
+      const failed: QueuedJob = {
+        ...makePendingJob({
+          jobId: "r3",
+          jobGroupId: "group-1",
+          jobType: JobType.REVIEWER_DISPATCH,
+        }),
+        status: JobStatus.FAILED,
+      };
+      jobRepo.jobs.push(pending, completed, failed);
+
+      const result = service.findJobsByGroup("group-1");
+      expect(result.jobs).toHaveLength(3);
+    });
+  });
+
+  // ─── Review Fan-Out Integration Test ──────────────────────────────────────
+
+  /**
+   * Integration test for the review fan-out coordination pattern.
+   *
+   * This test validates the primary use case for job dependencies and groups:
+   * specialist reviewer jobs run in parallel, and the lead reviewer job
+   * waits for all specialists to complete before becoming claimable.
+   *
+   * The pattern:
+   * 1. Create 3 specialist reviewer jobs with the same group ID
+   * 2. Create 1 lead review consolidation job that depends on all 3
+   * 3. Lead job is NOT claimable while specialists are pending
+   * 4. Complete specialists one by one
+   * 5. Lead job becomes claimable only after ALL specialists finish
+   *
+   * @see docs/prd/002-data-model.md — Review cycle coordination rule
+   */
+  describe("review fan-out coordination pattern", () => {
+    let service: JobQueueService;
+    let jobRepo: JobQueueRepositoryPort & { jobs: QueuedJob[] };
+
+    beforeEach(() => {
+      mockIdCounter = 0;
+      jobRepo = createMockJobRepo();
+      const uow = createMockUnitOfWork(jobRepo);
+      service = createJobQueueService(uow, createMockIdGenerator(), createMockClock(FIXED_NOW));
+    });
+
+    /**
+     * Full review fan-out lifecycle: create specialist + lead jobs, complete
+     * specialists one by one, verify lead becomes claimable only after all
+     * specialists are in terminal status.
+     */
+    it("should coordinate review fan-out: lead waits for all specialists", () => {
+      const groupId = "review-cycle-abc";
+
+      // Create 3 specialist reviewer jobs with the same group
+      const spec1 = service.createJob({
+        jobType: JobType.REVIEWER_DISPATCH,
+        entityType: "review_cycle",
+        entityId: "rc-1",
+        jobGroupId: groupId,
+      });
+      const spec2 = service.createJob({
+        jobType: JobType.REVIEWER_DISPATCH,
+        entityType: "review_cycle",
+        entityId: "rc-1",
+        jobGroupId: groupId,
+      });
+      const spec3 = service.createJob({
+        jobType: JobType.REVIEWER_DISPATCH,
+        entityType: "review_cycle",
+        entityId: "rc-1",
+        jobGroupId: groupId,
+      });
+
+      // Create lead review job depending on all 3 specialists
+      const lead = service.createJob({
+        jobType: JobType.LEAD_REVIEW_CONSOLIDATION,
+        entityType: "review_cycle",
+        entityId: "rc-1",
+        jobGroupId: groupId,
+        dependsOnJobIds: [spec1.job.jobId, spec2.job.jobId, spec3.job.jobId],
+      });
+
+      // ── Verify lead is NOT claimable yet ──
+      expect(service.claimJob(JobType.LEAD_REVIEW_CONSOLIDATION, "lead-worker")).toBeNull();
+
+      // ── Verify group contains all 4 jobs ──
+      const group = service.findJobsByGroup(groupId);
+      expect(group.jobs).toHaveLength(4);
+
+      // ── Complete specialist 1 ──
+      const claimed1 = service.claimJob(JobType.REVIEWER_DISPATCH, "reviewer-1");
+      expect(claimed1).not.toBeNull();
+      service.completeJob(claimed1!.job.jobId);
+
+      // Lead still not claimable (2 specs remaining)
+      expect(service.claimJob(JobType.LEAD_REVIEW_CONSOLIDATION, "lead-worker")).toBeNull();
+
+      // ── Complete specialist 2 ──
+      const claimed2 = service.claimJob(JobType.REVIEWER_DISPATCH, "reviewer-2");
+      expect(claimed2).not.toBeNull();
+      service.completeJob(claimed2!.job.jobId);
+
+      // Lead still not claimable (1 spec remaining)
+      expect(service.claimJob(JobType.LEAD_REVIEW_CONSOLIDATION, "lead-worker")).toBeNull();
+
+      // ── Fail specialist 3 (failed is also terminal) ──
+      const claimed3 = service.claimJob(JobType.REVIEWER_DISPATCH, "reviewer-3");
+      expect(claimed3).not.toBeNull();
+      service.failJob(claimed3!.job.jobId, "Specialist review failed");
+
+      // ── Now lead IS claimable (all deps terminal) ──
+      const leadClaim = service.claimJob(JobType.LEAD_REVIEW_CONSOLIDATION, "lead-worker");
+      expect(leadClaim).not.toBeNull();
+      expect(leadClaim!.job.jobId).toBe(lead.job.jobId);
+
+      // ── Verify areJobDependenciesMet reports correctly ──
+      // Note: lead is now CLAIMED, so we check before completion
+      // Let's verify the dependency check on the lead job
+      // (dependencies are still met since they're terminal)
+      const depCheck = service.areJobDependenciesMet(lead.job.jobId);
+      expect(depCheck.met).toBe(true);
+      expect(depCheck.pendingDependencyIds).toEqual([]);
+      expect(depCheck.missingDependencyIds).toEqual([]);
+    });
+
+    /**
+     * Verify that specialist jobs without dependencies are immediately
+     * claimable, while the lead job with dependencies waits.
+     */
+    it("should allow claiming specialists while lead waits", () => {
+      const groupId = "review-cycle-xyz";
+
+      const spec1 = service.createJob({
+        jobType: JobType.REVIEWER_DISPATCH,
+        entityType: "review_cycle",
+        entityId: "rc-2",
+        jobGroupId: groupId,
+      });
+      const spec2 = service.createJob({
+        jobType: JobType.REVIEWER_DISPATCH,
+        entityType: "review_cycle",
+        entityId: "rc-2",
+        jobGroupId: groupId,
+      });
+
+      service.createJob({
+        jobType: JobType.LEAD_REVIEW_CONSOLIDATION,
+        entityType: "review_cycle",
+        entityId: "rc-2",
+        jobGroupId: groupId,
+        dependsOnJobIds: [spec1.job.jobId, spec2.job.jobId],
+      });
+
+      // Specialists are immediately claimable
+      const claimed1 = service.claimJob(JobType.REVIEWER_DISPATCH, "reviewer-a");
+      expect(claimed1).not.toBeNull();
+      const claimed2 = service.claimJob(JobType.REVIEWER_DISPATCH, "reviewer-b");
+      expect(claimed2).not.toBeNull();
+
+      // No more specialists available
+      expect(service.claimJob(JobType.REVIEWER_DISPATCH, "reviewer-c")).toBeNull();
     });
   });
 });

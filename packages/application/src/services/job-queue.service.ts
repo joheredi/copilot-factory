@@ -1,6 +1,6 @@
 /**
  * Job queue service — DB-backed job queue with create, claim, complete,
- * and fail operations.
+ * fail, dependency checking, and group coordination.
  *
  * This service provides reliable job processing backed by SQLite. Jobs are
  * enqueued with a type, optional entity reference, and optional delay
@@ -20,17 +20,24 @@
  * - **COMPLETED**: The job finished successfully.
  * - **FAILED**: The job failed (may be retried by a higher-level policy).
  *
+ * ## Job dependencies
+ *
+ * Jobs may declare `dependsOnJobIds` — a list of job IDs that must reach
+ * terminal status (`completed` or `failed`) before this job can be claimed.
+ * The claim operation checks dependency satisfaction atomically within the
+ * same transaction.
+ *
+ * ## Job groups
+ *
+ * Related jobs can share a `jobGroupId` for coordination. The primary use
+ * case is review fan-out: specialist reviewer jobs share a group ID, and the
+ * lead reviewer job depends on all of them.
+ *
  * ## Transaction pattern
  *
  * All mutating operations execute inside a `BEGIN IMMEDIATE` transaction
  * via the injected `JobQueueUnitOfWork`. This prevents SQLITE_BUSY errors
  * and guarantees atomicity of the claim operation.
- *
- * ## Out of scope
- *
- * - Job dependencies (T026)
- * - Specific job type handlers
- * - Retry policy (handled by scheduler / higher-level orchestration)
  *
  * @see docs/prd/002-data-model.md §2.3 — Entity: Job
  * @see docs/prd/007-technical-architecture.md §7.8 — Queue / Job Architecture
@@ -62,6 +69,30 @@ const FAILABLE_STATUSES: ReadonlySet<string> = new Set([JobStatus.CLAIMED, JobSt
  * Only CLAIMED jobs can start running.
  */
 const RUNNABLE_STATUSES: ReadonlySet<string> = new Set([JobStatus.CLAIMED]);
+
+/**
+ * Terminal job statuses. A dependency is considered satisfied when the
+ * dependency job is in one of these statuses.
+ *
+ * @see docs/prd/002-data-model.md — Job coordination rules
+ */
+const TERMINAL_STATUSES: ReadonlySet<string> = new Set([JobStatus.COMPLETED, JobStatus.FAILED]);
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+/**
+ * Safely parse the `dependsOnJobIds` field from a job record.
+ *
+ * The field is stored as a JSON array in SQLite and typed as `unknown`
+ * in the port interface. This helper normalizes it to a string array,
+ * returning an empty array for null, undefined, or non-array values.
+ */
+function parseDependsOnJobIds(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((item): item is string => typeof item === "string");
+}
 
 // ─── Service Input/Output Types ─────────────────────────────────────────────
 
@@ -106,10 +137,31 @@ export interface StartJobResult {
 }
 
 /**
+ * Result of a dependency check.
+ */
+export interface AreJobDependenciesMetResult {
+  /** Whether all dependencies are satisfied. */
+  readonly met: boolean;
+  /** IDs of dependency jobs that are not yet in terminal status. */
+  readonly pendingDependencyIds: string[];
+  /** IDs of dependency jobs that could not be found in the database. */
+  readonly missingDependencyIds: string[];
+}
+
+/**
+ * Result of a group query.
+ */
+export interface FindJobsByGroupResult {
+  /** All jobs belonging to the group. */
+  readonly jobs: QueuedJob[];
+}
+
+/**
  * Job queue service interface.
  *
  * Provides the core operations for DB-backed job queue management:
- * create, claim, start, complete, and fail.
+ * create, claim, start, complete, fail, dependency checking, and
+ * group coordination.
  */
 export interface JobQueueService {
   /**
@@ -117,6 +169,8 @@ export interface JobQueueService {
    *
    * The job will be eligible for claiming once its `runAfter` time
    * has passed (or immediately if `runAfter` is null/not provided).
+   * If `dependsOnJobIds` is specified, the job will not be claimable
+   * until all dependency jobs reach terminal status.
    *
    * @param data - Job creation parameters (type, entity reference, payload, etc.)
    * @returns The persisted job record.
@@ -128,7 +182,9 @@ export interface JobQueueService {
    *
    * The claim operation is atomic: an `UPDATE...WHERE` ensures that no
    * two workers can claim the same job. Jobs with `runAfter` in the
-   * future are skipped. The attempt count is incremented on each claim.
+   * future are skipped. Jobs with unmet dependencies (any job in
+   * `dependsOnJobIds` not in terminal status) are skipped. The attempt
+   * count is incremented on each claim.
    *
    * @param jobType - The type of job to claim (e.g., WORKER_DISPATCH).
    * @param leaseOwner - Identifier of the worker claiming the job.
@@ -173,6 +229,31 @@ export interface JobQueueService {
    * @throws InvalidTransitionError if the job is not in a failable status.
    */
   failJob(jobId: string, error?: string): FailJobResult;
+
+  /**
+   * Check whether all dependency jobs for a given job are in terminal status.
+   *
+   * A job's dependencies are met when every job ID in its `dependsOnJobIds`
+   * array is in `completed` or `failed` status. Jobs with no dependencies
+   * (null or empty `dependsOnJobIds`) always have met dependencies.
+   *
+   * @param jobId - ID of the job whose dependencies to check.
+   * @returns Whether dependencies are met, plus lists of pending and missing dependency IDs.
+   * @throws EntityNotFoundError if the job does not exist.
+   */
+  areJobDependenciesMet(jobId: string): AreJobDependenciesMetResult;
+
+  /**
+   * Find all jobs belonging to a job group.
+   *
+   * Job groups coordinate related jobs — e.g., all specialist reviewer
+   * jobs in one review cycle share the same `job_group_id`. This method
+   * returns all jobs in the group, regardless of status.
+   *
+   * @param groupId - The group identifier.
+   * @returns All jobs with matching `jobGroupId`.
+   */
+  findJobsByGroup(groupId: string): FindJobsByGroupResult;
 }
 
 // ─── Factory ────────────────────────────────────────────────────────────────
@@ -335,6 +416,48 @@ export function createJobQueueService(
       });
 
       return { job };
+    },
+
+    areJobDependenciesMet(jobId: string): AreJobDependenciesMetResult {
+      return unitOfWork.runInTransaction((repos) => {
+        const job = repos.job.findById(jobId);
+        if (!job) {
+          throw new EntityNotFoundError("Job", jobId);
+        }
+
+        const depIds = parseDependsOnJobIds(job.dependsOnJobIds);
+        if (depIds.length === 0) {
+          return { met: true, pendingDependencyIds: [], missingDependencyIds: [] };
+        }
+
+        const depJobs = repos.job.findByIds(depIds);
+        const foundIds = new Set(depJobs.map((j) => j.jobId));
+
+        const missingDependencyIds: string[] = [];
+        const pendingDependencyIds: string[] = [];
+
+        for (const depId of depIds) {
+          if (!foundIds.has(depId)) {
+            missingDependencyIds.push(depId);
+          } else {
+            const depJob = depJobs.find((j) => j.jobId === depId)!;
+            if (!TERMINAL_STATUSES.has(depJob.status)) {
+              pendingDependencyIds.push(depId);
+            }
+          }
+        }
+
+        const met = pendingDependencyIds.length === 0 && missingDependencyIds.length === 0;
+        return { met, pendingDependencyIds, missingDependencyIds };
+      });
+    },
+
+    findJobsByGroup(groupId: string): FindJobsByGroupResult {
+      const jobs = unitOfWork.runInTransaction((repos) => {
+        return repos.job.findByGroupId(groupId);
+      });
+
+      return { jobs };
     },
   };
 }

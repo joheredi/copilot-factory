@@ -24,6 +24,41 @@
 - Test pattern: spec example validation, enum iteration with it.each, empty/missing field rejection, type inference test
 - The `zodEnumFromConst` helper is private to shared.ts — add new enum schemas there, not in separate files
 
+## T026 — Implement job dependency and group coordination (2026-03-11)
+
+### What was done
+
+- Extended `packages/application/src/ports/job-queue.ports.ts` — added 2 new port methods:
+  - `findByIds(jobIds: string[]): QueuedJob[]` — bulk lookup for dependency resolution
+  - `findByGroupId(groupId: string): QueuedJob[]` — group coordination queries
+  - Updated `claimNextByType` contract: "eligible" now requires all `dependsOnJobIds` in terminal status
+- Extended `packages/application/src/services/job-queue.service.ts` — added 2 new service methods:
+  - `areJobDependenciesMet(jobId)` — returns `{ met, pendingDependencyIds, missingDependencyIds }`
+  - `findJobsByGroup(groupId)` — returns all jobs in a group
+  - Added `TERMINAL_STATUSES` constant (completed, failed) and `parseDependsOnJobIds` helper
+  - Updated service JSDoc with dependency and group coordination documentation
+- 23 new tests covering:
+  - Dependency enforcement: unmet deps block claiming, completed/failed deps unblock, partial deps block
+  - Edge cases: null deps, empty array deps, missing dep IDs, non-terminal statuses (claimed/running)
+  - Skip logic: claims first eligible job when some have unmet deps
+  - `areJobDependenciesMet`: reports pending, missing, and mixed dependency states
+  - `findJobsByGroup`: returns group members regardless of status, empty for unknown groups
+  - Review fan-out integration: 3 specialists + 1 lead, lead claimable only after all 3 terminal
+- All 1,376 tests pass, build clean, lint clean
+
+### Design decisions
+
+- Dependency checking is enforced at the repository port level (in `claimNextByType`) rather than the service level. This keeps the claim atomic and matches the existing filter pattern — the mock filters eligible jobs before claiming.
+- Missing dependency IDs (non-existent jobs) are treated as unmet dependencies, preventing premature execution when data is inconsistent.
+- `parseDependsOnJobIds` safely handles the `unknown` typed field from SQLite JSON storage, filtering to string arrays.
+
+### Patterns for next loops
+
+- T027 (scheduler service) will use `claimJob` which now respects dependencies automatically
+- T059/T060 (reviewer dispatch) can use `findJobsByGroup` and `areJobDependenciesMet` for coordination
+- The review fan-out pattern is: create specialist jobs with same `jobGroupId`, create lead job with `dependsOnJobIds` referencing all specialists
+- Port adapter in infrastructure (not yet implemented) will need to implement `findByIds` and `findByGroupId`
+
 ## T025 — Implement DB-backed job queue (2026-03-11)
 
 ### What was done

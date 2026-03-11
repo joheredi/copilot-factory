@@ -81,6 +81,8 @@ export type {
   CompleteJobResult,
   FailJobResult,
   StartJobResult,
+  AreJobDependenciesMetResult,
+  FindJobsByGroupResult,
   JobQueueService,
 } from "./services/job-queue.service.js";
 
