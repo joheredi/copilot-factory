@@ -71,24 +71,41 @@ export type SuggestedRevertScope = z.infer<typeof SuggestedRevertScopeSchema>;
  *
  * @see {@link file://docs/prd/008-packet-and-schema-spec.md} §8.11 PostMergeAnalysisPacket
  */
-export const PostMergeAnalysisPacketSchema = z.object({
-  packet_type: z.literal("post_merge_analysis_packet"),
-  schema_version: z.literal("1.0"),
-  created_at: z.string().datetime({ message: "created_at must be ISO 8601" }),
-  task_id: z.string().min(1, "task_id must not be empty"),
-  repository_id: z.string().min(1, "repository_id must not be empty"),
-  merge_queue_item_id: z.string().min(1, "merge_queue_item_id must not be empty"),
-  validation_run_id: z.string().min(1, "validation_run_id must not be empty"),
-  recommendation: PostMergeAnalysisRecommendationSchema,
-  confidence: ConfidenceSchema,
-  summary: z.string().min(1, "summary must not be empty"),
-  failure_attribution: z.string().min(1, "failure_attribution must not be empty"),
-  rationale: z.string().min(1, "rationale must not be empty"),
-  suggested_revert_scope: SuggestedRevertScopeSchema.nullable(),
-  follow_up_task_description: z.string().min(1).nullable(),
-  risks: z.array(z.string()),
-  open_questions: z.array(z.string()),
-});
+export const PostMergeAnalysisPacketSchema = z
+  .object({
+    packet_type: z.literal("post_merge_analysis_packet"),
+    schema_version: z.literal("1.0"),
+    created_at: z.string().datetime({ message: "created_at must be ISO 8601" }),
+    task_id: z.string().min(1, "task_id must not be empty"),
+    repository_id: z.string().min(1, "repository_id must not be empty"),
+    merge_queue_item_id: z.string().min(1, "merge_queue_item_id must not be empty"),
+    validation_run_id: z.string().min(1, "validation_run_id must not be empty"),
+    recommendation: PostMergeAnalysisRecommendationSchema,
+    confidence: ConfidenceSchema,
+    summary: z.string().min(1, "summary must not be empty"),
+    failure_attribution: z.string().min(1, "failure_attribution must not be empty"),
+    rationale: z.string().min(1, "rationale must not be empty"),
+    suggested_revert_scope: SuggestedRevertScopeSchema.nullable(),
+    follow_up_task_description: z.string().min(1).nullable(),
+    risks: z.array(z.string()),
+    open_questions: z.array(z.string()),
+  })
+  .superRefine((data, ctx) => {
+    /**
+     * Cross-field invariant (PRD 008 §8.13):
+     * When confidence is "low", recommendation must be "escalate".
+     * Low-confidence automated decisions (revert, hotfix) risk
+     * causing more damage than the original failure.
+     */
+    if (data.confidence === "low" && data.recommendation !== "escalate") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["recommendation"],
+        message:
+          'recommendation must be "escalate" when confidence is "low" — low-confidence automated remediation is not permitted',
+      });
+    }
+  });
 
 /** Inferred TypeScript type for {@link PostMergeAnalysisPacketSchema}. */
 export type PostMergeAnalysisPacket = z.infer<typeof PostMergeAnalysisPacketSchema>;

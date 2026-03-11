@@ -1,5 +1,43 @@
 # Progress Log
 
+## T024: Implement cross-field validation and schema versioning
+
+**Status:** Done
+**Date:** 2026-03-11
+
+### What was done
+
+- Added cross-field validation rules (PRD 008 §8.13) using `.superRefine()` to 4 packet schemas:
+  - `review-packet.ts` — verdict="approved" requires empty blocking_issues
+  - `lead-review-decision-packet.ts` — decision="changes_requested" requires non-empty blocking_issues; decision="approved_with_follow_up" requires non-empty follow_up_task_refs
+  - `merge-assist-packet.ts` — confidence="low" requires recommendation to be "reject_to_dev" or "escalate"
+  - `post-merge-analysis-packet.ts` — confidence="low" requires recommendation to be "escalate"
+- Created `packages/schemas/src/version.ts` — schema version parsing, validation, and compatibility checking (PRD 008 §8.15):
+  - `SchemaVersionSchema` — Zod schema for `major.minor` format validation
+  - `parseSchemaVersion()` — extracts major/minor numbers from version string
+  - `isVersionCompatible()` — checks if version is in expected major family
+  - `validatePacketVersion()` — validates packet version with detailed result
+- Created `packages/schemas/src/version.test.ts` — comprehensive version utility tests
+- Created `packages/schemas/src/cross-field-validation.test.ts` — exhaustive cross-field rule tests with confidence×recommendation matrices
+- Updated existing tests in merge-assist-packet.test.ts and post-merge-analysis-packet.test.ts to use cross-field-valid combinations when testing confidence level acceptance
+- Updated barrel exports in `index.ts`
+- Fixed T027 status discrepancy in backlog index (was pending in index but done in task file)
+
+### Patterns used
+
+- `.superRefine()` for cross-field validation with descriptive error messages and correct paths
+- Factory functions in tests for creating valid base packets with overrides
+- Exhaustive matrix testing (confidence × recommendation) for complete coverage
+- Version format: `major.minor` with regex validation, no leading zeros
+
+### Notes for next loop
+
+- E004 (Packet Schemas & Validation) is now fully complete — all 5 tasks done
+- This unblocks E010 (Policy & Configuration) and E011 (Validation Runner) which depend on E004
+- Cross-field validation errors target the field that needs to change (e.g., `blocking_issues` path, not `verdict` path) for better debugging
+- `validatePacketVersion()` returns `compatible: false` with a reason string rather than throwing — the orchestrator should handle this gracefully
+- The version validation is a runtime check separate from the Zod schema — schemas still use `z.literal("1.0")` for the current version; `validatePacketVersion()` will be used by the orchestrator for multi-version acceptance
+
 ## T023: Define remaining packet schemas
 
 **Status:** Done

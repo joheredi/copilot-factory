@@ -48,22 +48,54 @@ import { LeadReviewDecisionSchema as LeadReviewDecisionEnumSchema, IssueSchema }
  *
  * @see {@link file://docs/prd/008-packet-and-schema-spec.md} §8.7 LeadReviewDecisionPacket
  */
-export const LeadReviewDecisionPacketSchema = z.object({
-  packet_type: z.literal("lead_review_decision_packet"),
-  schema_version: z.literal("1.0"),
-  created_at: z.string().datetime({ message: "created_at must be ISO 8601" }),
-  task_id: z.string().min(1, "task_id must not be empty"),
-  repository_id: z.string().min(1, "repository_id must not be empty"),
-  review_cycle_id: z.string().min(1, "review_cycle_id must not be empty"),
-  decision: LeadReviewDecisionEnumSchema,
-  summary: z.string().min(1, "summary must not be empty"),
-  blocking_issues: z.array(IssueSchema),
-  non_blocking_suggestions: z.array(z.string()),
-  deduplication_notes: z.array(z.string()),
-  follow_up_task_refs: z.array(z.string().min(1)),
-  risks: z.array(z.string()),
-  open_questions: z.array(z.string()),
-});
+export const LeadReviewDecisionPacketSchema = z
+  .object({
+    packet_type: z.literal("lead_review_decision_packet"),
+    schema_version: z.literal("1.0"),
+    created_at: z.string().datetime({ message: "created_at must be ISO 8601" }),
+    task_id: z.string().min(1, "task_id must not be empty"),
+    repository_id: z.string().min(1, "repository_id must not be empty"),
+    review_cycle_id: z.string().min(1, "review_cycle_id must not be empty"),
+    decision: LeadReviewDecisionEnumSchema,
+    summary: z.string().min(1, "summary must not be empty"),
+    blocking_issues: z.array(IssueSchema),
+    non_blocking_suggestions: z.array(z.string()),
+    deduplication_notes: z.array(z.string()),
+    follow_up_task_refs: z.array(z.string().min(1)),
+    risks: z.array(z.string()),
+    open_questions: z.array(z.string()),
+  })
+  .superRefine((data, ctx) => {
+    /**
+     * Cross-field invariant (PRD 008 §8.13):
+     * When decision is "changes_requested", blocking_issues must be non-empty.
+     * A changes-requested decision without blocking issues provides no
+     * actionable feedback for the developer rework loop.
+     */
+    if (data.decision === "changes_requested" && data.blocking_issues.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["blocking_issues"],
+        message:
+          'blocking_issues must not be empty when decision is "changes_requested" — the developer needs actionable feedback for rework',
+      });
+    }
+
+    /**
+     * Cross-field invariant (PRD 008 §8.13):
+     * When decision is "approved_with_follow_up", follow_up_task_refs must
+     * be non-empty. An approval-with-follow-up that lists no follow-up
+     * tasks is semantically identical to a plain approval.
+     */
+    if (data.decision === "approved_with_follow_up" && data.follow_up_task_refs.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["follow_up_task_refs"],
+        message:
+          'follow_up_task_refs must not be empty when decision is "approved_with_follow_up" — follow-up tasks are required for this decision type',
+      });
+    }
+  });
 
 /** Inferred TypeScript type for {@link LeadReviewDecisionPacketSchema}. */
 export type LeadReviewDecisionPacket = z.infer<typeof LeadReviewDecisionPacketSchema>;

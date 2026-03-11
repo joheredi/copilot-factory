@@ -68,22 +68,43 @@ export type MergeAssistFileAffected = z.infer<typeof MergeAssistFileAffectedSche
  *
  * @see {@link file://docs/prd/008-packet-and-schema-spec.md} §8.9 MergeAssistPacket
  */
-export const MergeAssistPacketSchema = z.object({
-  packet_type: z.literal("merge_assist_packet"),
-  schema_version: z.literal("1.0"),
-  created_at: z.string().datetime({ message: "created_at must be ISO 8601" }),
-  task_id: z.string().min(1, "task_id must not be empty"),
-  repository_id: z.string().min(1, "repository_id must not be empty"),
-  merge_queue_item_id: z.string().min(1, "merge_queue_item_id must not be empty"),
-  recommendation: MergeAssistRecommendationSchema,
-  confidence: ConfidenceSchema,
-  summary: z.string().min(1, "summary must not be empty"),
-  resolution_strategy: z.string().min(1, "resolution_strategy must not be empty"),
-  files_affected: z.array(MergeAssistFileAffectedSchema),
-  rationale: z.string().min(1, "rationale must not be empty"),
-  risks: z.array(z.string()),
-  open_questions: z.array(z.string()),
-});
+export const MergeAssistPacketSchema = z
+  .object({
+    packet_type: z.literal("merge_assist_packet"),
+    schema_version: z.literal("1.0"),
+    created_at: z.string().datetime({ message: "created_at must be ISO 8601" }),
+    task_id: z.string().min(1, "task_id must not be empty"),
+    repository_id: z.string().min(1, "repository_id must not be empty"),
+    merge_queue_item_id: z.string().min(1, "merge_queue_item_id must not be empty"),
+    recommendation: MergeAssistRecommendationSchema,
+    confidence: ConfidenceSchema,
+    summary: z.string().min(1, "summary must not be empty"),
+    resolution_strategy: z.string().min(1, "resolution_strategy must not be empty"),
+    files_affected: z.array(MergeAssistFileAffectedSchema),
+    rationale: z.string().min(1, "rationale must not be empty"),
+    risks: z.array(z.string()),
+    open_questions: z.array(z.string()),
+  })
+  .superRefine((data, ctx) => {
+    /**
+     * Cross-field invariant (PRD 008 §8.13):
+     * When confidence is "low", recommendation must be "reject_to_dev" or
+     * "escalate". A low-confidence auto-resolve would risk merging bad
+     * conflict resolutions without human oversight.
+     */
+    if (
+      data.confidence === "low" &&
+      data.recommendation !== "reject_to_dev" &&
+      data.recommendation !== "escalate"
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["recommendation"],
+        message:
+          'recommendation must be "reject_to_dev" or "escalate" when confidence is "low" — low-confidence auto-resolve is not permitted',
+      });
+    }
+  });
 
 /** Inferred TypeScript type for {@link MergeAssistPacketSchema}. */
 export type MergeAssistPacket = z.infer<typeof MergeAssistPacketSchema>;

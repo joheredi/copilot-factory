@@ -104,6 +104,16 @@ export type {
   SuggestedRevertScope,
 } from "./post-merge-analysis-packet.js";
 
+// ─── Schema Versioning (PRD 008 §8.15) ──────────────────────────────────────
+export {
+  SchemaVersionSchema,
+  parseSchemaVersion,
+  isVersionCompatible,
+  validatePacketVersion,
+} from "./version.js";
+
+export type { ParsedSchemaVersion, VersionValidationResult } from "./version.js";
+
 // ─── PolicySnapshot (PRD 009 §9.2) ──────────────────────────────────────────
 export {
   PolicySnapshotSchema,

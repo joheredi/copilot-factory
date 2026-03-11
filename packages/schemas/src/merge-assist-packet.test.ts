@@ -149,11 +149,14 @@ describe("MergeAssistPacketSchema (PRD 008 §8.9)", () => {
   });
 
   /**
-   * All three confidence levels must be accepted.
+   * All three confidence levels must be accepted (using cross-field-valid
+   * recommendation to isolate the confidence acceptance test from
+   * cross-field rules — §8.13 constrains low confidence to reject_to_dev
+   * or escalate, so we use reject_to_dev here).
    */
   it("should accept all confidence levels", () => {
     for (const confidence of ["high", "medium", "low"]) {
-      const packet = { ...specExample, confidence };
+      const packet = { ...specExample, confidence, recommendation: "reject_to_dev" };
       const result = MergeAssistPacketSchema.safeParse(packet);
       expect(result.success, `should accept confidence ${confidence}`).toBe(true);
     }

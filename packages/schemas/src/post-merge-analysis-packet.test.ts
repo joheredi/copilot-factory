@@ -196,11 +196,14 @@ describe("PostMergeAnalysisPacketSchema (PRD 008 §8.11)", () => {
   });
 
   /**
-   * All three confidence levels must be accepted.
+   * All three confidence levels must be accepted (using cross-field-valid
+   * recommendation to isolate the confidence acceptance test from
+   * cross-field rules — §8.13 constrains low confidence to escalate only,
+   * so we use escalate here).
    */
   it("should accept all confidence levels", () => {
     for (const confidence of ["high", "medium", "low"]) {
-      const packet = { ...specExample, confidence };
+      const packet = { ...specExample, confidence, recommendation: "escalate" };
       const result = PostMergeAnalysisPacketSchema.safeParse(packet);
       expect(result.success, `should accept confidence ${confidence}`).toBe(true);
     }

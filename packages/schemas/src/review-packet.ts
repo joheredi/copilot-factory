@@ -48,24 +48,41 @@ import { ReviewVerdictSchema, ConfidenceSchema, IssueSchema } from "./shared.js"
  *
  * @see {@link file://docs/prd/008-packet-and-schema-spec.md} §8.6 ReviewPacket
  */
-export const ReviewPacketSchema = z.object({
-  packet_type: z.literal("review_packet"),
-  schema_version: z.literal("1.0"),
-  created_at: z.string().datetime({ message: "created_at must be ISO 8601" }),
-  task_id: z.string().min(1, "task_id must not be empty"),
-  repository_id: z.string().min(1, "repository_id must not be empty"),
-  review_cycle_id: z.string().min(1, "review_cycle_id must not be empty"),
-  reviewer_pool_id: z.string().min(1, "reviewer_pool_id must not be empty"),
-  reviewer_type: z.string().min(1, "reviewer_type must not be empty"),
-  verdict: ReviewVerdictSchema,
-  summary: z.string().min(1, "summary must not be empty"),
-  blocking_issues: z.array(IssueSchema),
-  non_blocking_issues: z.array(IssueSchema),
-  confidence: ConfidenceSchema,
-  follow_up_task_refs: z.array(z.string().min(1)),
-  risks: z.array(z.string()),
-  open_questions: z.array(z.string()),
-});
+export const ReviewPacketSchema = z
+  .object({
+    packet_type: z.literal("review_packet"),
+    schema_version: z.literal("1.0"),
+    created_at: z.string().datetime({ message: "created_at must be ISO 8601" }),
+    task_id: z.string().min(1, "task_id must not be empty"),
+    repository_id: z.string().min(1, "repository_id must not be empty"),
+    review_cycle_id: z.string().min(1, "review_cycle_id must not be empty"),
+    reviewer_pool_id: z.string().min(1, "reviewer_pool_id must not be empty"),
+    reviewer_type: z.string().min(1, "reviewer_type must not be empty"),
+    verdict: ReviewVerdictSchema,
+    summary: z.string().min(1, "summary must not be empty"),
+    blocking_issues: z.array(IssueSchema),
+    non_blocking_issues: z.array(IssueSchema),
+    confidence: ConfidenceSchema,
+    follow_up_task_refs: z.array(z.string().min(1)),
+    risks: z.array(z.string()),
+    open_questions: z.array(z.string()),
+  })
+  .superRefine((data, ctx) => {
+    /**
+     * Cross-field invariant (PRD 008 §8.13):
+     * When verdict is "approved", blocking_issues must be empty.
+     * An approved review cannot have unresolved blocking issues —
+     * that would be a logical contradiction.
+     */
+    if (data.verdict === "approved" && data.blocking_issues.length > 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["blocking_issues"],
+        message:
+          'blocking_issues must be empty when verdict is "approved" — an approved review cannot have unresolved blocking issues',
+      });
+    }
+  });
 
 /** Inferred TypeScript type for {@link ReviewPacketSchema}. */
 export type ReviewPacket = z.infer<typeof ReviewPacketSchema>;

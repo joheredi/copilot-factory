@@ -144,10 +144,10 @@ See [phase documents](phases/) for details.
 | [T021](tasks/T021-schemas-task-dev.md)              | Define TaskPacket and DevResultPacket Zod schemas                                     | E004 | P0       | foundation | done    |
 | [T022](tasks/T022-schemas-review.md)                | Define ReviewPacket and LeadReviewDecisionPacket schemas                              | E004 | P0       | foundation | done    |
 | [T023](tasks/T023-schemas-merge-validation.md)      | Define remaining packet schemas                                                       | E004 | P0       | foundation | done    |
-| [T024](tasks/T024-schema-cross-validation.md)       | Implement cross-field validation and schema versioning                                | E004 | P0       | foundation | pending |
+| [T024](tasks/T024-schema-cross-validation.md)       | Implement cross-field validation and schema versioning                                | E004 | P0       | foundation | done    |
 | [T025](tasks/T025-job-queue-core.md)                | Implement DB-backed job queue                                                         | E005 | P0       | foundation | done    |
 | [T026](tasks/T026-job-dependencies.md)              | Implement job dependency and group coordination                                       | E005 | P0       | feature    | done    |
-| [T027](tasks/T027-scheduler-service.md)             | Implement Scheduler service                                                           | E005 | P0       | feature    | pending |
+| [T027](tasks/T027-scheduler-service.md)             | Implement Scheduler service                                                           | E005 | P0       | feature    | done    |
 | [T028](tasks/T028-scheduler-tick-loop.md)           | Implement scheduler tick loop                                                         | E005 | P1       | feature    | pending |
 | [T029](tasks/T029-reconciliation-sweep.md)          | Implement reconciliation sweep job                                                    | E005 | P1       | feature    | pending |
 | [T030](tasks/T030-lease-acquisition.md)             | Implement lease acquisition with exclusivity                                          | E006 | P0       | feature    | done    |
