@@ -16,7 +16,7 @@
  */
 
 import { sql } from "drizzle-orm";
-import { index, sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { index, sqliteTable, text, integer, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 // ─── T008: Project, Repository, WorkflowTemplate ───────────────────────────
 
@@ -195,5 +195,239 @@ export const repositories = sqliteTable(
     index("idx_repository_project_id").on(table.projectId),
     /** Index for filtering repositories by status. */
     index("idx_repository_status").on(table.status),
+  ],
+);
+
+// ─── T009: Task, TaskDependency ─────────────────────────────────────────────
+
+/**
+ * Task table — the central work item in the factory. Each task is scoped to
+ * a repository and progresses through the task state machine defined in
+ * PRD 002 §2.1. Tasks carry all lifecycle metadata including retry counts,
+ * review rounds, and an optimistic concurrency version token.
+ *
+ * JSON array columns (acceptance_criteria, definition_of_done,
+ * required_capabilities, suggested_file_scope) are stored as JSON text in
+ * SQLite. Drizzle handles serialization via `{ mode: "json" }`.
+ *
+ * FK references to TaskLease (T011), ReviewCycle (T011), and MergeQueueItem
+ * (T012) are nullable text columns with no DB-level FK constraint until those
+ * tables exist.
+ *
+ * @see {@link file://docs/prd/002-data-model.md} §2.3 Entity: Task
+ */
+export const tasks = sqliteTable(
+  "task",
+  {
+    /** Unique identifier (UUID). */
+    taskId: text("task_id").primaryKey(),
+
+    /** FK to the parent repository. Enforced at DB level. */
+    repositoryId: text("repository_id")
+      .notNull()
+      .references(() => repositories.repositoryId),
+
+    /**
+     * External reference linking this task to an outside system
+     * (e.g. GitHub issue number, Jira ticket ID). Nullable.
+     */
+    externalRef: text("external_ref"),
+
+    /** Human-readable task title. */
+    title: text("title").notNull(),
+
+    /** Optional longer description of the task. */
+    description: text("description"),
+
+    /**
+     * Classification of the work type (e.g. "feature", "bug_fix", "refactor").
+     * Stored as text; validated at the application layer against TaskType enum.
+     */
+    taskType: text("task_type").notNull(),
+
+    /**
+     * Scheduling priority (e.g. "critical", "high", "medium", "low").
+     * Stored as text; validated at the application layer against TaskPriority enum.
+     */
+    priority: text("priority").notNull(),
+
+    /**
+     * Optional severity level for bug/incident tasks.
+     * Stored as text; validated at the application layer against IssueSeverity enum.
+     */
+    severity: text("severity"),
+
+    /**
+     * Current state in the task lifecycle state machine.
+     * Stored as text; validated at the application layer against TaskStatus enum.
+     */
+    status: text("status").notNull(),
+
+    /**
+     * How this task was created (e.g. "manual", "automated", "follow_up").
+     * Stored as text; validated at the application layer against TaskSource enum.
+     */
+    source: text("source").notNull(),
+
+    /**
+     * JSON array of acceptance criteria strings that must be satisfied
+     * before the task can be considered complete.
+     */
+    acceptanceCriteria: text("acceptance_criteria", { mode: "json" }),
+
+    /**
+     * JSON array of definition-of-done checklist items.
+     */
+    definitionOfDone: text("definition_of_done", { mode: "json" }),
+
+    /**
+     * Optional estimated effort size (t-shirt sizing: "xs"–"xl").
+     * Stored as text; validated at the application layer against EstimatedSize enum.
+     */
+    estimatedSize: text("estimated_size"),
+
+    /**
+     * Optional risk level affecting review routing and validation strictness.
+     * Stored as text; validated at the application layer against RiskLevel enum.
+     */
+    riskLevel: text("risk_level"),
+
+    /**
+     * JSON array of capability strings required to work on this task
+     * (e.g. ["typescript", "react", "database"]). Used for worker matching.
+     */
+    requiredCapabilities: text("required_capabilities", { mode: "json" }),
+
+    /**
+     * JSON array of glob patterns defining the suggested file scope
+     * (e.g. ["apps/control-plane/src/modules/leases/**"]).
+     * Enforcement level is determined by the effective file scope policy.
+     */
+    suggestedFileScope: text("suggested_file_scope", { mode: "json" }),
+
+    /**
+     * Git branch name for this task's development work. Set when the task
+     * enters IN_DEVELOPMENT. Nullable before assignment.
+     */
+    branchName: text("branch_name"),
+
+    /**
+     * FK to the current active TaskLease (defined in T011).
+     * Nullable text — no DB-level FK constraint until TaskLease table exists.
+     */
+    currentLeaseId: text("current_lease_id"),
+
+    /**
+     * FK to the current ReviewCycle (defined in T011).
+     * Nullable text — no DB-level FK constraint until ReviewCycle table exists.
+     */
+    currentReviewCycleId: text("current_review_cycle_id"),
+
+    /**
+     * FK to the current MergeQueueItem (defined in T012).
+     * Nullable text — no DB-level FK constraint until MergeQueueItem table exists.
+     */
+    mergeQueueItemId: text("merge_queue_item_id"),
+
+    /**
+     * Number of times this task has been retried after failure.
+     * Used by the retry/escalation policy to determine next action.
+     */
+    retryCount: integer("retry_count").notNull().default(0),
+
+    /**
+     * Number of completed review rounds. Incremented each time a ReviewCycle
+     * completes with REJECTED status and a new cycle begins.
+     */
+    reviewRoundCount: integer("review_round_count").notNull().default(0),
+
+    /** Row creation timestamp (Unix epoch seconds). */
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+
+    /** Row last-update timestamp (Unix epoch seconds). */
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+
+    /**
+     * Optimistic concurrency token. Incremented on every state transition.
+     * Callers must include the current version in transition requests;
+     * conflicting transitions are rejected.
+     *
+     * @see {@link file://docs/prd/002-data-model.md} §2.4 Key Invariants
+     */
+    version: integer("version").notNull().default(1),
+
+    /**
+     * Timestamp when the task reached a terminal state (DONE, FAILED,
+     * ESCALATED, or CANCELLED). Nullable until completion.
+     */
+    completedAt: integer("completed_at", { mode: "timestamp" }),
+  },
+  (table) => [
+    /** Composite index for the common query pattern: tasks in a repo by status. */
+    index("idx_task_repository_id_status").on(table.repositoryId, table.status),
+    /** Index for global status queries (e.g. all READY tasks). */
+    index("idx_task_status").on(table.status),
+    /** Index for priority-based scheduling queries. */
+    index("idx_task_priority").on(table.priority),
+  ],
+);
+
+/**
+ * Task dependency table — models directed edges in the task dependency graph.
+ * Each row represents a relationship where `task_id` depends on
+ * `depends_on_task_id` with a given dependency type and blocking semantics.
+ *
+ * A unique constraint on (task_id, depends_on_task_id) prevents duplicate
+ * dependency edges. Circular dependencies are detected at the application
+ * layer (DAG validation in T035).
+ *
+ * @see {@link file://docs/prd/002-data-model.md} §2.3 Entity: TaskDependency
+ */
+export const taskDependencies = sqliteTable(
+  "task_dependency",
+  {
+    /** Unique identifier (UUID). */
+    taskDependencyId: text("task_dependency_id").primaryKey(),
+
+    /** FK to the dependent task (the task that waits). */
+    taskId: text("task_id")
+      .notNull()
+      .references(() => tasks.taskId),
+
+    /** FK to the dependency task (the task that must complete first). */
+    dependsOnTaskId: text("depends_on_task_id")
+      .notNull()
+      .references(() => tasks.taskId),
+
+    /**
+     * Type of dependency relationship (e.g. "blocks", "relates_to", "parent_child").
+     * Stored as text; validated at the application layer against DependencyType enum.
+     */
+    dependencyType: text("dependency_type").notNull(),
+
+    /**
+     * Whether this dependency is a hard block on task readiness.
+     * When true (1) and dependency_type is "blocks", the dependent task cannot
+     * enter READY until the dependency task reaches DONE.
+     * Stored as integer (SQLite boolean): 1 = true, 0 = false.
+     */
+    isHardBlock: integer("is_hard_block").notNull().default(1),
+
+    /** Row creation timestamp (Unix epoch seconds). */
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => [
+    /** Unique constraint preventing duplicate dependency edges. */
+    uniqueIndex("idx_task_dependency_unique").on(table.taskId, table.dependsOnTaskId),
+    /** Index for forward lookups: "what does this task depend on?" */
+    index("idx_task_dependency_task_id").on(table.taskId),
+    /** Index for reverse lookups: "what tasks depend on this one?" */
+    index("idx_task_dependency_depends_on").on(table.dependsOnTaskId),
   ],
 );

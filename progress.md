@@ -226,3 +226,31 @@
 - `pnpm lint` and `pnpm format:check` are now real quality gates (no longer vacuous)
 - T005 (CI pipeline) is now unblocked — it depends on T003
 - `eng/` directory is excluded from ESLint; if engineering scripts need linting later, add a separate config block with Node.js globals
+
+## T009 — Create migrations for Task and TaskDependency tables (2026-03-11)
+
+### What was done
+
+- Defined Task table (26 columns) in `apps/control-plane/src/infrastructure/database/schema.ts` with all fields from PRD 002 §2.3
+- Defined TaskDependency table (6 columns) with FK constraints to Task, unique constraint on (task_id, depends_on_task_id)
+- Generated migration `0001_melted_doctor_spectrum.sql` via drizzle-kit
+- Added 5 missing domain enums to `packages/domain/src/enums.ts`: TaskType, TaskPriority, TaskSource, EstimatedSize, RiskLevel
+- Wrote 31 new schema tests (T009 Task table, TaskDependency table, cross-table relationships)
+- Wrote 10 new enum tests for the 5 added enums
+- All 143 tests pass, build and lint clean
+
+### Key design decisions
+
+- JSON array columns (acceptance_criteria, definition_of_done, required_capabilities, suggested_file_scope) use `text({ mode: "json" })` matching T008 pattern
+- FK references to TaskLease (T011), ReviewCycle (T011), MergeQueueItem (T012) are nullable text with NO DB FK constraint yet
+- `is_hard_block` stored as integer (SQLite boolean convention), defaults to 1 (true)
+- `version` defaults to 1 for optimistic concurrency (PRD 002 §2.4)
+- Composite index on (repository_id, status) for scheduling queries
+- Missing enums (TaskType, TaskPriority, TaskSource, EstimatedSize, RiskLevel) were added since T007 missed them
+
+### Next loop should know
+
+- T009 completion unblocks T011 (TaskLease, ReviewCycle) and T012 (MergeQueueItem, ValidationRun, Job)
+- T010 (WorkerPool, Worker, AgentProfile, PromptTemplate) and T013 (AuditEvent, PolicySet) are also ready (independent of T009)
+- The `uniqueIndex` import was added to schema.ts for the task_dependency unique constraint
+- Test pattern: use `seedProjectAndRepo()` helper to create prerequisite Project+Repository for task tests

@@ -5,7 +5,7 @@
 | **ID**                    | T009                                                                                                                   |
 | **Epic**                  | [E002: Domain Model & Persistence](../epics/E002-domain-model-persistence.md)                                          |
 | **Type**                  | foundation                                                                                                             |
-| **Status**                | pending                                                                                                                |
+| **Status**                | done                                                                                                                   |
 | **Priority**              | P0                                                                                                                     |
 | **Owner**                 | backend-engineer                                                                                                       |
 | **AI Executable**         | Yes                                                                                                                    |
@@ -56,10 +56,10 @@ The implementing agent should read these files before starting:
 
 ## Acceptance Criteria
 
-- [ ] Task table has all fields from docs/prd/002-data-model.md
-- [ ] version column exists with default 1
-- [ ] TaskDependency table supports all dependency types
-- [ ] Migration runs without errors
+- [x] Task table has all fields from docs/prd/002-data-model.md
+- [x] version column exists with default 1
+- [x] TaskDependency table supports all dependency types
+- [x] Migration runs without errors
 
 ## Definition of Done
 

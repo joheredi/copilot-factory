@@ -129,7 +129,7 @@ See [phase documents](phases/) for details.
 | [T006](tasks/T006-sqlite-drizzle-setup.md)          | Set up SQLite with Drizzle ORM and migrations                                         | E001 | P0       | foundation | done    |
 | [T007](tasks/T007-domain-enums-types.md)            | Define core domain enums and value objects                                            | E002 | P0       | foundation | done    |
 | [T008](tasks/T008-migration-project-repo.md)        | Create migrations for Project, Repository, WorkflowTemplate tables                    | E002 | P0       | foundation | done    |
-| [T009](tasks/T009-migration-task.md)                | Create migrations for Task and TaskDependency tables                                  | E002 | P0       | foundation | pending |
+| [T009](tasks/T009-migration-task.md)                | Create migrations for Task and TaskDependency tables                                  | E002 | P0       | foundation | done    |
 | [T010](tasks/T010-migration-worker-pool.md)         | Create migrations for WorkerPool, Worker, AgentProfile, PromptTemplate tables         | E002 | P0       | foundation | pending |
 | [T011](tasks/T011-migration-lease-review.md)        | Create migrations for TaskLease, ReviewCycle, ReviewPacket, LeadReviewDecision tables | E002 | P0       | foundation | pending |
 | [T012](tasks/T012-migration-merge-job.md)           | Create migrations for MergeQueueItem, ValidationRun, Job tables                       | E002 | P0       | foundation | pending |

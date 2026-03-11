@@ -15,6 +15,11 @@
 import { describe, it, expect } from "vitest";
 import {
   TaskStatus,
+  TaskType,
+  TaskPriority,
+  TaskSource,
+  EstimatedSize,
+  RiskLevel,
   WorkerLeaseStatus,
   ReviewCycleStatus,
   MergeQueueItemStatus,
@@ -187,6 +192,86 @@ describe("MergeQueueItemStatus (PRD 002 §2.2)", () => {
     for (const [key, value] of Object.entries(MergeQueueItemStatus)) {
       expect(key).toBe(value);
     }
+  });
+});
+
+describe("TaskType (PRD 002 §2.3)", () => {
+  /**
+   * Verifies task type values for classifying the kind of work.
+   * These values drive task selection policy and scheduling decisions.
+   */
+  it("should have exactly 7 types", () => {
+    expect(valuesOf(TaskType)).toHaveLength(7);
+  });
+
+  it("should contain all types from the PRD spec", () => {
+    const expected = ["feature", "bug_fix", "refactor", "chore", "documentation", "test", "spike"];
+    expect(valuesOf(TaskType)).toEqual(expect.arrayContaining(expected));
+    expect(expected).toEqual(expect.arrayContaining(valuesOf(TaskType)));
+  });
+});
+
+describe("TaskPriority (PRD 002 §2.3)", () => {
+  /**
+   * Verifies task priority levels. The scheduler uses priority to determine
+   * dispatch order; higher priority tasks are processed first.
+   */
+  it("should have exactly 4 priorities", () => {
+    expect(valuesOf(TaskPriority)).toHaveLength(4);
+  });
+
+  it("should contain all priorities from the PRD spec", () => {
+    const expected = ["critical", "high", "medium", "low"];
+    expect(valuesOf(TaskPriority)).toEqual(expect.arrayContaining(expected));
+    expect(expected).toEqual(expect.arrayContaining(valuesOf(TaskPriority)));
+  });
+});
+
+describe("TaskSource (PRD 002 §2.3)", () => {
+  /**
+   * Verifies task source values. These indicate how a task was created
+   * and affect audit trail interpretation and follow-up tracking.
+   */
+  it("should have exactly 4 sources", () => {
+    expect(valuesOf(TaskSource)).toHaveLength(4);
+  });
+
+  it("should contain all sources from the PRD spec", () => {
+    const expected = ["manual", "automated", "follow_up", "decomposition"];
+    expect(valuesOf(TaskSource)).toEqual(expect.arrayContaining(expected));
+    expect(expected).toEqual(expect.arrayContaining(valuesOf(TaskSource)));
+  });
+});
+
+describe("EstimatedSize (PRD 002 §2.3)", () => {
+  /**
+   * Verifies t-shirt sizing values for task effort estimation.
+   * The scheduler may use size hints for capacity planning.
+   */
+  it("should have exactly 5 sizes", () => {
+    expect(valuesOf(EstimatedSize)).toHaveLength(5);
+  });
+
+  it("should contain all sizes from the PRD spec", () => {
+    const expected = ["xs", "s", "m", "l", "xl"];
+    expect(valuesOf(EstimatedSize)).toEqual(expect.arrayContaining(expected));
+    expect(expected).toEqual(expect.arrayContaining(valuesOf(EstimatedSize)));
+  });
+});
+
+describe("RiskLevel (PRD 002 §2.3)", () => {
+  /**
+   * Verifies risk level values. High-risk tasks may trigger additional
+   * review routing or stricter validation gates.
+   */
+  it("should have exactly 3 levels", () => {
+    expect(valuesOf(RiskLevel)).toHaveLength(3);
+  });
+
+  it("should contain all levels from the PRD spec", () => {
+    const expected = ["high", "medium", "low"];
+    expect(valuesOf(RiskLevel)).toEqual(expect.arrayContaining(expected));
+    expect(expected).toEqual(expect.arrayContaining(valuesOf(RiskLevel)));
   });
 });
 
@@ -542,9 +627,14 @@ describe("Enum completeness", () => {
    * If someone adds a new enum to enums.ts without adding tests, this
    * will catch the discrepancy (assuming they also export from index.ts).
    */
-  it("should export exactly 24 enum objects", () => {
+  it("should export exactly 29 enum objects", () => {
     const enumObjects = [
       TaskStatus,
+      TaskType,
+      TaskPriority,
+      TaskSource,
+      EstimatedSize,
+      RiskLevel,
       WorkerLeaseStatus,
       ReviewCycleStatus,
       MergeQueueItemStatus,
@@ -569,7 +659,7 @@ describe("Enum completeness", () => {
       FileScopeEnforcementLevel,
       EscalationAction,
     ];
-    expect(enumObjects).toHaveLength(24);
+    expect(enumObjects).toHaveLength(29);
     for (const obj of enumObjects) {
       expect(typeof obj).toBe("object");
       expect(Object.keys(obj).length).toBeGreaterThan(0);

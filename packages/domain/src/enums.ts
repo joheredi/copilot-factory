@@ -45,6 +45,93 @@ export const TaskStatus = {
 /** Union of all valid task status values. */
 export type TaskStatus = (typeof TaskStatus)[keyof typeof TaskStatus];
 
+// ─── Task Classification Fields (PRD 002 §2.3) ─────────────────────────────
+
+/**
+ * Task type values for classifying the kind of work a task represents.
+ *
+ * @see {@link file://docs/prd/002-data-model.md} §2.3 Entity: Task (task_type)
+ */
+export const TaskType = {
+  FEATURE: "feature",
+  BUG_FIX: "bug_fix",
+  REFACTOR: "refactor",
+  CHORE: "chore",
+  DOCUMENTATION: "documentation",
+  TEST: "test",
+  SPIKE: "spike",
+} as const;
+
+/** Union of all valid task type values. */
+export type TaskType = (typeof TaskType)[keyof typeof TaskType];
+
+/**
+ * Task priority levels controlling scheduling order.
+ * Higher priority tasks are dispatched before lower priority ones.
+ *
+ * @see {@link file://docs/prd/002-data-model.md} §2.3 Entity: Task (priority)
+ */
+export const TaskPriority = {
+  CRITICAL: "critical",
+  HIGH: "high",
+  MEDIUM: "medium",
+  LOW: "low",
+} as const;
+
+/** Union of all valid task priority values. */
+export type TaskPriority = (typeof TaskPriority)[keyof typeof TaskPriority];
+
+/**
+ * Task source indicating how the task was created.
+ *
+ * - `manual`: created by an operator
+ * - `automated`: created by the system (e.g. planner agent)
+ * - `follow_up`: created as a follow-up from a lead review decision
+ * - `decomposition`: created by decomposing a larger task
+ *
+ * @see {@link file://docs/prd/002-data-model.md} §2.3 Entity: Task (source)
+ */
+export const TaskSource = {
+  MANUAL: "manual",
+  AUTOMATED: "automated",
+  FOLLOW_UP: "follow_up",
+  DECOMPOSITION: "decomposition",
+} as const;
+
+/** Union of all valid task source values. */
+export type TaskSource = (typeof TaskSource)[keyof typeof TaskSource];
+
+/**
+ * Estimated size (t-shirt sizing) for effort estimation and scheduling hints.
+ *
+ * @see {@link file://docs/prd/002-data-model.md} §2.3 Entity: Task (estimated_size)
+ */
+export const EstimatedSize = {
+  XS: "xs",
+  S: "s",
+  M: "m",
+  L: "l",
+  XL: "xl",
+} as const;
+
+/** Union of all valid estimated size values. */
+export type EstimatedSize = (typeof EstimatedSize)[keyof typeof EstimatedSize];
+
+/**
+ * Risk level for tasks, used by scheduling and review routing policies
+ * to apply appropriate scrutiny levels.
+ *
+ * @see {@link file://docs/prd/002-data-model.md} §2.3 Entity: Task (risk_level)
+ */
+export const RiskLevel = {
+  HIGH: "high",
+  MEDIUM: "medium",
+  LOW: "low",
+} as const;
+
+/** Union of all valid risk level values. */
+export type RiskLevel = (typeof RiskLevel)[keyof typeof RiskLevel];
+
 // ─── Worker Lease Lifecycle (PRD 002 §2.2) ──────────────────────────────────
 
 /**
