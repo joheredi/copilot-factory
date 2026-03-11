@@ -371,3 +371,34 @@ Created ReverseDependencyService in `packages/application` that automatically re
 - T052 unblocks T053 (effective policy snapshot generation) which needs `resolveConfig()` + DB layer loading
 - The `PartialFactoryConfig` type is the contract for what each layer can contribute — application services loading from DB should produce this shape
 - The `ConfigContext` type is defined but not yet consumed by the resolver (it's for the future application service that will select which layers to load from DB based on context)
+
+## T057: Validation Gate Checking for State Transitions — Done
+
+**What was implemented:**
+
+- Created `packages/application/src/ports/validation-gate.ports.ts`:
+  - `ValidationResultQueryPort` interface for querying latest validation results
+  - `LatestValidationResult` type with validationRunId, profileName, overallStatus, completedAt
+- Created `packages/application/src/services/validation-gate.service.ts`:
+  - `ValidationGateService` with `checkGate()` method returning discriminated union
+  - `GATED_TRANSITIONS` constant mapping gated transitions to required profiles
+  - `enforceValidationGate()` convenience function for exception-based control flow
+  - Two gated transitions: IN_DEVELOPMENT→DEV_COMPLETE (default-dev), POST_MERGE_VALIDATION→DONE (merge-gate)
+  - APPROVED→QUEUED_FOR_MERGE explicitly NOT gated per spec
+- Added `ValidationGateError` to `packages/application/src/errors.ts`
+- 20 new tests covering: gate configuration, non-gated transitions, both gated transitions (pass/fail/missing), task isolation, enforceValidationGate convenience function
+- All types/functions exported from `@factory/application`
+
+**Design decision:**
+
+- Created a standalone ValidationGateService rather than modifying TransitionService directly
+- TransitionService is synchronous/transactional; adding I/O queries would violate its design
+- Domain state machine already has guards (requiredValidationsPassed, postMergeValidationPassed)
+- Callers use ValidationGateService to check gates, then populate TransitionContext accordingly
+- Follows existing composition pattern where services are independent and composed by callers
+
+**Patterns:**
+
+- Fake query port pattern for testing (map of "taskId:profileName" → result)
+- Discriminated union result types (GateNotApplicableResult | GatePassedResult | GateFailedResult)
+- Uses domain constants DEFAULT_DEV_PROFILE_NAME and MERGE_GATE_PROFILE_NAME from @factory/domain

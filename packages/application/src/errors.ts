@@ -305,3 +305,37 @@ export class LeaseNotReclaimableError extends Error {
     this.currentStatus = currentStatus;
   }
 }
+
+/**
+ * Thrown when a state transition is blocked by a validation gate.
+ *
+ * Gated transitions require the latest validation run for a specific
+ * profile to have passed before the transition is allowed. This error
+ * is raised when no passing validation run exists.
+ *
+ * @see docs/prd/009-policy-and-enforcement-spec.md §9.5.2 — Validation Gates
+ * @see docs/backlog/tasks/T057-validation-gates.md
+ */
+export class ValidationGateError extends Error {
+  public readonly taskId: string;
+  public readonly fromStatus: string;
+  public readonly toStatus: string;
+  public readonly requiredProfile: string;
+  public readonly reason: string;
+
+  constructor(
+    taskId: string,
+    fromStatus: string,
+    toStatus: string,
+    requiredProfile: string,
+    reason: string,
+  ) {
+    super(`Validation gate blocked ${fromStatus} → ${toStatus} for task ${taskId}: ${reason}`);
+    this.name = "ValidationGateError";
+    this.taskId = taskId;
+    this.fromStatus = fromStatus;
+    this.toStatus = toStatus;
+    this.requiredProfile = requiredProfile;
+    this.reason = reason;
+  }
+}

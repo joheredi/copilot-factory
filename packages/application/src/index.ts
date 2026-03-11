@@ -15,6 +15,7 @@ export {
   GracePeriodExpiredError,
   WorkerMismatchError,
   LeaseNotReclaimableError,
+  ValidationGateError,
 } from "./errors.js";
 
 // Ports — repository interfaces
@@ -360,6 +361,29 @@ export type {
   ValidationPacketEmitterService,
   ValidationPacketEmitterDependencies,
 } from "./services/validation-packet-emitter.service.js";
+
+// Ports — validation gate interfaces (PRD 009 §9.5.2)
+export type {
+  LatestValidationResult,
+  ValidationResultQueryPort,
+} from "./ports/validation-gate.ports.js";
+
+// Services — validation gate checking for gated transitions (PRD 009 §9.5.2)
+export {
+  createValidationGateService,
+  enforceValidationGate,
+  GATED_TRANSITIONS,
+} from "./services/validation-gate.service.js";
+export type {
+  GateConfig,
+  CheckGateParams,
+  GateNotApplicableResult,
+  GatePassedResult,
+  GateFailedResult,
+  ValidationGateResult,
+  ValidationGateService,
+  ValidationGateServiceDependencies,
+} from "./services/validation-gate.service.js";
 
 // Ports — policy snapshot generation interfaces (PRD 009 §9.2)
 export type {
