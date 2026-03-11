@@ -81,7 +81,11 @@ importers:
 
   packages/domain: {}
 
-  packages/infrastructure: {}
+  packages/infrastructure:
+    dependencies:
+      '@factory/schemas':
+        specifier: workspace:*
+        version: link:../schemas
 
   packages/observability: {}
 

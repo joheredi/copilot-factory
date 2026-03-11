@@ -388,3 +388,30 @@
 - The scheduler ports (`SchedulerTaskRepositoryPort`, `SchedulerPoolRepositoryPort`) need infrastructure implementations in `packages/infrastructure/` when the repository adapters are built
 - The `SchedulablePool.activeLeaseCount` field requires a COUNT query joining task_leases with active statuses — this is the most complex query the infra layer needs to implement
 - Pool type assignment is hardcoded to DEVELOPER for now; future tasks may need REVIEWER/PLANNER pool matching
+
+## T043: Define Worker Runtime Interface (2026-03-11)
+
+**What was done:**
+
+- Created `packages/infrastructure/src/worker-runtime/types.ts` with all runtime types: `RunContext`, `PreparedRun`, `FinalizeResult`, `RunOutputStream`, `RunLogEntry`, `CancelResult`, `CollectedArtifacts`, `WorkspacePaths`, `TimeoutSettings`, `OutputSchemaExpectation`, `RunStatus`
+- Created `packages/infrastructure/src/worker-runtime/runtime.interface.ts` with the `WorkerRuntime` interface defining all 6 lifecycle methods: `prepareRun`, `startRun`, `streamRun`, `cancelRun`, `collectArtifacts`, `finalizeRun`
+- Created `packages/infrastructure/src/worker-runtime/registry.ts` with `RuntimeRegistry` (singleton factory pattern), `RuntimeNotFoundError`, and `DuplicateRuntimeError`
+- Created barrel exports via `worker-runtime/index.ts` and updated `packages/infrastructure/src/index.ts`
+- Added `@factory/schemas` as workspace dependency and TypeScript project reference
+- Created 22 tests across two test files covering interface satisfaction, full lifecycle, concurrent runs, registry CRUD, error handling
+
+**Patterns used:**
+
+- Lifecycle method signatures match PRD 010 §10.8.2: prepare → start → stream → cancel → collect → finalize
+- `RunContext` imports `TaskPacket` and `PolicySnapshot` types from `@factory/schemas` for type-safe adapter contracts
+- `streamRun` returns `AsyncIterable<RunOutputStream>` for live output streaming
+- Registry uses factory pattern (`WorkerRuntimeFactory = () => WorkerRuntime`) for lazy, per-retrieval adapter instantiation
+- All types use `readonly` fields for immutability
+- Comprehensive JSDoc with PRD cross-references on every type and method
+
+**Next loop should know:**
+
+- T044 (Worker Supervisor) is now unblocked — it will orchestrate the `WorkerRuntime` lifecycle and manage heartbeat tracking
+- T045 (Copilot CLI Adapter) is now unblocked — it must implement the `WorkerRuntime` interface with Copilot CLI process spawning
+- The `RuntimeRegistry` is a singleton; bootstrap code should call `RuntimeRegistry.create()` and register adapters before dispatch
+- `streamRun` uses `AsyncIterable` — adapters should implement it as an async generator function

@@ -163,7 +163,7 @@ See [phase documents](phases/) for details.
 | [T040](tasks/T040-workspace-mounting.md)            | Implement workspace packet and config mounting                                        | E008 | P0       | feature    | pending |
 | [T041](tasks/T041-workspace-cleanup.md)             | Implement workspace cleanup for terminal states                                       | E008 | P1       | feature    | pending |
 | [T042](tasks/T042-reconcile-workspaces.md)          | Implement ReconcileWorkspacesCommand                                                  | E008 | P1       | feature    | pending |
-| [T043](tasks/T043-worker-runtime-interface.md)      | Define worker runtime interface                                                       | E009 | P0       | foundation | pending |
+| [T043](tasks/T043-worker-runtime-interface.md)      | Define worker runtime interface                                                       | E009 | P0       | foundation | done    |
 | [T044](tasks/T044-worker-supervisor.md)             | Implement Worker Supervisor                                                           | E009 | P0       | feature    | pending |
 | [T045](tasks/T045-copilot-cli-adapter.md)           | Implement Copilot CLI execution adapter                                               | E009 | P0       | feature    | pending |
 | [T046](tasks/T046-output-capture-validation.md)     | Implement structured output capture and validation                                    | E009 | P0       | feature    | pending |

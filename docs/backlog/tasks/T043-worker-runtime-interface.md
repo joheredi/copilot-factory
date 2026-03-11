@@ -5,7 +5,7 @@
 | **ID**                    | T043                                                                       |
 | **Epic**                  | [E009: Worker Runtime & Execution](../epics/E009-worker-runtime.md)        |
 | **Type**                  | foundation                                                                 |
-| **Status**                | pending                                                                    |
+| **Status**                | done                                                                       |
 | **Priority**              | P0                                                                         |
 | **Owner**                 | backend-engineer                                                           |
 | **AI Executable**         | Yes                                                                        |
