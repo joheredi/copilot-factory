@@ -356,3 +356,39 @@
 - T014 depends on T008-T013 (all now done). It's the next critical-path task
 - The `default_policy_set_id` on Project and various policy ID columns on WorkflowTemplate/AgentProfile are currently nullable text without DB-level FK constraints — T014 repositories should handle this gracefully
 - AuditEvent is append-only by design; no UPDATE/DELETE patterns needed in the repository layer
+
+## 2026-03-11 — T014: Implement data access repositories for all entities
+
+**Status:** Done
+
+**What was done:**
+
+- Created `apps/control-plane/src/infrastructure/repositories/` with 18 repository factory functions
+- Each repository is a `createXxxRepository(db: BetterSQLite3Database)` factory returning a typed object with CRUD + query methods
+- All 18 schema entities covered: WorkflowTemplate, Project, Repository, Task, TaskDependency, WorkerPool, Worker, AgentProfile, PromptTemplate, TaskLease, ReviewCycle, ReviewPacket, LeadReviewDecision, MergeQueueItem, ValidationRun, Job, AuditEvent, PolicySet
+- **Task repository**: Optimistic concurrency via version column — `update()` requires `expectedVersion`, atomically checks and increments, throws `VersionConflictError` on mismatch
+- **Job repository**: `claimJob()` atomically sets status=CLAIMED + leaseOwner + increments attemptCount, only if job is PENDING
+- **AuditEvent repository**: Insert-only by design — no update/delete methods
+- **TaskLease repository**: `findActiveByTaskId()` filters out terminal statuses (COMPLETED, TIMED_OUT, CRASHED, RECLAIMED)
+- **MergeQueueItem repository**: `findByRepositoryId()` returns items ordered by position
+- Central `index.ts` re-exports all factory functions and entity types
+- 138 tests in `repositories.test.ts` covering CRUD, special behaviors, and edge cases
+- 418 total tests pass (280 existing + 138 new)
+
+**Patterns established:**
+
+- Factory function pattern: `createXxxRepository(db)` — accepts `BetterSQLite3Database` for both standalone and transactional use
+- Consistent API: `findById`, `findAll(opts?)`, `create`, `update`, `delete` + entity-specific queries
+- `$dynamic()` used for optional limit/offset pagination
+- Optimistic concurrency via WHERE clause on version column (Task repository)
+- Atomic claim pattern via conditional UPDATE (Job repository)
+- Entity types exported as `Xxx` (select) and `NewXxx` (insert) from each repository module
+
+**Next steps:**
+
+- T015: Task state machine (depends on T014 ✅)
+- T025: Job queue core (depends on T014 ✅)
+- T030: Lease acquisition (depends on T014 ✅)
+- T035: DAG validation (depends on T014 ✅)
+- T005: CI pipeline (independent — depends on T003 ✅, T004 ✅)
+- T020-T024: Zod packet schemas (independent — depends on T004 ✅)
