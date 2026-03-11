@@ -5,7 +5,7 @@
 | **ID**                    | T039                                                                                                           |
 | **Epic**                  | [E008: Workspace Management](../epics/E008-workspace-management.md)                                            |
 | **Type**                  | feature                                                                                                        |
-| **Status**                | pending                                                                                                        |
+| **Status**                | done                                                                                                           |
 | **Priority**              | P0                                                                                                             |
 | **Owner**                 | backend-engineer                                                                                               |
 | **AI Executable**         | Yes                                                                                                            |
@@ -57,11 +57,11 @@ The implementing agent should read these files before starting:
 
 ## Acceptance Criteria
 
-- [ ] Worktree created in correct location
-- [ ] Branch follows naming convention
-- [ ] Retry branches use /r{attempt} suffix
-- [ ] Existing workspaces reused when possible
-- [ ] Errors produce clear failure messages
+- [x] Worktree created in correct location
+- [x] Branch follows naming convention
+- [x] Retry branches use /r{attempt} suffix
+- [x] Existing workspaces reused when possible
+- [x] Errors produce clear failure messages
 
 ## Definition of Done
 

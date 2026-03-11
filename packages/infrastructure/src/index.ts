@@ -22,3 +22,23 @@ export {
   RuntimeNotFoundError,
   DuplicateRuntimeError,
 } from "./worker-runtime/index.js";
+
+// ─── Workspace Management ────────────────────────────────────────────────────
+export type {
+  WorkspaceLayout,
+  WorkspaceResult,
+  CreateWorkspaceOptions,
+  WorktreeEntry,
+  GitOperations,
+  FileSystem,
+} from "./workspace/index.js";
+
+export {
+  WorkspaceManager,
+  GitOperationError,
+  WorkspaceBranchExistsError,
+  WorkspaceDirtyError,
+  createExecGitOperations,
+  parseWorktreeListOutput,
+  createNodeFileSystem,
+} from "./workspace/index.js";

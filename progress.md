@@ -415,3 +415,27 @@
 - T045 (Copilot CLI Adapter) is now unblocked — it must implement the `WorkerRuntime` interface with Copilot CLI process spawning
 - The `RuntimeRegistry` is a singleton; bootstrap code should call `RuntimeRegistry.create()` and register adapters before dispatch
 - `streamRun` uses `AsyncIterable` — adapters should implement it as an async generator function
+
+---
+
+## T039: Git Worktree Creation — Done
+
+**What was implemented:**
+
+- T039: Implemented git worktree creation per task
+- Created `packages/infrastructure/src/workspace/` module with:
+  - `WorkspaceManager` class for workspace provisioning
+  - `GitOperations` interface + `createExecGitOperations()` production impl using `execFile`
+  - `FileSystem` interface + `createNodeFileSystem()` production impl
+  - Branch naming: `factory/{taskId}` and `factory/{taskId}/r{attempt}` for retries
+  - Workspace reuse on retry when worktree is clean
+  - Error types: `GitOperationError`, `WorkspaceBranchExistsError`, `WorkspaceDirtyError`
+- 31 new tests (17 unit tests for WorkspaceManager with mocks, 14 integration tests with real git repos)
+
+**Patterns used:**
+
+- Constructor injection of `GitOperations` + `FileSystem` interfaces for testability
+
+**Next loop should know:**
+
+- T040 (workspace mounting), T041 (workspace cleanup), T044 (worker supervisor) are now unblocked
