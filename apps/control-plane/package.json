@@ -20,6 +20,8 @@
     "test": "vitest run --project @factory/control-plane",
     "test:watch": "vitest --project @factory/control-plane",
     "test:coverage": "vitest run --project @factory/control-plane --coverage",
+    "dev": "tsx src/main.ts",
+    "start": "node dist/main.js",
     "clean": "rm -rf dist tsconfig.tsbuildinfo",
     "lint": "eslint .",
     "format": "prettier --write .",
@@ -30,11 +32,21 @@
   "dependencies": {
     "@factory/application": "workspace:*",
     "@factory/domain": "workspace:*",
+    "@fastify/static": "^9.0.0",
+    "@nestjs/common": "^11.1.16",
+    "@nestjs/core": "^11.1.16",
+    "@nestjs/platform-fastify": "^11.1.16",
+    "@nestjs/swagger": "^11.2.6",
     "better-sqlite3": "^12.6.2",
-    "drizzle-orm": "^0.45.1"
+    "drizzle-orm": "^0.45.1",
+    "fastify": "^5.8.2",
+    "reflect-metadata": "^0.2.2",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@nestjs/testing": "^11.1.16",
     "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^25.4.0",
     "drizzle-kit": "^0.31.9"
   }
 }

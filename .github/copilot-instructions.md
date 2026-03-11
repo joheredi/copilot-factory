@@ -75,6 +75,18 @@ The `eng/` directory is excluded from ESLint (utility scripts with Node.js globa
 - **DB path:** Controlled by `DATABASE_PATH` env var (default: `./data/factory.db`).
 - **Native module:** `better-sqlite3` requires native compilation. Run `pnpm rebuild better-sqlite3` if the `.node` binding is missing after install.
 
+# NestJS API Layer (apps/control-plane)
+
+- **Framework:** NestJS 11 with Fastify adapter (`@nestjs/platform-fastify`).
+- **Entry point:** `apps/control-plane/src/main.ts` — bootstraps app with CORS, Swagger, global pipes/filters.
+- **Dev server:** `cd apps/control-plane && pnpm dev` (uses tsx). Production: `pnpm start` (uses compiled dist).
+- **OpenAPI docs:** Available at `http://localhost:3000/api/docs` when the server is running.
+- **Health check:** `GET /health` returns `{ status: "ok", service: "factory-control-plane", timestamp: "..." }`.
+- **Validation:** Zod-based validation pipe. DTOs should have a static `schema: ZodSchema` property.
+- **Error handling:** Global exception filter returns structured `{ statusCode, error, message, details?, timestamp, path }`.
+- **Module structure:** Feature modules match domain boundaries (Projects, Tasks, Workers, Review, Merge, Validation, Audit, Policy). Add controllers/services to these modules for new endpoints.
+- **TypeScript:** The control-plane tsconfig overrides `verbatimModuleSyntax: false` and enables `experimentalDecorators`/`emitDecoratorMetadata` for NestJS decorator support. Other packages are unaffected.
+
 # High-level architecture
 
 The intended system is a local-first orchestration platform for software delivery using bounded AI workers inside a deterministic control plane.

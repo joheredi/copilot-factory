@@ -1,172 +1,34 @@
 # Progress Log
 
-## T033: Implement stale lease reclaim and retry/escalation — DONE (2026-03-11)
-
-**Status:** Done
+## T080: Implement NestJS application bootstrap and module structure (2026-03-11)
 
 **What was done:**
 
-- Added 3 new transitions to the task state machine (`task-state-machine.ts`):
-  - `IN_DEVELOPMENT → READY` (lease reclaimed, retry eligible)
-  - `ASSIGNED → READY` (lease reclaimed before worker reached IN_DEVELOPMENT)
-  - `ASSIGNED → FAILED` (lease timed out, no retry remaining)
-  - New guard context field: `leaseReclaimedRetryEligible`
+- Bootstrapped NestJS application in `apps/control-plane` with Fastify adapter
+- Created `src/main.ts` with CORS (localhost origins), OpenAPI/Swagger at `/api/docs`, global exception filter, and Zod validation pipe
+- Created `src/app.module.ts` root module importing 9 feature modules matching domain boundaries
+- Created `src/health/` with `HealthController` (GET /health → 200 with status, service name, timestamp)
+- Created `src/common/filters/global-exception.filter.ts` — structured JSON error responses for all exception types (HttpException → proper status, unknown → safe 500)
+- Created `src/common/pipes/zod-validation.pipe.ts` — validates request data against Zod schemas attached as static `schema` property on DTO classes
+- Created 8 feature module shells: Projects, Tasks, Workers, Review, Merge, Validation, Audit, Policy
+- Added 16 new tests (health controller, exception filter, validation pipe, app module wiring)
+- Added `dev` (tsx) and `start` (node) scripts to package.json
 
-- Created `packages/application/src/ports/lease-reclaim.ports.ts`:
-  - `ReclaimableLease`, `ReclaimableTask` entity shapes
-  - `ReclaimLeaseRepositoryPort` with `updateStatusWithReason`
-  - `ReclaimTaskRepositoryPort` with `updateStatusAndRetryCount`
-  - `ReclaimUnitOfWork` transaction boundary
+**Key decisions:**
 
-- Created `packages/application/src/services/lease-reclaim.service.ts`:
-  - `createLeaseReclaimService(unitOfWork, eventEmitter)` factory
-  - `reclaimLease(params)` — atomically reclaims a stale/crashed lease:
-    1. Validates lease is in STARTING/RUNNING/HEARTBEATING
-    2. Transitions lease to TIMED_OUT or CRASHED via state machine
-    3. Evaluates `shouldRetry()` from retry policy
-    4. If eligible: task → READY, increment retry_count
-    5. If exhausted: evaluates `shouldEscalate()` → FAILED or ESCALATED
-    6. Records audit event with full decision context
-    7. Emits domain events after commit
-  - Handles race condition: task already transitioned by another process
+- Used Fastify adapter (not Express) per PRD §7.1 recommendation
+- Used Zod for validation (not class-validator) since codebase already uses Zod in @factory/schemas
+- Overrode `verbatimModuleSyntax: false` and added `experimentalDecorators`/`emitDecoratorMetadata` in control-plane tsconfig only (NestJS decorators require these; doesn't affect other packages)
+- Feature modules are empty shells — endpoint implementation is in T081–T085
 
-- Added `LeaseNotReclaimableError` to `errors.ts`
+**Dependencies added:** @nestjs/core, @nestjs/common, @nestjs/platform-fastify, @nestjs/swagger, reflect-metadata, fastify, @fastify/static, zod, @nestjs/testing
 
-- Created 25 tests in `lease-reclaim.service.test.ts` covering:
-  - Retry-eligible paths (heartbeat miss, crash, TTL, ASSIGNED state, boundary counts)
-  - Escalation paths (exhausted retries, fail_then_escalate, no increment on escalation)
-  - Failure summary requirement (required+missing vs required+present)
-  - Audit trail (full context, escalation action)
-  - Domain events (2 events per reclaim, correct from/to statuses)
-  - Error cases (not found, non-reclaimable states, task already transitioned)
-  - Concurrency safety (duplicate reclaim prevention, version conflict)
-  - Retry count boundary conditions (equals max, last available)
+**What next loop should know:**
 
-**Patterns used:**
-
-- Same factory + unit-of-work + event-emitter pattern as lease.service.ts
-- Domain state machine validation for both lease and task transitions
-- Audit event captures old/new state JSON with decision metadata
-- Domain events emitted AFTER successful transaction commit
-
-**Notes for next loops:**
-
-- T034 (crash recovery with partial artifact capture) is now unblocked
-- The reclaim service expects policies as params — T052 (hierarchical config) will provide these at runtime
-- COMPLETING leases are NOT reclaimed by this service (handled by graceful completion + reconciliation sweep T029)
-
-## T051: Implement retry and escalation policy evaluation — DONE (2026-03-11)
-
-**Status:** Done
-
-**What was done:**
-
-- Created `packages/domain/src/policies/retry-policy.ts`:
-  - `BackoffStrategy` enum (V1: exponential only)
-  - `RetryPolicy` interface matching PRD §9.6.1 canonical shape
-  - `RetryEvaluationContext` / `RetryEvaluation` result types
-  - `calculateBackoff(attempt, policy)` — exponential formula: initial × 2^(attempt−1), capped at max
-  - `shouldRetry(context, policy)` — checks retry_count < max_attempts and failure summary requirement
-  - `DEFAULT_RETRY_POLICY` constant (max_attempts=2, exponential 60s-900s)
-  - `createDefaultRetryPolicy()` factory
-
-- Created `packages/domain/src/policies/escalation-policy.ts`:
-  - `EscalationTrigger` enum with all 7 triggers from PRD §9.7.2
-  - `EscalationTriggerAction` type extending `EscalationAction` with `retry_or_escalate` and `disable_profile_and_escalate`
-  - `EscalationPolicy` interface matching PRD §9.7.1 canonical shape
-  - `shouldEscalate(context, policy)` — threshold-based triggers validate context, unconditional triggers always fire
-  - Fail-safe: missing context data or unknown triggers default to escalation
-  - `getTriggerAction()`, `getConfiguredTriggers()` helpers
-  - `DEFAULT_ESCALATION_POLICY` constant (routes to operator-queue, requires summary)
-  - `createDefaultEscalationPolicy()` factory
-
-- Created test files with 46 new tests:
-  - `retry-policy.test.ts` (20 tests): backoff formula, cap, eligibility, summary requirement, zero-retry, priority of checks
-  - `escalation-policy.test.ts` (26 tests): all 7 triggers, threshold-based + unconditional, fail-safe, custom policy routing, reason messages
-
-- Updated `packages/domain/src/index.ts` barrel exports
-
-**Patterns used:** Same as existing policies (command-policy, file-scope-policy, validation-policy):
-
-- `as const` enums with derived union types
-- Readonly interfaces
-- Pure functions with full JSDoc
-- Section dividers
-
-**What the next loop should know:**
-
-- T051 unblocks T033 (lease reclaim) and T053 (policy snapshot)
-- The `EscalationAction` enum in `enums.ts` already existed — escalation-policy imports it
-- `EscalationTriggerAction` extends `EscalationAction` with two additional string literals for composite actions
-- Total test count: 2,191 (up from 2,145)
-
----
-
-## T035: Implement DAG validation with circular dependency detection — DONE (2026-03-11)
-
-**Status:** Done
-
-**What was done:**
-
-- Created `packages/application/src/ports/dependency.ports.ts` — port interfaces for DAG validation:
-  - `DependencyEdge` / `NewDependencyEdge` — entity shapes
-  - `DependencyTaskRepositoryPort` — task existence checks
-  - `TaskDependencyRepositoryPort` — forward/reverse graph traversal + CRUD
-  - `DependencyUnitOfWork` — transaction boundary for atomic cycle-check + insert
-- Created `packages/application/src/services/dependency.service.ts` — DependencyService with:
-  - `addDependency()` — validates input, runs DFS cycle detection, inserts atomically
-  - `removeDependency()` — deletes edge by ID
-  - `getDependencies()` — forward lookup (what does this task depend on?)
-  - `getDependents()` — reverse lookup (what tasks depend on this?)
-  - `detectCycle()` — DFS from dependsOnTaskId following forward edges to check reachability of taskId
-- Added 3 new error classes in `errors.ts`:
-  - `CyclicDependencyError` — includes the cycle path for diagnostics
-  - `DuplicateDependencyError` — prevents duplicate edges
-  - `SelfDependencyError` — prevents a task depending on itself
-- Created 33 tests in `dependency.service.test.ts` covering:
-  - Input validation (self-dep, missing tasks, duplicates)
-  - Cycle detection: 2-node, 3-node, long chain, diamond, mixed types
-  - Valid DAGs: linear chain, diamond, tree, disconnected, fan-out, fan-in
-  - isHardBlock defaults per dependency type
-  - Edge removal and re-addition
-  - Complex graph scenarios with mixed accept/reject
-
-**Key patterns:**
-
-- Follows the same functional factory pattern as other application services
-- Uses hexagonal architecture: service depends on ports, not concrete repos
-- DFS cycle detection runs inside the same transaction as the insert (atomic)
-- All dependency types (blocks, relates_to, parent_child) participate in cycle detection per PRD §2.3
-- isHardBlock defaults: true for BLOCKS, false for RELATES_TO and PARENT_CHILD
-
-**For next loops:**
-
-- T036 (readiness computation) is now unblocked — can use DependencyService for dependency queries
-- T037 (reverse-dependency recalculation) is now unblocked — getDependents() provides reverse lookups
-- Infrastructure adapter for DependencyUnitOfWork will be needed when wiring into the control plane
-
-## T027: Implement Scheduler Service (2026-03-11)
-
-**What was done:**
-
-- Created `packages/application/src/ports/scheduler.ports.ts` with `SchedulerTaskRepositoryPort` and `SchedulerPoolRepositoryPort` interfaces
-- Created `packages/application/src/services/scheduler.service.ts` implementing the full `SchedulerService` with `scheduleNext()` method
-- Created comprehensive test suite with 33 tests covering priority ordering, capability matching, concurrency limits, duplicate assignment prevention, and error propagation
-- Exported all new types and functions from `packages/application/src/index.ts`
-
-**Patterns used:**
-
-- Factory function pattern (`createSchedulerService()`) consistent with existing services
-- Service composition: Scheduler orchestrates `LeaseService` and `JobQueueService` rather than owning their transactions
-- Pure helper functions exported for unit testing: `isPoolCompatible`, `hasPoolCapacity`, `selectBestPool`, `comparePriority`
-- Discriminated union result type (`ScheduleResult = ScheduleSuccessResult | ScheduleNoAssignmentResult`) with skip reasons for observability
-
-**Next loop should know:**
-
-- T028 (scheduler tick loop) is now unblocked — it will need to call `scheduleNext()` on a periodic tick
-- The scheduler ports (`SchedulerTaskRepositoryPort`, `SchedulerPoolRepositoryPort`) need infrastructure implementations in `packages/infrastructure/` when the repository adapters are built
-- The `SchedulablePool.activeLeaseCount` field requires a COUNT query joining task_leases with active statuses — this is the most complex query the infra layer needs to implement
-- Pool type assignment is hardcoded to DEVELOPER for now; future tasks may need REVIEWER/PLANNER pool matching
+- The NestJS app coexists with existing infrastructure code (database, repositories, unit-of-work)
+- Feature modules need controllers and services wired to existing repository adapters (via NestJS providers)
+- The Zod validation pipe expects DTOs with a static `schema: ZodSchema` property
+- CORS is configured for `localhost:*` origins (for web-ui dev server)
 
 ## T043: Define Worker Runtime Interface (2026-03-11)
 
