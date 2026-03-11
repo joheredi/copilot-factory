@@ -165,8 +165,8 @@ See [phase documents](phases/) for details.
 | [T042](tasks/T042-reconcile-workspaces.md)          | Implement ReconcileWorkspacesCommand                                                  | E008 | P1       | feature    | pending |
 | [T043](tasks/T043-worker-runtime-interface.md)      | Define worker runtime interface                                                       | E009 | P0       | foundation | done    |
 | [T044](tasks/T044-worker-supervisor.md)             | Implement Worker Supervisor                                                           | E009 | P0       | feature    | done    |
-| [T045](tasks/T045-copilot-cli-adapter.md)           | Implement Copilot CLI execution adapter                                               | E009 | P0       | feature    | pending |
-| [T046](tasks/T046-output-capture-validation.md)     | Implement structured output capture and validation                                    | E009 | P0       | feature    | pending |
+| [T045](tasks/T045-copilot-cli-adapter.md)           | Implement Copilot CLI execution adapter                                               | E009 | P0       | feature    | done    |
+| [T046](tasks/T046-output-capture-validation.md)     | Implement structured output capture and validation                                    | E009 | P0       | feature    | done    |
 | [T047](tasks/T047-command-wrapper.md)               | Implement policy-aware command wrapper                                                | E009 | P0       | security   | done    |
 | [T048](tasks/T048-command-policy.md)                | Implement command policy model and enforcement                                        | E010 | P0       | feature    | done    |
 | [T049](tasks/T049-file-scope-policy.md)             | Implement file scope policy model and enforcement                                     | E010 | P0       | feature    | done    |

@@ -293,3 +293,36 @@ export type {
   ReclaimLeaseResult,
   LeaseReclaimService,
 } from "./services/lease-reclaim.service.js";
+
+// Ports — output validation interfaces
+export type {
+  WorkerOutputSource,
+  OutputValidationContext,
+  OutputRejectionReason,
+  OutputValidationSuccess,
+  OutputValidationFailure,
+  OutputValidationResult,
+  ExtractionResult,
+  ArtifactExistencePort,
+  SchemaFailureTrackerPort,
+  OutputValidationAuditPort,
+  OutputValidatorService,
+} from "./ports/output-validator.ports.js";
+
+// Services — structured output capture and validation (PRD 008 §8.14)
+export {
+  createOutputValidatorService,
+  extractPacket,
+  validateSchema,
+  attemptSchemaRepair,
+  verifyIds,
+  verifyArtifacts,
+  RESULT_PACKET_START_DELIMITER,
+  RESULT_PACKET_END_DELIMITER,
+  DEFAULT_CONSECUTIVE_FAILURE_THRESHOLD,
+} from "./services/output-validator.service.js";
+export type {
+  OutputValidatorDependencies,
+  SchemaValidationResult,
+  RepairResult,
+} from "./services/output-validator.service.js";

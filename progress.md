@@ -1,5 +1,35 @@
 # Progress Log
 
+## T046: Implement structured output capture and validation (2026-03-11)
+
+**What was done:**
+
+- Created `packages/application/src/ports/output-validator.ports.ts` with port interfaces: `ArtifactExistencePort`, `SchemaFailureTrackerPort`, `OutputValidationAuditPort`, and full result/context types
+- Created `packages/application/src/services/output-validator.service.ts` with the full validation pipeline:
+  - `extractPacket()` — file-based extraction (priority) with stdout delimiter fallback
+  - `validateSchema()` — Zod-based validation using a packet schema registry
+  - `attemptSchemaRepair()` — conservative repair for missing arrays→[] and nullables→null
+  - `verifyIds()` — checks task_id, repository_id, and stage-specific IDs match orchestrator context
+  - `verifyArtifacts()` — checks artifact_refs resolve to existing files via port
+  - `createOutputValidatorService()` — factory with consecutive failure tracking per agent profile (threshold=3 disables profile) and schema_violation audit event recording
+- Created 54 comprehensive tests covering all acceptance criteria
+- Added `@factory/schemas` and `zod` as dependencies to `@factory/application`
+- Updated tsconfig references to include `@factory/schemas`
+
+**Patterns used:**
+
+- Hexagonal architecture: ports for artifact checking, failure tracking, audit recording
+- Pure functions for extraction, schema validation, ID verification (testable without infrastructure)
+- Service factory pattern matching existing services (e.g., `createGracefulCompletionService`)
+- Fake ports in tests (same pattern as `FakeCliProcess`, `FakeFileSystem` in infrastructure)
+
+**What the next loop should know:**
+
+- The output validator is a pure application-layer service — it does NOT do state transitions. The caller (e.g., worker completion flow) is responsible for using the result to drive transitions.
+- Schema repair is intentionally conservative: only repairs missing arrays (→[]) and nullable fields (→null). It does NOT default required strings or numbers.
+- The `PACKET_STAGE_ID_FIELDS` map in the service specifies which stage-specific IDs to verify per packet type.
+- T045 (Copilot CLI adapter) was already done but the backlog index was stale — corrected in this commit.
+
 ## T080: Implement NestJS application bootstrap and module structure (2026-03-11)
 
 **What was done:**

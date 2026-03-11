@@ -5,7 +5,7 @@
 | **ID**                    | T046                                                                                                                  |
 | **Epic**                  | [E009: Worker Runtime & Execution](../epics/E009-worker-runtime.md)                                                   |
 | **Type**                  | feature                                                                                                               |
-| **Status**                | pending                                                                                                               |
+| **Status**                | done                                                                                                                  |
 | **Priority**              | P0                                                                                                                    |
 | **Owner**                 | backend-engineer                                                                                                      |
 | **AI Executable**         | Yes                                                                                                                   |
@@ -58,11 +58,11 @@ The implementing agent should read these files before starting:
 
 ## Acceptance Criteria
 
-- [ ] Valid packets accepted correctly
-- [ ] Invalid JSON rejected as fatal
-- [ ] Schema violations handled with repair attempt
-- [ ] ID mismatches rejected
-- [ ] Consecutive failure tracking works
+- [x] Valid packets accepted correctly
+- [x] Invalid JSON rejected as fatal
+- [x] Schema violations handled with repair attempt
+- [x] ID mismatches rejected
+- [x] Consecutive failure tracking works
 
 ## Definition of Done
 
