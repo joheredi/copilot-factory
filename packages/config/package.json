@@ -25,6 +25,7 @@
     "format": "prettier --write ."
   },
   "dependencies": {
-    "@factory/domain": "workspace:*"
+    "@factory/domain": "workspace:*",
+    "@factory/schemas": "workspace:*"
   }
 }

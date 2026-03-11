@@ -118,6 +118,9 @@ importers:
       '@factory/domain':
         specifier: workspace:*
         version: link:../domain
+      '@factory/schemas':
+        specifier: workspace:*
+        version: link:../schemas
 
   packages/domain: {}
 

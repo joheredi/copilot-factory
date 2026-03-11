@@ -398,3 +398,38 @@ Created ReverseDependencyService in `packages/application` that automatically re
 - The adapter depends on T043 (worker runtime interface) and T047 (command wrapper) — both done
 - `zod` is now available in `@factory/infrastructure` for any future schema validation needs
 - The `CliProcessSpawner` / `FakeCliProcess` pattern can be reused for other CLI-based adapters
+
+## T052: Implement hierarchical configuration resolution (2026-03-11)
+
+**What was done:**
+
+- Created `packages/config/src/types.ts` with core types: `ConfigLayer` (8-value enum), `ConfigContext`, `ConfigLayerEntry`, `PartialFactoryConfig`, `ResolvedPolicy<T>`, `ResolvedConfig` with field-level source tracking
+- Created default policy modules with override types and merge functions for all 6 previously-missing policies:
+  - `defaults/lease-policy.ts` — 30min TTL, 30s heartbeat, 2 missed threshold
+  - `defaults/retention-policy.ts` — 24h workspace, 30d artifact retention
+  - `defaults/review-policy.ts` — 3 rounds, general required, security/perf optional
+  - `defaults/validation-policy.ts` — default-dev and merge-gate profiles
+  - `defaults/retry-policy.ts` — 2 retries, exponential backoff 60s→900s
+  - `defaults/escalation-policy.ts` — 7 trigger types, operator-queue routing
+- Created `defaults/system-defaults.ts` — complete FactoryConfig baseline from all 8 sub-policy defaults
+- Created `resolver.ts` — `resolveConfig(layers, systemDefaults?)` with:
+  - 8-layer precedence enforcement (system→operator_override)
+  - Layer ordering validation (must be non-decreasing)
+  - Field-level source tracking (every field records which layer supplied it)
+  - Last-writer-wins merge semantics (arrays replaced wholesale)
+  - `extractValues()` and `extractSources()` utility functions
+- Created 28 tests covering: system defaults, single/multi-layer overrides, all 8 layers, skipped layers, array replacement, ordering enforcement, extractValues/extractSources, realistic scenarios
+- Added `@factory/schemas` dependency to `@factory/config`
+
+**Patterns used:**
+
+- Pure function resolver with no DB dependency — layer loading is the caller's responsibility (follows layered architecture)
+- Generic merge function registry keyed by PolicyName — avoids switch/case and scales with new policies
+- Existing merge pattern: `override.field ?? base.field` (last-writer-wins per field, arrays wholesale)
+- FieldSourceMap<T> type for compile-time-safe source tracking per policy field
+
+**Notes for next iteration:**
+
+- T052 unblocks T053 (effective policy snapshot generation) which needs `resolveConfig()` + DB layer loading
+- The `PartialFactoryConfig` type is the contract for what each layer can contribute — application services loading from DB should produce this shape
+- The `ConfigContext` type is defined but not yet consumed by the resolver (it's for the future application service that will select which layers to load from DB based on context)
