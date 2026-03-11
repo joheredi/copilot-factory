@@ -44,6 +44,8 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@factory/schemas": "workspace:*",
+    "@factory/testing": "workspace:*",
     "@nestjs/testing": "^11.1.16",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.4.0",

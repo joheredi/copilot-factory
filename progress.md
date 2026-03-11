@@ -1,5 +1,33 @@
 # Progress Log
 
+## 2026-03-11 — T107: Integration test: full task lifecycle BACKLOG to DONE
+
+**Status:** Done
+
+**What was done:**
+
+- Created `apps/control-plane/src/integration/full-lifecycle.integration.test.ts` (6 tests)
+- Full happy-path lifecycle test: BACKLOG → READY → ASSIGNED → IN_DEVELOPMENT → DEV_COMPLETE → IN_REVIEW → APPROVED → QUEUED_FOR_MERGE → MERGING → POST_MERGE_VALIDATION → DONE
+- Also transitions supporting entities alongside: lease (LEASED→COMPLETING), review cycle (NOT_STARTED→APPROVED), merge queue item (ENQUEUED→MERGED)
+- Verifies 10 task audit events with correct old/new state JSON and event types
+- Verifies audit trails for lease, review cycle, and merge queue item entities
+- Schema-valid packet creation tests (DevResultPacket, ReviewPacket, LeadReviewDecisionPacket, ValidationResultPacket, MergePacket)
+- Version increment verification across all 10 transitions
+- Duplicate assignment rejection test
+- Guard rejection test with unchanged DB state
+- Atomic persistence test (successful + failed transitions)
+- Added `@factory/schemas` and `@factory/testing` as devDependencies to `@factory/control-plane`
+
+**Patterns / notes for next loops:**
+
+- The TransitionService throws `InvalidTransitionError` on invalid transitions (not a success/failure return)
+- `ActorInfo` uses `type` and `id` fields (not `actorType`/`actorId`)
+- Audit event `old_state`/`new_state` columns store JSON like `{"status":"BACKLOG","version":1}`, not bare strings
+- Audit event `event_type` format: `task.transition.{FROM}.to.{TO}`
+- `createTestDatabase({ migrationsFolder })` needs the path to `apps/control-plane/drizzle` — use `resolve(import.meta.dirname, "../../drizzle")` from the integration test directory
+- The `createSqliteUnitOfWork` from `apps/control-plane/src/infrastructure/unit-of-work/` bridges DB to application services
+- Test seeding uses raw SQL via `conn.sqlite.prepare()` for speed and simplicity
+
 ## 2026-03-11 — T005: Create CI pipeline with GitHub Actions
 
 **Status:** Done
