@@ -48,7 +48,7 @@ Stack choices (NestJS vs Fastify, Drizzle vs Kysely) must be finalized before st
 
 | ID | Title | Priority | Status |
 |---|---|---|---|
-| [T001](../tasks/T001-init-monorepo.md) | Initialize pnpm monorepo workspace | P0 | pending |
+| [T001](../tasks/T001-init-monorepo.md) | Initialize pnpm monorepo workspace | P0 | done |
 | [T002](../tasks/T002-typescript-config.md) | Configure TypeScript for all packages | P0 | pending |
 | [T003](../tasks/T003-eslint-prettier.md) | Set up ESLint and Prettier | P0 | pending |
 | [T004](../tasks/T004-vitest-setup.md) | Set up Vitest testing framework | P0 | pending |

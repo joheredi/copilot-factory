@@ -121,7 +121,7 @@ See [phase documents](phases/) for details.
 
 | ID | Title | Epic | Priority | Type | Status |
 |---|---|---|---|---|---|
-| [T001](tasks/T001-init-monorepo.md) | Initialize pnpm monorepo workspace | E001 | P0 | foundation | pending |
+| [T001](tasks/T001-init-monorepo.md) | Initialize pnpm monorepo workspace | E001 | P0 | foundation | done |
 | [T002](tasks/T002-typescript-config.md) | Configure TypeScript for all packages | E001 | P0 | foundation | pending |
 | [T003](tasks/T003-eslint-prettier.md) | Set up ESLint and Prettier | E001 | P0 | foundation | pending |
 | [T004](tasks/T004-vitest-setup.md) | Set up Vitest testing framework | E001 | P0 | foundation | pending |

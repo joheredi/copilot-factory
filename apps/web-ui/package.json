@@ -1,0 +1,6 @@
+{
+  "name": "@factory/web-ui",
+  "version": "0.1.0",
+  "private": true,
+  "description": "React SPA operator dashboard — system health, task board, review center, merge queue, config editor, audit explorer."
+}

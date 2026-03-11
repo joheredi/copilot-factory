@@ -1,0 +1,6 @@
+{
+  "name": "@factory/infrastructure",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Infrastructure layer — database repositories, git services, runner adapters, filesystem storage, event transport."
+}

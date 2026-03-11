@@ -1,0 +1,6 @@
+{
+  "name": "@factory/schemas",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Packet schemas — Zod schemas for task packets, dev results, reviews, merge, validation, and all artifact contracts."
+}

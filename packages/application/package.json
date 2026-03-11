@@ -1,0 +1,6 @@
+{
+  "name": "@factory/application",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Application layer — commands, queries, orchestrators, and use cases."
+}

@@ -14,9 +14,17 @@ The architecture is spread across numbered documents instead of a single README:
 
 # Build, test, and lint
 
-There are no runnable build, test, or lint commands in the current repository snapshot. No `package.json`, test suite, or implementation code is present yet.
+The repository is a pnpm monorepo. Root-level scripts delegate to workspaces via `pnpm -r run`:
 
-If future work adds the implementation described in the docs, `docs/007-technical-architecture.md` proposes a `pnpm`-based workflow, but do not present those commands as existing project commands unless the corresponding manifests and scripts are actually added.
+```bash
+pnpm install          # Install all dependencies (run after cloning or adding deps)
+pnpm build            # Build all packages (delegates to workspace build scripts)
+pnpm test             # Run tests in all packages (delegates to workspace test scripts)
+pnpm lint             # Lint all packages (delegates to workspace lint scripts)
+pnpm format           # Format all packages (delegates to workspace format scripts)
+```
+
+> **Note:** Individual workspace build/test/lint scripts are added by subsequent tasks (T002–T004). Until those are complete, root-level `pnpm build`, `pnpm test`, and `pnpm lint` will succeed vacuously (no workspace scripts to run yet).
 
 # High-level architecture
 

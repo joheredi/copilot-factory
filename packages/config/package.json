@@ -1,0 +1,6 @@
+{
+  "name": "@factory/config",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Configuration layer — hierarchical config resolution, policy loading, and effective snapshot generation."
+}

@@ -1,0 +1,31 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .: {}
+
+  apps/control-plane: {}
+
+  apps/web-ui: {}
+
+  apps/worker-runner: {}
+
+  packages/application: {}
+
+  packages/config: {}
+
+  packages/domain: {}
+
+  packages/infrastructure: {}
+
+  packages/observability: {}
+
+  packages/schemas: {}
+
+  packages/testing: {}
+
+  packages/ui-components: {}

@@ -1,0 +1,6 @@
+{
+  "name": "@factory/testing",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Testing utilities — fakes, fixtures, test helpers, and shared test infrastructure."
+}
