@@ -36,6 +36,8 @@ import {
   mergeQueueItems,
   validationRuns,
   jobs,
+  auditEvents,
+  policySets,
 } from "./schema.js";
 
 /**
@@ -316,6 +318,36 @@ function openTestDb() {
     CREATE INDEX idx_job_status_run_after ON job(status, run_after);
     CREATE INDEX idx_job_group_id ON job(job_group_id);
     CREATE INDEX idx_job_parent_job_id ON job(parent_job_id);
+
+    -- T013: AuditEvent, PolicySet
+    CREATE TABLE audit_event (
+      audit_event_id TEXT PRIMARY KEY NOT NULL,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      actor_type TEXT NOT NULL,
+      actor_id TEXT NOT NULL,
+      old_state TEXT,
+      new_state TEXT,
+      metadata_json TEXT,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+
+    CREATE INDEX idx_audit_event_entity ON audit_event(entity_type, entity_id);
+    CREATE INDEX idx_audit_event_created_at ON audit_event(created_at);
+
+    CREATE TABLE policy_set (
+      policy_set_id TEXT PRIMARY KEY NOT NULL,
+      name TEXT NOT NULL,
+      version TEXT NOT NULL,
+      scheduling_policy_json TEXT,
+      review_policy_json TEXT,
+      merge_policy_json TEXT,
+      security_policy_json TEXT,
+      validation_policy_json TEXT,
+      budget_policy_json TEXT,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
   `);
 
   const db = drizzle(sqlite);
@@ -3872,5 +3904,786 @@ describe("T012 — Cross-table relationships", () => {
       .all(groupId) as Array<Record<string, unknown>>;
 
     expect(groupJobs).toHaveLength(3);
+  });
+});
+
+// ─── T013 Factory Functions ─────────────────────────────────────────────────
+
+/** Generate a minimal valid AuditEvent row. */
+function makeAuditEvent(overrides: Partial<typeof auditEvents.$inferInsert> = {}) {
+  return {
+    auditEventId: randomUUID(),
+    entityType: "task",
+    entityId: randomUUID(),
+    eventType: "state_transition",
+    actorType: "system",
+    actorId: "scheduler",
+    ...overrides,
+  };
+}
+
+/** Generate a minimal valid PolicySet row. */
+function makePolicySet(overrides: Partial<typeof policySets.$inferInsert> = {}) {
+  return {
+    policySetId: randomUUID(),
+    name: "default-policy",
+    version: "1.0.0",
+    ...overrides,
+  };
+}
+
+// ─── T013 Tests ─────────────────────────────────────────────────────────────
+
+describe("T013 — AuditEvent table", () => {
+  let db: ReturnType<typeof openTestDb>["db"];
+  let sqlite: ReturnType<typeof openTestDb>["sqlite"];
+
+  beforeEach(() => {
+    ({ db, sqlite } = openTestDb());
+  });
+
+  afterEach(() => {
+    sqlite.close();
+  });
+
+  /**
+   * @why The audit_event table must exist for the audit trail to function.
+   * This verifies the table was created correctly by openTestDb.
+   */
+  it("audit_event table exists in sqlite_master", () => {
+    const row = sqlite
+      .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='audit_event'`)
+      .get() as { name: string } | undefined;
+    expect(row).toBeDefined();
+    expect(row!.name).toBe("audit_event");
+  });
+
+  /**
+   * @why Basic CRUD: an audit event with all required fields should round-trip
+   * through the ORM without data loss. This validates column mapping.
+   */
+  it("inserts and retrieves an audit event with required fields", () => {
+    const event = makeAuditEvent();
+    db.insert(auditEvents).values(event).run();
+
+    const result = db
+      .select()
+      .from(auditEvents)
+      .where(eq(auditEvents.auditEventId, event.auditEventId))
+      .get();
+
+    expect(result).toBeDefined();
+    expect(result!.auditEventId).toBe(event.auditEventId);
+    expect(result!.entityType).toBe("task");
+    expect(result!.entityId).toBe(event.entityId);
+    expect(result!.eventType).toBe("state_transition");
+    expect(result!.actorType).toBe("system");
+    expect(result!.actorId).toBe("scheduler");
+  });
+
+  /**
+   * @why State transition events carry old_state and new_state. This validates
+   * that nullable state columns store and retrieve correctly.
+   */
+  it("stores old_state and new_state for state transition events", () => {
+    const event = makeAuditEvent({
+      eventType: "state_transition",
+      oldState: "READY",
+      newState: "ASSIGNED",
+    });
+    db.insert(auditEvents).values(event).run();
+
+    const result = db
+      .select()
+      .from(auditEvents)
+      .where(eq(auditEvents.auditEventId, event.auditEventId))
+      .get();
+
+    expect(result!.oldState).toBe("READY");
+    expect(result!.newState).toBe("ASSIGNED");
+  });
+
+  /**
+   * @why Events like "created" or "deleted" have no state transition, so
+   * old_state and new_state must accept null.
+   */
+  it("allows null for old_state and new_state", () => {
+    const event = makeAuditEvent({
+      eventType: "created",
+      oldState: null,
+      newState: null,
+    });
+    db.insert(auditEvents).values(event).run();
+
+    const result = db
+      .select()
+      .from(auditEvents)
+      .where(eq(auditEvents.auditEventId, event.auditEventId))
+      .get();
+
+    expect(result!.oldState).toBeNull();
+    expect(result!.newState).toBeNull();
+  });
+
+  /**
+   * @why metadata_json carries event-specific context as a JSON object.
+   * This validates JSON round-trip through SQLite without data loss.
+   */
+  it("stores and retrieves metadata_json correctly", () => {
+    const metadata = {
+      leaseTimeoutSec: 300,
+      previousWorker: "worker-abc",
+      reason: "heartbeat_missed",
+    };
+    const event = makeAuditEvent({
+      eventType: "lease_reclaimed",
+      metadataJson: metadata,
+    });
+    db.insert(auditEvents).values(event).run();
+
+    const result = db
+      .select()
+      .from(auditEvents)
+      .where(eq(auditEvents.auditEventId, event.auditEventId))
+      .get();
+
+    expect(result!.metadataJson).toEqual(metadata);
+  });
+
+  /**
+   * @why metadata_json is optional — events without extra context should
+   * store null without error.
+   */
+  it("allows null for metadata_json", () => {
+    const event = makeAuditEvent({ metadataJson: null });
+    db.insert(auditEvents).values(event).run();
+
+    const result = db
+      .select()
+      .from(auditEvents)
+      .where(eq(auditEvents.auditEventId, event.auditEventId))
+      .get();
+
+    expect(result!.metadataJson).toBeNull();
+  });
+
+  /**
+   * @why created_at must auto-populate so callers don't need to provide it.
+   * The audit trail depends on reliable timestamps for ordering.
+   */
+  it("auto-populates created_at timestamp", () => {
+    const event = makeAuditEvent();
+    db.insert(auditEvents).values(event).run();
+
+    const result = db
+      .select()
+      .from(auditEvents)
+      .where(eq(auditEvents.auditEventId, event.auditEventId))
+      .get();
+
+    expect(result!.createdAt).toBeDefined();
+    expect(result!.createdAt).toBeInstanceOf(Date);
+  });
+
+  /**
+   * @why Duplicate audit_event_id must be rejected to preserve uniqueness.
+   * The PK constraint is the last line of defense against duplicate events.
+   */
+  it("rejects duplicate audit_event_id", () => {
+    const event = makeAuditEvent();
+    db.insert(auditEvents).values(event).run();
+
+    expect(() => {
+      db.insert(auditEvents).values(event).run();
+    }).toThrow();
+  });
+
+  /**
+   * @why The audit trail is append-only and must support high-volume inserts.
+   * Multiple events for the same entity must coexist without conflict.
+   */
+  it("supports multiple events for the same entity", () => {
+    const entityId = randomUUID();
+    const events = [
+      makeAuditEvent({ entityId, eventType: "created", newState: "BACKLOG" }),
+      makeAuditEvent({
+        entityId,
+        eventType: "state_transition",
+        oldState: "BACKLOG",
+        newState: "READY",
+      }),
+      makeAuditEvent({
+        entityId,
+        eventType: "state_transition",
+        oldState: "READY",
+        newState: "ASSIGNED",
+      }),
+    ];
+    for (const event of events) {
+      db.insert(auditEvents).values(event).run();
+    }
+
+    const results = sqlite
+      .prepare(`SELECT * FROM audit_event WHERE entity_id = ?`)
+      .all(entityId) as Array<Record<string, unknown>>;
+
+    expect(results).toHaveLength(3);
+  });
+
+  /**
+   * @why The (entity_type, entity_id) composite index is critical for the
+   * primary audit query: "show all events for this entity." Without it,
+   * entity-scoped queries would require a full table scan on large tables.
+   */
+  it("has composite index on (entity_type, entity_id)", () => {
+    const indexes = sqlite
+      .prepare(
+        `SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='audit_event' AND name='idx_audit_event_entity'`,
+      )
+      .all() as Array<{ name: string }>;
+    expect(indexes).toHaveLength(1);
+  });
+
+  /**
+   * @why The created_at index supports time-range queries for operational
+   * monitoring: "what happened in the last hour?" Without this index,
+   * time-range queries would be slow on a table that grows indefinitely.
+   */
+  it("has index on created_at", () => {
+    const indexes = sqlite
+      .prepare(
+        `SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='audit_event' AND name='idx_audit_event_created_at'`,
+      )
+      .all() as Array<{ name: string }>;
+    expect(indexes).toHaveLength(1);
+  });
+
+  /**
+   * @why Different actor types (system, worker, operator) must all be
+   * storable. This validates the actor_type column accepts all expected values.
+   */
+  it("accepts all actor types", () => {
+    const actorTypes = ["system", "worker", "operator", "scheduler", "reconciliation"];
+    for (const actorType of actorTypes) {
+      const event = makeAuditEvent({ actorType });
+      db.insert(auditEvents).values(event).run();
+
+      const result = db
+        .select()
+        .from(auditEvents)
+        .where(eq(auditEvents.auditEventId, event.auditEventId))
+        .get();
+
+      expect(result!.actorType).toBe(actorType);
+    }
+  });
+
+  /**
+   * @why Different entity types must be supported — the audit trail tracks
+   * events across all entity types in the system.
+   */
+  it("accepts all entity types", () => {
+    const entityTypes = [
+      "task",
+      "lease",
+      "review_cycle",
+      "merge_queue_item",
+      "policy_set",
+      "worker",
+      "job",
+    ];
+    for (const entityType of entityTypes) {
+      const event = makeAuditEvent({ entityType });
+      db.insert(auditEvents).values(event).run();
+
+      const result = db
+        .select()
+        .from(auditEvents)
+        .where(eq(auditEvents.auditEventId, event.auditEventId))
+        .get();
+
+      expect(result!.entityType).toBe(entityType);
+    }
+  });
+
+  /**
+   * @why Different event types must be supported — from state transitions
+   * to operator overrides. This validates the column accepts the full range.
+   */
+  it("accepts all event types", () => {
+    const eventTypes = [
+      "state_transition",
+      "created",
+      "deleted",
+      "policy_applied",
+      "lease_reclaimed",
+      "operator_override",
+      "configuration_changed",
+    ];
+    for (const eventType of eventTypes) {
+      const event = makeAuditEvent({ eventType });
+      db.insert(auditEvents).values(event).run();
+
+      const result = db
+        .select()
+        .from(auditEvents)
+        .where(eq(auditEvents.auditEventId, event.auditEventId))
+        .get();
+
+      expect(result!.eventType).toBe(eventType);
+    }
+  });
+
+  /**
+   * @why Complex metadata_json objects with nested structures must survive
+   * JSON round-trip. Policy changes and review details can be deeply nested.
+   */
+  it("handles complex nested metadata_json", () => {
+    const metadata = {
+      reviewDetails: {
+        verdict: "changes_requested",
+        issues: [
+          { severity: "high", code: "SEC-001", title: "SQL injection risk" },
+          { severity: "medium", code: "PERF-003", title: "N+1 query" },
+        ],
+        blockingCount: 1,
+      },
+      timestamp: 1700000000,
+    };
+    const event = makeAuditEvent({ metadataJson: metadata });
+    db.insert(auditEvents).values(event).run();
+
+    const result = db
+      .select()
+      .from(auditEvents)
+      .where(eq(auditEvents.auditEventId, event.auditEventId))
+      .get();
+
+    expect(result!.metadataJson).toEqual(metadata);
+  });
+
+  /**
+   * @why The table must have the correct number of columns matching the
+   * PRD §2.3 AuditEvent entity definition. Missing or extra columns would
+   * indicate a schema drift.
+   */
+  it("has the expected number of columns", () => {
+    const columns = sqlite.prepare(`PRAGMA table_info(audit_event)`).all() as Array<{
+      name: string;
+    }>;
+    // audit_event_id, entity_type, entity_id, event_type, actor_type,
+    // actor_id, old_state, new_state, metadata_json, created_at
+    expect(columns).toHaveLength(10);
+  });
+});
+
+describe("T013 — PolicySet table", () => {
+  let db: ReturnType<typeof openTestDb>["db"];
+  let sqlite: ReturnType<typeof openTestDb>["sqlite"];
+
+  beforeEach(() => {
+    ({ db, sqlite } = openTestDb());
+  });
+
+  afterEach(() => {
+    sqlite.close();
+  });
+
+  /**
+   * @why The policy_set table must exist for policy configuration storage.
+   * This verifies the table was created correctly by openTestDb.
+   */
+  it("policy_set table exists in sqlite_master", () => {
+    const row = sqlite
+      .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='policy_set'`)
+      .get() as { name: string } | undefined;
+    expect(row).toBeDefined();
+    expect(row!.name).toBe("policy_set");
+  });
+
+  /**
+   * @why Basic CRUD: a policy set with required fields should round-trip
+   * through the ORM without data loss.
+   */
+  it("inserts and retrieves a policy set with required fields", () => {
+    const ps = makePolicySet();
+    db.insert(policySets).values(ps).run();
+
+    const result = db
+      .select()
+      .from(policySets)
+      .where(eq(policySets.policySetId, ps.policySetId))
+      .get();
+
+    expect(result).toBeDefined();
+    expect(result!.policySetId).toBe(ps.policySetId);
+    expect(result!.name).toBe("default-policy");
+    expect(result!.version).toBe("1.0.0");
+  });
+
+  /**
+   * @why All six JSON policy columns must store and retrieve complex policy
+   * objects without data loss. This is the core functionality of the table.
+   */
+  it("stores and retrieves all JSON policy columns correctly", () => {
+    const schedulingPolicy = {
+      priorityWeights: { P0: 100, P1: 50, P2: 10 },
+      maxQueueDepth: 20,
+      starvationTimeoutSec: 3600,
+    };
+    const reviewPolicy = {
+      requiredReviewerCount: 2,
+      autoApproveThreshold: "low",
+      escalationTriggers: ["critical_issue", "timeout"],
+    };
+    const mergePolicy = {
+      strategy: "rebase",
+      conflictClassification: { reworkable: ["text"], irrecoverable: ["binary"] },
+      requiredGates: ["typecheck", "lint", "test"],
+    };
+    const securityPolicy = {
+      allowedCommands: ["npm", "node", "git"],
+      pathRestrictions: ["/src/**", "/test/**"],
+      networkAccess: false,
+    };
+    const validationPolicy = {
+      stages: {
+        preDev: ["lint"],
+        preMerge: ["typecheck", "lint", "test"],
+      },
+      timeoutSec: 300,
+    };
+    const budgetPolicy = {
+      maxTokensPerSession: 100000,
+      costCapPerTask: 5.0,
+      alertThreshold: 0.8,
+    };
+
+    const ps = makePolicySet({
+      schedulingPolicyJson: schedulingPolicy,
+      reviewPolicyJson: reviewPolicy,
+      mergePolicyJson: mergePolicy,
+      securityPolicyJson: securityPolicy,
+      validationPolicyJson: validationPolicy,
+      budgetPolicyJson: budgetPolicy,
+    });
+    db.insert(policySets).values(ps).run();
+
+    const result = db
+      .select()
+      .from(policySets)
+      .where(eq(policySets.policySetId, ps.policySetId))
+      .get();
+
+    expect(result!.schedulingPolicyJson).toEqual(schedulingPolicy);
+    expect(result!.reviewPolicyJson).toEqual(reviewPolicy);
+    expect(result!.mergePolicyJson).toEqual(mergePolicy);
+    expect(result!.securityPolicyJson).toEqual(securityPolicy);
+    expect(result!.validationPolicyJson).toEqual(validationPolicy);
+    expect(result!.budgetPolicyJson).toEqual(budgetPolicy);
+  });
+
+  /**
+   * @why Policy columns are nullable — a policy set may only define a subset
+   * of policies. This validates that null is accepted for all JSON columns.
+   */
+  it("allows null for all JSON policy columns", () => {
+    const ps = makePolicySet({
+      schedulingPolicyJson: null,
+      reviewPolicyJson: null,
+      mergePolicyJson: null,
+      securityPolicyJson: null,
+      validationPolicyJson: null,
+      budgetPolicyJson: null,
+    });
+    db.insert(policySets).values(ps).run();
+
+    const result = db
+      .select()
+      .from(policySets)
+      .where(eq(policySets.policySetId, ps.policySetId))
+      .get();
+
+    expect(result!.schedulingPolicyJson).toBeNull();
+    expect(result!.reviewPolicyJson).toBeNull();
+    expect(result!.mergePolicyJson).toBeNull();
+    expect(result!.securityPolicyJson).toBeNull();
+    expect(result!.validationPolicyJson).toBeNull();
+    expect(result!.budgetPolicyJson).toBeNull();
+  });
+
+  /**
+   * @why created_at must auto-populate so callers don't need to provide it.
+   */
+  it("auto-populates created_at timestamp", () => {
+    const ps = makePolicySet();
+    db.insert(policySets).values(ps).run();
+
+    const result = db
+      .select()
+      .from(policySets)
+      .where(eq(policySets.policySetId, ps.policySetId))
+      .get();
+
+    expect(result!.createdAt).toBeDefined();
+    expect(result!.createdAt).toBeInstanceOf(Date);
+  });
+
+  /**
+   * @why Duplicate policy_set_id must be rejected to preserve uniqueness.
+   */
+  it("rejects duplicate policy_set_id", () => {
+    const ps = makePolicySet();
+    db.insert(policySets).values(ps).run();
+
+    expect(() => {
+      db.insert(policySets).values(ps).run();
+    }).toThrow();
+  });
+
+  /**
+   * @why Multiple policy set versions must coexist — version management
+   * requires storing historical versions alongside the current one.
+   */
+  it("supports multiple policy sets with different versions", () => {
+    const baseName = `policy-${randomUUID().slice(0, 8)}`;
+    const versions = ["1.0.0", "1.1.0", "2.0.0"];
+    for (const version of versions) {
+      db.insert(policySets)
+        .values(makePolicySet({ name: baseName, version }))
+        .run();
+    }
+
+    const results = sqlite
+      .prepare(`SELECT * FROM policy_set WHERE name = ?`)
+      .all(baseName) as Array<Record<string, unknown>>;
+
+    expect(results).toHaveLength(3);
+  });
+
+  /**
+   * @why The table must have the correct number of columns matching the
+   * PRD §2.3 PolicySet entity definition.
+   */
+  it("has the expected number of columns", () => {
+    const columns = sqlite.prepare(`PRAGMA table_info(policy_set)`).all() as Array<{
+      name: string;
+    }>;
+    // policy_set_id, name, version, scheduling_policy_json, review_policy_json,
+    // merge_policy_json, security_policy_json, validation_policy_json,
+    // budget_policy_json, created_at
+    expect(columns).toHaveLength(10);
+  });
+
+  /**
+   * @why Deeply nested policy objects with arrays must survive JSON round-trip.
+   * Real policy documents can be arbitrarily complex.
+   */
+  it("handles deeply nested JSON policy objects", () => {
+    const complexPolicy = {
+      rules: [
+        {
+          name: "high-priority-fast-track",
+          conditions: { priority: ["P0"], estimatedSize: ["small", "medium"] },
+          actions: { skipReview: false, maxConcurrency: 3 },
+        },
+        {
+          name: "security-critical",
+          conditions: { riskLevel: ["high"], capabilities: ["security"] },
+          actions: { requireLeadReview: true, additionalReviewers: 1 },
+        },
+      ],
+      defaults: { maxConcurrency: 1, timeoutSec: 600 },
+    };
+
+    const ps = makePolicySet({ schedulingPolicyJson: complexPolicy });
+    db.insert(policySets).values(ps).run();
+
+    const result = db
+      .select()
+      .from(policySets)
+      .where(eq(policySets.policySetId, ps.policySetId))
+      .get();
+
+    expect(result!.schedulingPolicyJson).toEqual(complexPolicy);
+  });
+});
+
+describe("T013 — Cross-table relationships", () => {
+  let db: ReturnType<typeof openTestDb>["db"];
+  let sqlite: ReturnType<typeof openTestDb>["sqlite"];
+
+  beforeEach(() => {
+    ({ db, sqlite } = openTestDb());
+  });
+
+  afterEach(() => {
+    sqlite.close();
+  });
+
+  /**
+   * @why Audit events reference entities by type+id without FK constraints.
+   * This test validates that audit events can reference tasks and that the
+   * entity-scoped audit query works via a join.
+   */
+  it("correlates audit events to tasks via entity_type and entity_id", () => {
+    const projectId = randomUUID();
+    const repoId = randomUUID();
+    const taskId = randomUUID();
+
+    db.insert(projects)
+      .values(makeProject({ projectId, name: `proj-${projectId.slice(0, 8)}` }))
+      .run();
+    db.insert(repositories)
+      .values(
+        makeRepository(projectId, { repositoryId: repoId, name: `repo-${repoId.slice(0, 8)}` }),
+      )
+      .run();
+    db.insert(tasks)
+      .values(makeTask(repoId, { taskId, title: `task-${taskId.slice(0, 8)}` }))
+      .run();
+
+    db.insert(auditEvents)
+      .values(
+        makeAuditEvent({
+          entityType: "task",
+          entityId: taskId,
+          eventType: "state_transition",
+          oldState: "BACKLOG",
+          newState: "READY",
+          actorType: "system",
+          actorId: "scheduler",
+        }),
+      )
+      .run();
+
+    const result = sqlite
+      .prepare(
+        `SELECT t.title, ae.event_type, ae.old_state, ae.new_state
+         FROM audit_event ae
+         JOIN task t ON ae.entity_id = t.task_id
+         WHERE ae.entity_type = 'task' AND ae.entity_id = ?`,
+      )
+      .get(taskId) as {
+      title: string;
+      event_type: string;
+      old_state: string;
+      new_state: string;
+    };
+
+    expect(result.event_type).toBe("state_transition");
+    expect(result.old_state).toBe("BACKLOG");
+    expect(result.new_state).toBe("READY");
+  });
+
+  /**
+   * @why Policy sets are referenced by Projects (default_policy_set_id),
+   * WorkflowTemplates, and AgentProfiles. This test validates that a project
+   * can store a policy_set_id reference and the two can be joined.
+   */
+  it("links policy sets to projects via default_policy_set_id", () => {
+    const ps = makePolicySet({
+      name: "strict-review",
+      version: "1.0.0",
+      reviewPolicyJson: { requiredReviewerCount: 3 },
+    });
+    db.insert(policySets).values(ps).run();
+
+    const project = makeProject({
+      name: `proj-${randomUUID().slice(0, 8)}`,
+      defaultPolicySetId: ps.policySetId,
+    });
+    db.insert(projects).values(project).run();
+
+    const result = sqlite
+      .prepare(
+        `SELECT p.name AS project_name, ps.name AS policy_name, ps.version
+         FROM project p
+         JOIN policy_set ps ON p.default_policy_set_id = ps.policy_set_id
+         WHERE p.project_id = ?`,
+      )
+      .get(project.projectId) as {
+      project_name: string;
+      policy_name: string;
+      version: string;
+    };
+
+    expect(result.policy_name).toBe("strict-review");
+    expect(result.version).toBe("1.0.0");
+  });
+
+  /**
+   * @why An audit event recording a policy change should be joinable to
+   * the affected PolicySet entity. This validates the audit trail for
+   * policy management operations.
+   */
+  it("records audit events for policy set changes", () => {
+    const ps = makePolicySet({ name: "default", version: "1.0.0" });
+    db.insert(policySets).values(ps).run();
+
+    db.insert(auditEvents)
+      .values(
+        makeAuditEvent({
+          entityType: "policy_set",
+          entityId: ps.policySetId,
+          eventType: "configuration_changed",
+          actorType: "operator",
+          actorId: "admin-user",
+          metadataJson: { changedFields: ["review_policy_json"], previousVersion: "0.9.0" },
+        }),
+      )
+      .run();
+
+    const result = sqlite
+      .prepare(
+        `SELECT ps.name AS policy_name, ae.event_type, ae.actor_type
+         FROM audit_event ae
+         JOIN policy_set ps ON ae.entity_id = ps.policy_set_id
+         WHERE ae.entity_type = 'policy_set' AND ae.entity_id = ?`,
+      )
+      .get(ps.policySetId) as {
+      policy_name: string;
+      event_type: string;
+      actor_type: string;
+    };
+
+    expect(result.policy_name).toBe("default");
+    expect(result.event_type).toBe("configuration_changed");
+    expect(result.actor_type).toBe("operator");
+  });
+
+  /**
+   * @why Both T013 tables (audit_event, policy_set) must be present alongside
+   * all previously created tables. This validates that T013 additions didn't
+   * break any existing table creation.
+   */
+  it("all tables from T008-T013 exist in sqlite_master", () => {
+    const expectedTables = [
+      "workflow_template",
+      "project",
+      "repository",
+      "task",
+      "task_dependency",
+      "worker_pool",
+      "worker",
+      "prompt_template",
+      "agent_profile",
+      "task_lease",
+      "review_cycle",
+      "review_packet",
+      "lead_review_decision",
+      "merge_queue_item",
+      "validation_run",
+      "job",
+      "audit_event",
+      "policy_set",
+    ];
+
+    const tables = sqlite
+      .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'`)
+      .all() as Array<{ name: string }>;
+
+    const tableNames = tables.map((t) => t.name).sort();
+    expect(tableNames).toEqual(expectedTables.sort());
   });
 });

@@ -133,7 +133,7 @@ See [phase documents](phases/) for details.
 | [T010](tasks/T010-migration-worker-pool.md)         | Create migrations for WorkerPool, Worker, AgentProfile, PromptTemplate tables         | E002 | P0       | foundation | done    |
 | [T011](tasks/T011-migration-lease-review.md)        | Create migrations for TaskLease, ReviewCycle, ReviewPacket, LeadReviewDecision tables | E002 | P0       | foundation | done    |
 | [T012](tasks/T012-migration-merge-job.md)           | Create migrations for MergeQueueItem, ValidationRun, Job tables                       | E002 | P0       | foundation | done    |
-| [T013](tasks/T013-migration-audit-policy.md)        | Create migrations for AuditEvent and PolicySet tables                                 | E002 | P0       | foundation | pending |
+| [T013](tasks/T013-migration-audit-policy.md)        | Create migrations for AuditEvent and PolicySet tables                                 | E002 | P0       | foundation | done    |
 | [T014](tasks/T014-entity-repositories.md)           | Implement data access repositories for all entities                                   | E002 | P0       | foundation | pending |
 | [T015](tasks/T015-task-state-machine.md)            | Implement Task state machine with transition validation                               | E003 | P0       | foundation | pending |
 | [T016](tasks/T016-supporting-state-machines.md)     | Implement supporting state machines                                                   | E003 | P0       | foundation | pending |

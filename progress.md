@@ -329,3 +329,30 @@
 - T012 and T013 both unblock T014 (entity repositories). T013 (AuditEvent, PolicySet) is the next critical dependency.
 - The Job table's `(status, run_after)` composite index is the hot path for queue polling (T025)
 - The `depends_on_job_ids` JSON column stores cross-job dependency references but has no DB-level FK — coordination is enforced at the application layer
+
+## 2026-03-11 — T013: Create migrations for AuditEvent and PolicySet tables
+
+**Status:** Done
+
+**What was done:**
+
+- Added two Drizzle schema table definitions to `apps/control-plane/src/infrastructure/database/schema.ts`:
+  - `auditEvents`: append-only audit trail with entity_type+entity_id correlation, actor tracking, state transitions, and metadata_json for event-specific context
+  - `policySets`: versioned policy configuration bundles with 6 JSON policy columns (scheduling, review, merge, security, validation, budget)
+- Added indexes: composite `(entity_type, entity_id)` and `created_at` on audit_event
+- Generated migration `0005_odd_snowbird.sql`
+- Added 29 comprehensive tests covering: CRUD, nullable fields, JSON round-trip (including deeply nested objects), auto-populated timestamps, duplicate rejection, multiple events per entity, all actor/entity/event types, cross-table joins (audit→task, policy→project, audit→policy), and full T008-T013 table existence check
+- All 280 tests pass (up from 251 baseline)
+
+**Patterns used:**
+
+- Same Drizzle schema patterns as T008-T012: text PKs, integer timestamps with `(unixepoch())` default, JSON columns via `text("col", { mode: "json" })`
+- AuditEvent has no FK constraints by design — it references any entity type via entity_type+entity_id text columns
+- PolicySet has no FK constraints — referenced by other tables (Project.default_policy_set_id, AgentProfile policy IDs) as nullable text columns
+
+**What the next loop should know:**
+
+- T013 completion unblocks T014 (data access repositories) — the critical path bottleneck
+- T014 depends on T008-T013 (all now done). It's the next critical-path task
+- The `default_policy_set_id` on Project and various policy ID columns on WorkflowTemplate/AgentProfile are currently nullable text without DB-level FK constraints — T014 repositories should handle this gracefully
+- AuditEvent is append-only by design; no UPDATE/DELETE patterns needed in the repository layer

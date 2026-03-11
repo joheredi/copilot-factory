@@ -1319,3 +1319,171 @@ export const jobs = sqliteTable(
     index("idx_job_parent_job_id").on(table.parentJobId),
   ],
 );
+
+// ─── T013: AuditEvent, PolicySet ────────────────────────────────────────────
+
+/**
+ * Audit event table — append-only log of all significant events in the
+ * system. Every state transition, entity creation, policy change, and
+ * operator action is recorded here for traceability and replay.
+ *
+ * This table is append-only by design: rows are never updated or deleted.
+ * The `entity_type` + `entity_id` columns identify the affected entity,
+ * while `actor_type` + `actor_id` identify who triggered the event.
+ *
+ * `metadata_json` carries event-specific context (e.g. lease timeout
+ * duration, review verdict details, merge conflict info) as a JSON object.
+ *
+ * @see {@link file://docs/prd/002-data-model.md} §2.3 Entity: AuditEvent
+ */
+export const auditEvents = sqliteTable(
+  "audit_event",
+  {
+    /** Unique identifier (UUID). */
+    auditEventId: text("audit_event_id").primaryKey(),
+
+    /**
+     * Type of entity this event pertains to (e.g. "task", "lease",
+     * "review_cycle", "merge_queue_item", "policy_set", "worker").
+     * Stored as text; validated at the application layer.
+     */
+    entityType: text("entity_type").notNull(),
+
+    /**
+     * Identifier of the entity this event pertains to.
+     * Combined with entityType for entity-scoped audit queries.
+     * No DB-level FK — events may reference any entity type.
+     */
+    entityId: text("entity_id").notNull(),
+
+    /**
+     * Classification of what happened (e.g. "state_transition", "created",
+     * "deleted", "policy_applied", "lease_reclaimed", "operator_override").
+     * Stored as text; validated at the application layer.
+     */
+    eventType: text("event_type").notNull(),
+
+    /**
+     * Type of actor that triggered this event (e.g. "system", "worker",
+     * "operator", "scheduler", "reconciliation").
+     * Stored as text; validated at the application layer.
+     */
+    actorType: text("actor_type").notNull(),
+
+    /**
+     * Identifier of the actor that triggered this event.
+     * For workers this is the worker_id; for operators, a user identifier;
+     * for system actors, a component name (e.g. "scheduler", "reconciler").
+     */
+    actorId: text("actor_id").notNull(),
+
+    /**
+     * Previous state value before this event, if applicable.
+     * Nullable — only set for state transition events.
+     */
+    oldState: text("old_state"),
+
+    /**
+     * New state value after this event, if applicable.
+     * Nullable — only set for state transition events.
+     */
+    newState: text("new_state"),
+
+    /**
+     * JSON object with event-specific metadata. Structure varies by
+     * event_type and is validated at the application layer.
+     * Examples: lease timeout details, review verdict info, merge conflict
+     * descriptions, operator override justifications.
+     */
+    metadataJson: text("metadata_json", { mode: "json" }),
+
+    /** Row creation timestamp (Unix epoch seconds). */
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => [
+    /**
+     * Composite index for entity-scoped audit queries: "what happened to
+     * this task?" or "show all events for this review cycle." This is the
+     * primary query pattern for audit trail display.
+     */
+    index("idx_audit_event_entity").on(table.entityType, table.entityId),
+    /**
+     * Index on created_at for time-range queries: "what happened in the
+     * last hour?" or "events since this timestamp." Supports both
+     * operational monitoring and historical audit review.
+     */
+    index("idx_audit_event_created_at").on(table.createdAt),
+  ],
+);
+
+/**
+ * Policy set table — stores versioned bundles of policy configurations
+ * that govern system behavior. Each policy set contains JSON definitions
+ * for scheduling, review, merge, security, validation, and budget policies.
+ *
+ * Policy sets are referenced by Projects (default_policy_set_id),
+ * WorkflowTemplates (validation/retry/escalation policy IDs), and
+ * AgentProfiles (tool/command/file-scope/validation/review/budget policy IDs).
+ *
+ * Each JSON column stores a self-contained policy document whose schema
+ * is validated at the application layer. The DB treats them as opaque
+ * JSON blobs for storage flexibility.
+ *
+ * @see {@link file://docs/prd/002-data-model.md} §2.3 Entity: PolicySet
+ */
+export const policySets = sqliteTable("policy_set", {
+  /** Unique identifier (UUID). */
+  policySetId: text("policy_set_id").primaryKey(),
+
+  /** Human-readable name for this policy set (e.g. "default", "strict-review"). */
+  name: text("name").notNull(),
+
+  /**
+   * Version string for this policy set (e.g. "1.0.0", "2").
+   * Enables tracking policy evolution and rollback.
+   */
+  version: text("version").notNull(),
+
+  /**
+   * JSON object defining task scheduling policies: priority weighting,
+   * queue depth limits, starvation prevention, and pool affinity rules.
+   */
+  schedulingPolicyJson: text("scheduling_policy_json", { mode: "json" }),
+
+  /**
+   * JSON object defining review routing policies: required reviewer count,
+   * specialist-to-lead routing, auto-approve thresholds, and escalation triggers.
+   */
+  reviewPolicyJson: text("review_policy_json", { mode: "json" }),
+
+  /**
+   * JSON object defining merge policies: merge strategy (rebase/squash/merge),
+   * conflict classification, required validation gates, and post-merge actions.
+   */
+  mergePolicyJson: text("merge_policy_json", { mode: "json" }),
+
+  /**
+   * JSON object defining security policies: allowed commands, path restrictions,
+   * network access rules, secret scanning, and sandboxing requirements.
+   */
+  securityPolicyJson: text("security_policy_json", { mode: "json" }),
+
+  /**
+   * JSON object defining validation policies: required checks per lifecycle
+   * stage, tool configurations, pass/fail thresholds, and timeout limits.
+   */
+  validationPolicyJson: text("validation_policy_json", { mode: "json" }),
+
+  /**
+   * JSON object defining budget policies: token limits per worker session,
+   * cost caps per task/review cycle, and alerting thresholds.
+   */
+  budgetPolicyJson: text("budget_policy_json", { mode: "json" }),
+
+  /** Row creation timestamp (Unix epoch seconds). */
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
