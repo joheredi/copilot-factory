@@ -84,3 +84,34 @@
 - T003: Set up ESLint and Prettier.
 - T005: Create CI pipeline (depends on T003 + T004 ✅).
 - T006: Set up SQLite with Drizzle ORM and migrations.
+
+## 2026-03-11 — T006: Set up SQLite with Drizzle ORM and migrations
+
+**Status:** Done
+
+**What was done:**
+- Installed `drizzle-orm`, `better-sqlite3`, `@types/better-sqlite3`, and `drizzle-kit` in `apps/control-plane`.
+- Created `apps/control-plane/src/infrastructure/database/connection.ts` — connection factory with `createDatabaseConnection()` that applies WAL mode, busy_timeout=5000, and foreign_keys pragmas. Includes `healthCheck()` and `writeTransaction()` (BEGIN IMMEDIATE).
+- Created `apps/control-plane/src/infrastructure/database/schema.ts` — empty barrel file for future E002 table definitions.
+- Created `apps/control-plane/src/infrastructure/database/migrate.ts` — programmatic `runMigrations()` for app startup use.
+- Created `apps/control-plane/src/infrastructure/database/index.ts` — module barrel re-exporting connection and migrate APIs.
+- Created `apps/control-plane/drizzle.config.ts` — drizzle-kit config pointing to schema.ts, out=./drizzle, SQLite dialect.
+- Created `apps/control-plane/drizzle/meta/_journal.json` — initial empty migration journal.
+- Added `db:generate`, `db:migrate`, `db:studio` scripts to control-plane `package.json`.
+- Updated `apps/control-plane/src/index.ts` to export database module types and functions.
+- Created 17 tests covering WAL mode, busy timeout, foreign keys, healthCheck, writeTransaction (commit, rollback, return value, BEGIN IMMEDIATE), close behavior, directory auto-creation, and Drizzle integration.
+
+**Patterns established:**
+- Database connection factory at `apps/control-plane/src/infrastructure/database/connection.ts`.
+- `DatabaseConnection` interface wraps both Drizzle ORM (`db`) and raw better-sqlite3 (`sqlite`) for full control.
+- All write transactions must use `conn.writeTransaction()` which issues BEGIN IMMEDIATE to avoid SQLITE_BUSY on lock promotion.
+- `healthCheck()` verifies connectivity and reports current pragma values.
+- Pragmas are always set explicitly (including foreign_keys = OFF when disabled) — don't rely on SQLite compile-time defaults.
+- `better-sqlite3` requires native compilation — run `pnpm rebuild better-sqlite3` if the `.node` binding is missing after install.
+- Migration directory: `apps/control-plane/drizzle/`. Schema file: `apps/control-plane/src/infrastructure/database/schema.ts`.
+- `DATABASE_PATH` env var controls the DB file path (defaults to `./data/factory.db`).
+
+**Next steps:**
+- T007: Define core domain enums and value objects (depends on T002 ✅).
+- T008-T013: Create entity migrations (depend on T006 ✅ and T007).
+- T003: Set up ESLint and Prettier.

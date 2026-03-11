@@ -48,6 +48,22 @@ pnpm format           # Format all packages (delegates to workspace format scrip
 - **Build command:** Each workspace uses `tsc --build`. Run `pnpm build` from root to build all.
 - **Important:** `outDir`/`rootDir` are set per-workspace (not in base config) because tsconfig `extends` resolves relative paths from the originating config file.
 
+# Database (SQLite + Drizzle ORM)
+
+- **Driver:** better-sqlite3 with WAL mode, busy_timeout=5000, foreign_keys=ON.
+- **ORM:** Drizzle ORM (`drizzle-orm/better-sqlite3`).
+- **Migration tool:** drizzle-kit. Config at `apps/control-plane/drizzle.config.ts`.
+- **Schema file:** `apps/control-plane/src/infrastructure/database/schema.ts` — all table definitions go here.
+- **Migration output:** `apps/control-plane/drizzle/` — SQL migration files and journal.
+- **Connection factory:** `apps/control-plane/src/infrastructure/database/connection.ts` — use `createDatabaseConnection()`.
+- **Write transactions:** Always use `conn.writeTransaction(fn)` which issues `BEGIN IMMEDIATE` to avoid SQLITE_BUSY errors.
+- **DB scripts (from `apps/control-plane`):**
+  - `pnpm db:generate` — generate migrations from schema changes.
+  - `pnpm db:migrate` — apply pending migrations.
+  - `pnpm db:studio` — open Drizzle Studio web UI.
+- **DB path:** Controlled by `DATABASE_PATH` env var (default: `./data/factory.db`).
+- **Native module:** `better-sqlite3` requires native compilation. Run `pnpm rebuild better-sqlite3` if the `.node` binding is missing after install.
+
 # High-level architecture
 
 The intended system is a local-first orchestration platform for software delivery using bounded AI workers inside a deterministic control plane.
