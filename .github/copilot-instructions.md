@@ -46,6 +46,7 @@ The `eng/` directory is excluded from ESLint (utility scripts with Node.js globa
 - **Coverage:** `pnpm test:coverage` uses `@vitest/coverage-v8`.
 - **Scoped tests:** From a workspace directory, `pnpm test` runs only that workspace's tests via `--project` flag.
 - **Shared helpers:** `@factory/testing` exports `createTestId()`, `createSequentialId()`, `sleep()` for use in tests.
+- **I/O test fakes:** `@factory/infrastructure` tests use `FakeCliProcess` and `FakeFileSystem` to test adapters (e.g., `CopilotCliAdapter`) without real I/O or OS processes. Prefer this pattern for new infrastructure adapters.
 
 # TypeScript configuration
 
@@ -56,6 +57,7 @@ The `eng/` directory is excluded from ESLint (utility scripts with Node.js globa
 - **Cross-package imports:** Resolved via pnpm workspace symlinks + package.json `exports` field. No tsconfig `paths` aliases needed with `moduleResolution: NodeNext`.
 - **Build command:** Each workspace uses `tsc --build`. Run `pnpm build` from root to build all.
 - **Important:** `outDir`/`rootDir` are set per-workspace (not in base config) because tsconfig `extends` resolves relative paths from the originating config file.
+- **Notable dependencies:** `@factory/infrastructure` depends on `@factory/domain` (for policy evaluation) and `zod` (for schema validation in the Copilot CLI adapter). The `worker-runtime` module exports `CopilotCliAdapter` and related types.
 
 # Database (SQLite + Drizzle ORM)
 

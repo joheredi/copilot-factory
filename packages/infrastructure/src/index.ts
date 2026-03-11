@@ -23,6 +23,27 @@ export {
   DuplicateRuntimeError,
 } from "./worker-runtime/index.js";
 
+// ─── Copilot CLI Adapter ─────────────────────────────────────────────────────
+export type {
+  CliProcess,
+  CliProcessSpawner,
+  CopilotCliConfig,
+  CopilotCliDependencies,
+} from "./worker-runtime/index.js";
+
+export {
+  CopilotCliAdapter,
+  createDefaultProcessSpawner,
+  generatePrompt,
+  extractPacketFromStdout,
+  validatePacketSchema,
+  OUTPUT_PACKET_FILENAME,
+  PROMPT_FILENAME,
+  RESULT_PACKET_START_DELIMITER,
+  RESULT_PACKET_END_DELIMITER,
+  HEARTBEAT_MARKER,
+} from "./worker-runtime/index.js";
+
 // ─── Workspace Management ────────────────────────────────────────────────────
 export type {
   WorkspaceLayout,

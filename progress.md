@@ -477,3 +477,32 @@ Created ReverseDependencyService in `packages/application` that automatically re
 - `setProcessRunner()` enables test isolation without spawning real processes
 - T047 unblocks T045 (Copilot CLI adapter) and T055 (validation command exec)
 - `execFile` with `shell: false` prevents shell injection; arguments passed as arrays
+
+## T045: Implement Copilot CLI execution adapter — DONE (2026-03-11)
+
+**Status:** Done
+
+**What was done:**
+
+- Implemented `CopilotCliAdapter` in `packages/infrastructure/src/worker-runtime/copilot-cli-adapter.ts`
+- 47 tests added covering all lifecycle phases, prompt generation, schema validation
+- Role-specific prompts for all 6 agent roles (developer, reviewer, lead-reviewer, planner, merge-assist, post-merge-analysis)
+- File-based structured output with stdout delimiter fallback
+- Dynamic Zod schema validation against PACKET_SCHEMA_REGISTRY
+- Injected dependencies (FileSystem, CliProcessSpawner) for testability
+- Added `zod` as a dependency of `@factory/infrastructure` (needed for schema validation in the CLI adapter)
+- Updated `packages/infrastructure/src/index.ts` — worker-runtime module now exports `CopilotCliAdapter` and related types
+
+**Patterns & notes for next loops:**
+
+- Uses injectable process spawner abstraction (`CliProcessSpawner`) for testability without real OS processes
+- Test fakes: `FakeCliProcess` and `FakeFileSystem` for testing adapters without real I/O
+- The adapter does NOT validate the CLI command itself against policy — the command wrapper is for commands the worker executes, not for the adapter spawning the CLI
+- The schema types for `PolicySnapshot.command_policy` (from `@factory/schemas`) differ from `CommandPolicy` (from `@factory/domain`) — a conversion layer may be needed in future tasks
+
+**Next loop should know:**
+
+- T045 unblocks T107 (end-to-end full lifecycle test)
+- The adapter depends on T043 (worker runtime interface) and T047 (command wrapper) — both done
+- `zod` is now available in `@factory/infrastructure` for any future schema validation needs
+- The `CliProcessSpawner` / `FakeCliProcess` pattern can be reused for other CLI-based adapters

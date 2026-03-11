@@ -5,7 +5,7 @@
 | **ID**                    | T045                                                                          |
 | **Epic**                  | [E009: Worker Runtime & Execution](../epics/E009-worker-runtime.md)           |
 | **Type**                  | feature                                                                       |
-| **Status**                | pending                                                                       |
+| **Status**                | done                                                                          |
 | **Priority**              | P0                                                                            |
 | **Owner**                 | backend-engineer                                                              |
 | **AI Executable**         | Yes                                                                           |
@@ -59,10 +59,10 @@ The implementing agent should read these files before starting:
 
 ## Acceptance Criteria
 
-- [ ] Copilot CLI process spawned with correct arguments
-- [ ] Prompt includes role, task context, and output schema expectations
-- [ ] Structured output captured and schema-validated
-- [ ] Logs captured separately from structured output
+- [x] Copilot CLI process spawned with correct arguments
+- [x] Prompt includes role, task context, and output schema expectations
+- [x] Structured output captured and schema-validated
+- [x] Logs captured separately from structured output
 
 ## Definition of Done
 

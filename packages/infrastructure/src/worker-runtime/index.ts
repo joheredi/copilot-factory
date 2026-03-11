@@ -33,3 +33,24 @@ export type { WorkerRuntime } from "./runtime.interface.js";
 // ─── Registry ────────────────────────────────────────────────────────────────
 export type { WorkerRuntimeFactory } from "./registry.js";
 export { RuntimeRegistry, RuntimeNotFoundError, DuplicateRuntimeError } from "./registry.js";
+
+// ─── Copilot CLI Adapter ─────────────────────────────────────────────────────
+export type {
+  CliProcess,
+  CliProcessSpawner,
+  CopilotCliConfig,
+  CopilotCliDependencies,
+} from "./copilot-cli-adapter.js";
+
+export {
+  CopilotCliAdapter,
+  createDefaultProcessSpawner,
+  generatePrompt,
+  extractPacketFromStdout,
+  validatePacketSchema,
+  OUTPUT_PACKET_FILENAME,
+  PROMPT_FILENAME,
+  RESULT_PACKET_START_DELIMITER,
+  RESULT_PACKET_END_DELIMITER,
+  HEARTBEAT_MARKER,
+} from "./copilot-cli-adapter.js";
