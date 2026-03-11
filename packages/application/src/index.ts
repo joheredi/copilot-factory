@@ -7,6 +7,9 @@ export {
   VersionConflictError,
   ExclusivityViolationError,
   TaskNotReadyForLeaseError,
+  CyclicDependencyError,
+  DuplicateDependencyError,
+  SelfDependencyError,
 } from "./errors.js";
 
 // Ports — repository interfaces
@@ -85,6 +88,27 @@ export type {
   FindJobsByGroupResult,
   JobQueueService,
 } from "./services/job-queue.service.js";
+
+// Ports — dependency management interfaces
+export type {
+  DependencyEdge,
+  NewDependencyEdge,
+  DependencyTaskRepositoryPort,
+  TaskDependencyRepositoryPort,
+  DependencyTransactionRepositories,
+  DependencyUnitOfWork,
+} from "./ports/dependency.ports.js";
+
+// Services — dependency graph management with DAG validation
+export { createDependencyService } from "./services/dependency.service.js";
+export type {
+  AddDependencyParams,
+  AddDependencyResult,
+  RemoveDependencyResult,
+  GetDependenciesResult,
+  GetDependentsResult,
+  DependencyService,
+} from "./services/dependency.service.js";
 
 // Services — optimistic retry with conflict resolution priority
 export { createOptimisticRetryService } from "./services/optimistic-retry.service.js";

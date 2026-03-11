@@ -114,6 +114,69 @@ export class ExclusivityViolationError extends Error {
  *
  * @see docs/prd/002-data-model.md §2.1 — Transitions to ASSIGNED
  */
+/**
+ * Thrown when adding a dependency edge would create a cycle in the
+ * task dependency graph.
+ *
+ * The dependency graph must be a DAG (Directed Acyclic Graph). This error
+ * is raised when the DependencyService detects that inserting the proposed
+ * edge would violate this invariant.
+ *
+ * The `path` field contains the cycle path for diagnostic purposes,
+ * e.g. ["task-A", "task-B", "task-C", "task-A"].
+ *
+ * @see docs/prd/002-data-model.md §2.3 — "Circular dependencies are rejected at creation time"
+ */
+export class CyclicDependencyError extends Error {
+  public readonly taskId: string;
+  public readonly dependsOnTaskId: string;
+  public readonly path: readonly string[];
+
+  constructor(taskId: string, dependsOnTaskId: string, path: readonly string[]) {
+    super(
+      `Circular dependency detected: adding ${taskId} → ${dependsOnTaskId} would create cycle: ${path.join(" → ")}`,
+    );
+    this.name = "CyclicDependencyError";
+    this.taskId = taskId;
+    this.dependsOnTaskId = dependsOnTaskId;
+    this.path = path;
+  }
+}
+
+/**
+ * Thrown when attempting to add a dependency edge that already exists.
+ *
+ * The task dependency graph enforces a unique constraint on
+ * (taskId, dependsOnTaskId) pairs — duplicate edges are not allowed.
+ */
+export class DuplicateDependencyError extends Error {
+  public readonly taskId: string;
+  public readonly dependsOnTaskId: string;
+
+  constructor(taskId: string, dependsOnTaskId: string) {
+    super(`Dependency already exists: ${taskId} → ${dependsOnTaskId}`);
+    this.name = "DuplicateDependencyError";
+    this.taskId = taskId;
+    this.dependsOnTaskId = dependsOnTaskId;
+  }
+}
+
+/**
+ * Thrown when a dependency references a task that does not exist.
+ *
+ * Both the dependent task and the prerequisite task must exist in the
+ * system before a dependency edge can be created.
+ */
+export class SelfDependencyError extends Error {
+  public readonly taskId: string;
+
+  constructor(taskId: string) {
+    super(`A task cannot depend on itself: ${taskId}`);
+    this.name = "SelfDependencyError";
+    this.taskId = taskId;
+  }
+}
+
 export class TaskNotReadyForLeaseError extends Error {
   public readonly taskId: string;
   public readonly currentStatus: string;

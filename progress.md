@@ -446,3 +446,46 @@
 - Added `zod` and `@factory/domain` as dependencies to `@factory/schemas`
 - 116 tests covering spec examples, all enum values, boundary conditions (empty strings, negative numbers, fractional values), and type inference
 - Pattern: use `zodEnumFromConst()` to convert domain `{ KEY: "value" } as const` objects to `z.enum()`
+
+## T035: Implement DAG validation with circular dependency detection — DONE (2026-03-11)
+
+**Status:** Done
+
+**What was done:**
+
+- Created `packages/application/src/ports/dependency.ports.ts` — port interfaces for DAG validation:
+  - `DependencyEdge` / `NewDependencyEdge` — entity shapes
+  - `DependencyTaskRepositoryPort` — task existence checks
+  - `TaskDependencyRepositoryPort` — forward/reverse graph traversal + CRUD
+  - `DependencyUnitOfWork` — transaction boundary for atomic cycle-check + insert
+- Created `packages/application/src/services/dependency.service.ts` — DependencyService with:
+  - `addDependency()` — validates input, runs DFS cycle detection, inserts atomically
+  - `removeDependency()` — deletes edge by ID
+  - `getDependencies()` — forward lookup (what does this task depend on?)
+  - `getDependents()` — reverse lookup (what tasks depend on this?)
+  - `detectCycle()` — DFS from dependsOnTaskId following forward edges to check reachability of taskId
+- Added 3 new error classes in `errors.ts`:
+  - `CyclicDependencyError` — includes the cycle path for diagnostics
+  - `DuplicateDependencyError` — prevents duplicate edges
+  - `SelfDependencyError` — prevents a task depending on itself
+- Created 33 tests in `dependency.service.test.ts` covering:
+  - Input validation (self-dep, missing tasks, duplicates)
+  - Cycle detection: 2-node, 3-node, long chain, diamond, mixed types
+  - Valid DAGs: linear chain, diamond, tree, disconnected, fan-out, fan-in
+  - isHardBlock defaults per dependency type
+  - Edge removal and re-addition
+  - Complex graph scenarios with mixed accept/reject
+
+**Key patterns:**
+
+- Follows the same functional factory pattern as other application services
+- Uses hexagonal architecture: service depends on ports, not concrete repos
+- DFS cycle detection runs inside the same transaction as the insert (atomic)
+- All dependency types (blocks, relates_to, parent_child) participate in cycle detection per PRD §2.3
+- isHardBlock defaults: true for BLOCKS, false for RELATES_TO and PARENT_CHILD
+
+**For next loops:**
+
+- T036 (readiness computation) is now unblocked — can use DependencyService for dependency queries
+- T037 (reverse-dependency recalculation) is now unblocked — getDependents() provides reverse lookups
+- Infrastructure adapter for DependencyUnitOfWork will be needed when wiring into the control plane
