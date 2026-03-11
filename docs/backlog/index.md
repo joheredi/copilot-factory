@@ -137,7 +137,7 @@ See [phase documents](phases/) for details.
 | [T014](tasks/T014-entity-repositories.md)           | Implement data access repositories for all entities                                   | E002 | P0       | foundation | done    |
 | [T015](tasks/T015-task-state-machine.md)            | Implement Task state machine with transition validation                               | E003 | P0       | foundation | done    |
 | [T016](tasks/T016-supporting-state-machines.md)     | Implement supporting state machines                                                   | E003 | P0       | foundation | done    |
-| [T017](tasks/T017-transition-service.md)            | Build centralized State Transition Service                                            | E003 | P0       | foundation | pending |
+| [T017](tasks/T017-transition-service.md)            | Build centralized State Transition Service                                            | E003 | P0       | foundation | done    |
 | [T018](tasks/T018-atomic-transition-audit.md)       | Implement atomic transition + audit persistence                                       | E003 | P0       | foundation | pending |
 | [T019](tasks/T019-optimistic-concurrency.md)        | Implement optimistic concurrency control                                              | E003 | P0       | foundation | pending |
 | [T020](tasks/T020-shared-zod-types.md)              | Define shared Zod types for packets                                                   | E004 | P0       | foundation | pending |

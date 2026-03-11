@@ -450,3 +450,33 @@
 - Worker Lease HEARTBEATING state has a self-loop (the only self-transition allowed across all state machines).
 - TIMED_OUT and CRASHED are NOT terminal for Worker Lease — they transition to RECLAIMED.
 - REQUEUED is NOT terminal for Merge Queue Item — it transitions back to ENQUEUED.
+
+## T017: Build Centralized State Transition Service (done)
+
+**Date:** 2026-03-11
+
+**What was done:**
+
+- Created the centralized State Transition Service in `packages/application/src/services/transition.service.ts`
+- Defined repository port interfaces in `packages/application/src/ports/repository.ports.ts`
+- Defined UnitOfWork port in `packages/application/src/ports/unit-of-work.port.ts`
+- Defined DomainEventEmitter port in `packages/application/src/ports/event-emitter.port.ts`
+- Defined domain event types in `packages/application/src/events/domain-events.ts`
+- Defined application-layer error types in `packages/application/src/errors.ts`
+- Added `@factory/domain` as a dependency of `@factory/application`
+- Added tsconfig project reference from application → domain
+- Wrote 33 unit tests covering all 4 entity transition methods
+
+**Design decisions:**
+
+- Used port-based dependency injection (repository ports + UnitOfWork + DomainEventEmitter) to keep the application layer decoupled from infrastructure. The control-plane wires implementations.
+- Tasks use version-based optimistic concurrency; other entities (lease, review cycle, merge queue item) use status-based optimistic concurrency checks.
+- Domain events are emitted AFTER transaction commit to prevent events on rollback.
+- Audit events are created WITHIN the transaction to guarantee atomicity with state changes.
+
+**Patterns for next loops:**
+
+- The `createTransitionService(unitOfWork, eventEmitter)` factory pattern should be used when wiring up the service in the control-plane.
+- All state transitions in downstream tasks (T018, T019, T030, etc.) should go through this service.
+- The UnitOfWork port needs a concrete implementation in `apps/control-plane` that wraps `connection.writeTransaction()`.
+- Repository ports need adapter implementations that delegate to the existing Drizzle repository factories.

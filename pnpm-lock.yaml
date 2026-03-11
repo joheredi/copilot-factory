@@ -65,7 +65,11 @@ importers:
 
   apps/worker-runner: {}
 
-  packages/application: {}
+  packages/application:
+    dependencies:
+      '@factory/domain':
+        specifier: workspace:*
+        version: link:../domain
 
   packages/config: {}
 
