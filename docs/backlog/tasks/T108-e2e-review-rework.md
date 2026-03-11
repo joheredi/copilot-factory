@@ -5,7 +5,7 @@
 | **ID**                    | T108                                                                    |
 | **Epic**                  | [E022: Integration Testing & E2E](../epics/E022-integration-testing.md) |
 | **Type**                  | test                                                                    |
-| **Status**                | pending                                                                 |
+| **Status**                | done                                                                    |
 | **Priority**              | P0                                                                      |
 | **Owner**                 | backend-engineer                                                        |
 | **AI Executable**         | Yes                                                                     |
@@ -56,10 +56,10 @@ The implementing agent should read these files before starting:
 
 ## Acceptance Criteria
 
-- [ ] Rejection transitions task to CHANGES_REQUESTED
-- [ ] Rework TaskPacket includes rejection context with blocking issues
-- [ ] Second attempt can succeed
-- [ ] review_round_count tracks correctly
+- [x] Rejection transitions task to CHANGES_REQUESTED
+- [x] Rework TaskPacket includes rejection context with blocking issues
+- [x] Second attempt can succeed
+- [x] review_round_count tracks correctly
 
 ## Definition of Done
 
