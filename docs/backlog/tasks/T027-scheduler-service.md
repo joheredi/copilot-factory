@@ -5,7 +5,7 @@
 | **ID**                    | T027                                                                                                          |
 | **Epic**                  | [E005: Job Queue & Scheduling](../epics/E005-job-queue-scheduling.md)                                         |
 | **Type**                  | feature                                                                                                       |
-| **Status**                | pending                                                                                                       |
+| **Status**                | done                                                                                                          |
 | **Priority**              | P0                                                                                                            |
 | **Owner**                 | backend-engineer                                                                                              |
 | **AI Executable**         | Yes                                                                                                           |
@@ -56,10 +56,10 @@ The implementing agent should read these files before starting:
 
 ## Acceptance Criteria
 
-- [ ] Scheduler selects highest-priority ready task
-- [ ] Pool matching respects capabilities and concurrency limits
-- [ ] Lease acquired atomically with state transition
-- [ ] No duplicate assignments possible
+- [x] Scheduler selects highest-priority ready task
+- [x] Pool matching respects capabilities and concurrency limits
+- [x] Lease acquired atomically with state transition
+- [x] No duplicate assignments possible
 
 ## Definition of Done
 

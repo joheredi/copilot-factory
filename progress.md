@@ -1,221 +1,5 @@
 # Progress Log
 
-## T022 — Define ReviewPacket and LeadReviewDecisionPacket schemas (2026-03-11)
-
-### What was done
-
-- Created `packages/schemas/src/review-packet.ts` — ReviewPacket schema (§8.6) with all fields from the canonical shape: packet_type, schema_version, created_at, task_id, repository_id, review_cycle_id, reviewer_pool_id, reviewer_type, verdict, summary, blocking_issues, non_blocking_issues, confidence, follow_up_task_refs, risks, open_questions
-- Created `packages/schemas/src/lead-review-decision-packet.ts` — LeadReviewDecisionPacket schema (§8.7) with all fields: packet_type, schema_version, created_at, task_id, repository_id, review_cycle_id, decision, summary, blocking_issues, non_blocking_suggestions, deduplication_notes, follow_up_task_refs, risks, open_questions
-- Updated index.ts barrel exports for both new schemas and types
-- 21 ReviewPacket tests + 18 LeadReviewDecisionPacket tests = 39 new tests
-- All 1,448 tests pass, build clean, lint clean
-- Fixed stale backlog index for T021 (was pending, task file says done) and T030 (same)
-
-### Design decisions
-
-- `reviewer_type` is a free-form `z.string().min(1)` rather than enum because the spec example uses "security" and the domain doesn't define a fixed set of reviewer types — new types can be added without schema changes
-- `non_blocking_suggestions` on LeadReviewDecisionPacket uses `z.array(z.string())` (not IssueSchema) because the spec §8.7.2 shows plain strings, unlike `blocking_issues` which uses Issue objects
-- Cross-field invariants (e.g., "blocking_issues must be empty when verdict is approved") are NOT enforced here — they belong in T024 per the task scope boundary
-- Renamed the imported `LeadReviewDecisionSchema` to `LeadReviewDecisionEnumSchema` locally to avoid shadowing with the packet schema name
-
-### Patterns for next loops
-
-- T023 (remaining packet schemas: MergePacket, MergeAssistPacket, ValidationResultPacket, PostMergeAnalysisPacket) follows the same pattern — one file per packet, spec example as primary test case
-- T024 (cross-field validation) should use Zod `.superRefine()` to add the invariants from §8.13
-
-## T021 — Define TaskPacket and DevResultPacket Zod schemas (2026-03-11)
-
-### What was done
-
-- Created `packages/schemas/src/rejection-context.ts` — RejectionContext schema (§8.12) with prior_review_cycle_id, blocking_issues array (min 1), and lead_decision_summary
-- Created `packages/schemas/src/task-packet.ts` — TaskPacket schema (§8.4) with all required top-level fields and 8 named nested sub-schemas (task, repository, workspace, context, repo_policy, tool_policy, validation_requirements, expected_output)
-- Created `packages/schemas/src/dev-result-packet.ts` — DevResultPacket schema (§8.5) with result sub-schema containing files_changed, validations_run, assumptions, risks, unresolved_issues
-- Added 3 missing enum Zod wrappers to shared.ts: TaskTypeSchema, TaskPrioritySchema, RiskLevelSchema
-- Updated index.ts barrel exports for all new schemas and types
-- Comprehensive tests: 10 (rejection-context) + 68 (task-packet) + 28 (dev-result-packet) = 106 new tests
-
-### Design decisions
-
-- `task.task_type`, `task.priority`, `task.severity` are free-form strings (not enum-constrained) because the PRD §8.4 does not formally enumerate their values and the spec example uses "backend-feature" which is not in the domain TaskType enum. RiskLevel is enum-constrained since it matches the domain enum exactly.
-- `context.prior_partial_work` uses `z.unknown().nullable()` since the PRD does not define its structure — it's null on initial attempts and may reference artifacts on retries.
-- All literal fields use `z.literal()` (packet_type, schema_version) for strict validation.
-- All timestamp fields use `z.string().datetime()` for ISO 8601 validation.
-
-### Patterns for next loops
-
-- New schema files follow the same pattern: JSDoc with §-references, named sub-schemas, type exports via `z.infer`, barrel export from index.ts
-- Test pattern: spec example validation, enum iteration with it.each, empty/missing field rejection, type inference test
-- The `zodEnumFromConst` helper is private to shared.ts — add new enum schemas there, not in separate files
-
-## T026 — Implement job dependency and group coordination (2026-03-11)
-
-### What was done
-
-- Extended `packages/application/src/ports/job-queue.ports.ts` — added 2 new port methods:
-  - `findByIds(jobIds: string[]): QueuedJob[]` — bulk lookup for dependency resolution
-  - `findByGroupId(groupId: string): QueuedJob[]` — group coordination queries
-  - Updated `claimNextByType` contract: "eligible" now requires all `dependsOnJobIds` in terminal status
-- Extended `packages/application/src/services/job-queue.service.ts` — added 2 new service methods:
-  - `areJobDependenciesMet(jobId)` — returns `{ met, pendingDependencyIds, missingDependencyIds }`
-  - `findJobsByGroup(groupId)` — returns all jobs in a group
-  - Added `TERMINAL_STATUSES` constant (completed, failed) and `parseDependsOnJobIds` helper
-  - Updated service JSDoc with dependency and group coordination documentation
-- 23 new tests covering:
-  - Dependency enforcement: unmet deps block claiming, completed/failed deps unblock, partial deps block
-  - Edge cases: null deps, empty array deps, missing dep IDs, non-terminal statuses (claimed/running)
-  - Skip logic: claims first eligible job when some have unmet deps
-  - `areJobDependenciesMet`: reports pending, missing, and mixed dependency states
-  - `findJobsByGroup`: returns group members regardless of status, empty for unknown groups
-  - Review fan-out integration: 3 specialists + 1 lead, lead claimable only after all 3 terminal
-- All 1,376 tests pass, build clean, lint clean
-
-### Design decisions
-
-- Dependency checking is enforced at the repository port level (in `claimNextByType`) rather than the service level. This keeps the claim atomic and matches the existing filter pattern — the mock filters eligible jobs before claiming.
-- Missing dependency IDs (non-existent jobs) are treated as unmet dependencies, preventing premature execution when data is inconsistent.
-- `parseDependsOnJobIds` safely handles the `unknown` typed field from SQLite JSON storage, filtering to string arrays.
-
-### Patterns for next loops
-
-- T027 (scheduler service) will use `claimJob` which now respects dependencies automatically
-- T059/T060 (reviewer dispatch) can use `findJobsByGroup` and `areJobDependenciesMet` for coordination
-- The review fan-out pattern is: create specialist jobs with same `jobGroupId`, create lead job with `dependsOnJobIds` referencing all specialists
-- Port adapter in infrastructure (not yet implemented) will need to implement `findByIds` and `findByGroupId`
-
-## T025 — Implement DB-backed job queue (2026-03-11)
-
-### What was done
-
-- Created `packages/application/src/ports/job-queue.ports.ts` — port interfaces for the job queue service:
-  - `QueuedJob` entity shape, `CreateJobData` input type
-  - `JobQueueRepositoryPort` with `findById`, `create`, `claimNextByType`, `updateStatus`
-  - `JobQueueUnitOfWork` and `JobQueueTransactionRepositories` for transaction boundaries
-- Created `packages/application/src/services/job-queue.service.ts` — DB-backed job queue service:
-  - `createJob` — enqueues with PENDING status, supports delayed execution via runAfter
-  - `claimJob` — atomic claim of oldest eligible job by type, respects runAfter, increments attempt count
-  - `startJob` — transitions CLAIMED → RUNNING
-  - `completeJob` — transitions CLAIMED/RUNNING → COMPLETED
-  - `failJob` — transitions CLAIMED/RUNNING → FAILED
-  - Injected clock for testability, factory function pattern matching existing services
-- 42 new tests covering: creation defaults, claim atomicity, FIFO ordering, runAfter filtering, concurrent claim simulation (10 workers / 3 jobs), full lifecycle, terminal state immutability
-- All 1,247 tests pass, build clean
-
-### Patterns for next loops
-
-- Job queue follows the same port/adapter/UnitOfWork pattern as lease and transition services
-- The `claimNextByType` port method is the atomic claim primitive — the real SQLite implementation uses `UPDATE...WHERE status='PENDING'`
-- T026 (job dependencies) will need to extend `claimNextByType` to check `dependsOnJobIds`
-- T027 (scheduler) will consume `JobQueueService.claimJob` and `createJob`
-
-## T019 — Implement optimistic concurrency control (2026-03-11)
-
-### What was done
-
-- Created `packages/domain/src/conflict-priority.ts` — pure domain functions for conflict resolution priority classification per §10.2.3:
-  - `ConflictPriority` enum: OPERATOR (3) > LEASE_EXPIRY (2) > AUTOMATED (1)
-  - `getConflictPriority(actorType, targetStatus)` — classifies actor priority
-  - `shouldRetryOnConflict(actorType, targetStatus)` — retry decision helper
-  - `isWithinGracePeriod(leaseExpiredAt, resultReceivedAt, gracePeriodSeconds)` — grace period check for late worker results
-- Created `packages/application/src/services/optimistic-retry.service.ts` — priority-aware retry wrapper:
-  - `OptimisticRetryService` with `transitionTaskWithPriority()` method
-  - Operator/lease-monitor actors retry on VersionConflictError (up to maxRetries)
-  - Automated actors (worker, scheduler) yield immediately (no retry)
-  - Configurable maxRetries (default 3)
-- Created design decision doc at `docs/design-decisions/conflict-resolution-priority.md`
-- 56 new tests (31 domain + 25 application) covering all priority scenarios, retry exhaustion, grace period edge cases, concurrent race simulations
-- All 1,089 tests pass, build clean
-
-### Key design decisions
-
-- **Domain classification + application retry** (vs embedding retry in transition service): Keeps transition service focused on single atomic transitions; retry orchestration is a separate concern at the application layer. See `docs/design-decisions/conflict-resolution-priority.md`.
-- **Priority enum with numeric values**: Enables simple comparison (`>`) for retry decisions. Three levels match the §10.2.3 rules exactly.
-- **Operator actor types**: 'operator' and 'admin' get OPERATOR priority. 'system' gets OPERATOR only when targeting ESCALATED/CANCELLED (operator-intent signals).
-- **Lease monitor actors**: 'lease-monitor' and 'reconciliation' get LEASE_EXPIRY priority only when targeting FAILED.
-- **Grace period as pure function**: Not coupled to retry logic — callers check grace period separately before deciding whether to accept a late worker result.
-
-### Next loop should know
-
-- The existing OCC mechanism (version check + increment + VersionConflictError) was already fully implemented in T017/T018. T019 added the priority resolution layer on top.
-- `isWithinGracePeriod()` is available but not yet wired into any orchestration flow. The lease reclaim service (T033) or worker supervisor (T044) will need to use it when handling late worker results.
-- The retry service only wraps `transitionTask` (not lease/review/merge transitions). Other entity types use status-based concurrency which doesn't need priority-based retry.
-
-## T030 — Implement lease acquisition with exclusivity (2026-03-11)
-
-### What was done
-
-- Created `packages/application/src/ports/lease.ports.ts` — narrow port interfaces for lease acquisition (LeaseTaskRepositoryPort, LeaseRepositoryPort, LeaseUnitOfWork, LeaseTransactionRepositories)
-- Created `packages/application/src/services/lease.service.ts` — LeaseService with `acquireLease()` that atomically enforces one-active-lease-per-task invariant
-- Added `ExclusivityViolationError` and `TaskNotReadyForLeaseError` to `packages/application/src/errors.ts`
-- Created comprehensive test suite with 41 tests covering: happy path (READY, CHANGES_REQUESTED, ESCALATED), exclusivity enforcement, concurrent acquisition, version conflicts, audit events, domain events, transaction atomicity, error propagation
-- Updated `packages/application/src/index.ts` to export all new types and the service factory
-- All 1,033 tests pass, build and lint clean
-
-### Key design decisions
-
-- **Separate ports from TransitionService**: Created dedicated `lease.ports.ts` rather than extending existing `TransactionRepositories`. Keeps ports narrow and purpose-specific (SRP), avoids breaking existing infrastructure implementations.
-- **Domain state machine validation**: Uses `validateTransition()` from `@factory/domain` with `{ leaseAcquired: true, isOperator }` context — same guards that the task state machine defines for READY/CHANGES_REQUESTED/ESCALATED → ASSIGNED.
-- **Lease-eligible states**: READY, CHANGES_REQUESTED, ESCALATED (per PRD §2.1 transition table). ESCALATED→ASSIGNED additionally requires `isOperator: true`.
-- **Active lease statuses**: LEASED, STARTING, RUNNING, HEARTBEATING, COMPLETING (per task spec). Terminal/inactive: IDLE, TIMED_OUT, CRASHED, RECLAIMED.
-- **Factory pattern**: `createLeaseService(unitOfWork, eventEmitter, idGenerator)` — same DI pattern as TransitionService.
-- **Events after commit**: Domain events (task.transitioned + task-lease.transitioned) emitted after transaction commits, matching TransitionService pattern.
-
-### Next loop should know
-
-- T030 unblocks: T031 (heartbeat/staleness), T032 (graceful completion), T033 (lease reclaim), T044 (Worker Supervisor)
-- The `LeaseUnitOfWork` needs an infrastructure implementation — it's parallel to the existing `UnitOfWork` but with `LeaseTransactionRepositories`. The infrastructure layer in `apps/control-plane/` will need to implement this when repositories are wired up.
-- The `LeaseTaskRepositoryPort.updateStatusAndLeaseId()` method is new — it updates both status AND currentLeaseId atomically. The existing infra `TaskRepository` in `apps/control-plane/` has `update()` which can support this but a port adapter is needed.
-- The `LeaseRepositoryPort.findActiveByTaskId()` maps directly to the existing `createTaskLeaseRepository().findActiveByTaskId()` in `apps/control-plane/`.
-
-## T009 — Create migrations for Task and TaskDependency tables (2026-03-11)
-
-### What was done
-
-- Defined Task table (26 columns) in `apps/control-plane/src/infrastructure/database/schema.ts` with all fields from PRD 002 §2.3
-- Defined TaskDependency table (6 columns) with FK constraints to Task, unique constraint on (task_id, depends_on_task_id)
-- Generated migration `0001_melted_doctor_spectrum.sql` via drizzle-kit
-- Added 5 missing domain enums to `packages/domain/src/enums.ts`: TaskType, TaskPriority, TaskSource, EstimatedSize, RiskLevel
-- Wrote 31 new schema tests (T009 Task table, TaskDependency table, cross-table relationships)
-- Wrote 10 new enum tests for the 5 added enums
-- All 143 tests pass, build and lint clean
-
-### Key design decisions
-
-- JSON array columns (acceptance_criteria, definition_of_done, required_capabilities, suggested_file_scope) use `text({ mode: "json" })` matching T008 pattern
-- FK references to TaskLease (T011), ReviewCycle (T011), MergeQueueItem (T012) are nullable text with NO DB FK constraint yet
-- `is_hard_block` stored as integer (SQLite boolean convention), defaults to 1 (true)
-- `version` defaults to 1 for optimistic concurrency (PRD 002 §2.4)
-- Composite index on (repository_id, status) for scheduling queries
-- Missing enums (TaskType, TaskPriority, TaskSource, EstimatedSize, RiskLevel) were added since T007 missed them
-
-### Next loop should know
-
-- T009 completion unblocks T011 (TaskLease, ReviewCycle) and T012 (MergeQueueItem, ValidationRun, Job)
-- T010 (WorkerPool, Worker, AgentProfile, PromptTemplate) and T013 (AuditEvent, PolicySet) are also ready (independent of T009)
-- The `uniqueIndex` import was added to schema.ts for the task_dependency unique constraint
-- Test pattern: use `seedProjectAndRepo()` helper to create prerequisite Project+Repository for task tests
-
-## T010 — WorkerPool, Worker, AgentProfile, PromptTemplate migrations (2026-03-11)
-
-**What was done:**
-
-- Added Drizzle schema definitions for 4 new tables: `worker_pool`, `worker`, `prompt_template`, `agent_profile`
-- Generated migration `0002_smart_micromax.sql`
-- Added 34 new tests covering all CRUD, FK enforcement, JSON round-trips, defaults, and cross-table relationships
-- Total test count: 177 (all passing)
-
-**Patterns used:**
-
-- Same schema patterns as T008/T009: UUID text PKs, `unixepoch()` timestamp defaults, `text({ mode: "json" })` for JSON columns, integer booleans
-- FK references to existing tables (tasks) enforced at DB level
-- FK references to future tables (PolicySet from T013) stored as nullable text without DB-level FK
-- PromptTemplate defined before AgentProfile in schema to support FK reference order
-
-**What next loop should know:**
-
-- T011, T012, T013 migrations are now unblocked (they depend on T006/T007/T009, all done)
-- T014 (entity repositories) still needs T010-T013 all done before starting
-- The `openTestDb()` helper in schema.test.ts now includes all T008-T010 tables — future tasks should continue this pattern
-
 ## T011: Create migrations for TaskLease, ReviewCycle, ReviewPacket, LeadReviewDecision tables
 
 **Status:** Done  
@@ -512,3 +296,26 @@
 - T036 (readiness computation) is now unblocked — can use DependencyService for dependency queries
 - T037 (reverse-dependency recalculation) is now unblocked — getDependents() provides reverse lookups
 - Infrastructure adapter for DependencyUnitOfWork will be needed when wiring into the control plane
+
+## T027: Implement Scheduler Service (2026-03-11)
+
+**What was done:**
+
+- Created `packages/application/src/ports/scheduler.ports.ts` with `SchedulerTaskRepositoryPort` and `SchedulerPoolRepositoryPort` interfaces
+- Created `packages/application/src/services/scheduler.service.ts` implementing the full `SchedulerService` with `scheduleNext()` method
+- Created comprehensive test suite with 33 tests covering priority ordering, capability matching, concurrency limits, duplicate assignment prevention, and error propagation
+- Exported all new types and functions from `packages/application/src/index.ts`
+
+**Patterns used:**
+
+- Factory function pattern (`createSchedulerService()`) consistent with existing services
+- Service composition: Scheduler orchestrates `LeaseService` and `JobQueueService` rather than owning their transactions
+- Pure helper functions exported for unit testing: `isPoolCompatible`, `hasPoolCapacity`, `selectBestPool`, `comparePriority`
+- Discriminated union result type (`ScheduleResult = ScheduleSuccessResult | ScheduleNoAssignmentResult`) with skip reasons for observability
+
+**Next loop should know:**
+
+- T028 (scheduler tick loop) is now unblocked — it will need to call `scheduleNext()` on a periodic tick
+- The scheduler ports (`SchedulerTaskRepositoryPort`, `SchedulerPoolRepositoryPort`) need infrastructure implementations in `packages/infrastructure/` when the repository adapters are built
+- The `SchedulablePool.activeLeaseCount` field requires a COUNT query joining task_leases with active statuses — this is the most complex query the infra layer needs to implement
+- Pool type assignment is hardcoded to DEVELOPER for now; future tasks may need REVIEWER/PLANNER pool matching

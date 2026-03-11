@@ -117,3 +117,30 @@ export type {
   PriorityTransitionResult,
   OptimisticRetryService,
 } from "./services/optimistic-retry.service.js";
+
+// Ports — scheduler interfaces
+export type {
+  SchedulableTask,
+  SchedulablePool,
+  SchedulerTaskRepositoryPort,
+  SchedulerPoolRepositoryPort,
+  SchedulerTransactionRepositories,
+  SchedulerUnitOfWork,
+} from "./ports/scheduler.ports.js";
+
+// Services — scheduler for task-to-worker assignment
+export { createSchedulerService } from "./services/scheduler.service.js";
+export {
+  isPoolCompatible,
+  hasPoolCapacity,
+  selectBestPool,
+  comparePriority,
+} from "./services/scheduler.service.js";
+export type {
+  ScheduleAssignmentResult,
+  ScheduleSkipReason,
+  ScheduleNoAssignmentResult,
+  ScheduleSuccessResult,
+  ScheduleResult,
+  SchedulerService,
+} from "./services/scheduler.service.js";
