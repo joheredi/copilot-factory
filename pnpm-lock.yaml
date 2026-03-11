@@ -77,7 +77,11 @@ importers:
         specifier: workspace:*
         version: link:../domain
 
-  packages/config: {}
+  packages/config:
+    dependencies:
+      '@factory/domain':
+        specifier: workspace:*
+        version: link:../domain
 
   packages/domain: {}
 

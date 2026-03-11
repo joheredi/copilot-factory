@@ -83,3 +83,20 @@ export {
   shouldRetryOnConflict,
   isWithinGracePeriod,
 } from "./conflict-priority.js";
+
+export {
+  CommandPolicyMode,
+  CommandViolationAction,
+  CommandViolationReason,
+  evaluateCommandPolicy,
+  parseCommandString,
+} from "./policies/command-policy.js";
+
+export type {
+  AllowedCommand,
+  DeniedPattern,
+  ForbiddenArgPattern,
+  CommandPolicy,
+  ParsedCommand,
+  CommandPolicyEvaluation,
+} from "./policies/command-policy.js";

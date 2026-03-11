@@ -347,3 +347,38 @@ Created ReverseDependencyService in `packages/application` that automatically re
 - Service composition pattern (composes ReadinessService + TransitionService)
 - Hexagonal ports for reverse-dependency repository queries
 - Idempotent recalculation with graceful error handling for InvalidTransitionError and VersionConflictError
+
+## 2026-03-11 — T048: Implement command policy model and enforcement
+
+**Status:** Done
+
+**What was done:**
+
+- Created `packages/domain/src/policies/command-policy.ts` — full command policy type model and enforcement logic per PRD §9.3
+  - `CommandPolicyMode` (allowlist/denylist), `CommandViolationAction`, `CommandViolationReason` const enums
+  - `AllowedCommand`, `DeniedPattern`, `ForbiddenArgPattern`, `CommandPolicy` interfaces
+  - `parseCommandString()` — splits raw command into base command + arg tokens
+  - `evaluateCommandPolicy()` — evaluates a command against a policy with 5-step evaluation order: invalid → shell operators → denied patterns → allowlist/denylist → forbidden arg patterns
+  - Glob-style pattern matching for denied patterns (`*` wildcards)
+  - Regex matching for forbidden argument patterns
+- Created `packages/config/src/defaults/command-policy.ts` — default V1 policy and merge utility
+  - `DEFAULT_COMMAND_POLICY` — allowlist mode with curated development commands (pnpm, npm, npx, git, tsc, node, cat, ls, find, grep, head, tail, wc, mkdir, diff)
+  - Default denied patterns: rm -rf /, curl|sh, wget|bash, sudo, ssh, scp, chmod 777, eval
+  - Default forbidden arg patterns: deep path traversal (3+ levels), /etc/, /proc/, /sys/
+  - `mergeCommandPolicies(base, override)` — last-writer-wins field merge for hierarchical config
+- Added `@factory/domain` dependency to `@factory/config` package with TypeScript project reference
+- 66 new tests (44 domain + 22 config), all passing. 1,963 total tests.
+
+**Patterns established:**
+
+- Policy types live in `packages/domain/src/policies/` (domain owns enforcement rules)
+- Default policy values live in `packages/config/src/defaults/` (config owns concrete defaults)
+- Policy interfaces use `readonly` throughout for immutability
+- Evaluation functions return structured results with reason codes for audit logging
+- `as const` + union type pattern for policy enums (consistent with existing domain enums)
+
+**Next steps:**
+
+- T049 (file scope policy), T050 (validation policy), T051 (retry/escalation policy) — same pattern in domain/config
+- T052 (hierarchical config resolution) — the merge utility here is the foundation
+- T053 (policy snapshot generation) — combines all resolved policies into snapshot
