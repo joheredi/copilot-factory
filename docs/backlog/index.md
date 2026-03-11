@@ -131,7 +131,7 @@ See [phase documents](phases/) for details.
 | [T008](tasks/T008-migration-project-repo.md)        | Create migrations for Project, Repository, WorkflowTemplate tables                    | E002 | P0       | foundation | done    |
 | [T009](tasks/T009-migration-task.md)                | Create migrations for Task and TaskDependency tables                                  | E002 | P0       | foundation | done    |
 | [T010](tasks/T010-migration-worker-pool.md)         | Create migrations for WorkerPool, Worker, AgentProfile, PromptTemplate tables         | E002 | P0       | foundation | done    |
-| [T011](tasks/T011-migration-lease-review.md)        | Create migrations for TaskLease, ReviewCycle, ReviewPacket, LeadReviewDecision tables | E002 | P0       | foundation | pending |
+| [T011](tasks/T011-migration-lease-review.md)        | Create migrations for TaskLease, ReviewCycle, ReviewPacket, LeadReviewDecision tables | E002 | P0       | foundation | done    |
 | [T012](tasks/T012-migration-merge-job.md)           | Create migrations for MergeQueueItem, ValidationRun, Job tables                       | E002 | P0       | foundation | pending |
 | [T013](tasks/T013-migration-audit-policy.md)        | Create migrations for AuditEvent and PolicySet tables                                 | E002 | P0       | foundation | pending |
 | [T014](tasks/T014-entity-repositories.md)           | Implement data access repositories for all entities                                   | E002 | P0       | foundation | pending |

@@ -754,3 +754,298 @@ export const agentProfiles = sqliteTable(
     index("idx_agent_profile_pool_id").on(table.poolId),
   ],
 );
+
+// ─── T011: TaskLease, ReviewCycle, ReviewPacket, LeadReviewDecision ─────────
+
+/**
+ * Task lease table — tracks the assignment of a task to a worker for execution.
+ * Each lease represents a bounded work session: a worker acquires a lease,
+ * sends heartbeats, and either completes or is reclaimed on timeout/crash.
+ *
+ * Only one active lease (non-terminal status) may exist per task at any time.
+ * This invariant is enforced at the application layer; the DB stores the full
+ * lease history for audit purposes.
+ *
+ * The `partial_result_artifact_refs` JSON column stores artifact paths captured
+ * during crash recovery, enabling the next worker to resume partial work.
+ *
+ * @see {@link file://docs/prd/002-data-model.md} §2.3 Entity: TaskLease
+ */
+export const taskLeases = sqliteTable(
+  "task_lease",
+  {
+    /** Unique identifier (UUID). */
+    leaseId: text("lease_id").primaryKey(),
+
+    /** FK to the task being worked on. Enforced at DB level. */
+    taskId: text("task_id")
+      .notNull()
+      .references(() => tasks.taskId),
+
+    /**
+     * Identifier of the worker holding this lease.
+     * Nullable text — no DB-level FK constraint; the worker may be an
+     * ephemeral process not registered in the workers table.
+     */
+    workerId: text("worker_id").notNull(),
+
+    /**
+     * FK to the worker pool that dispatched this lease.
+     * Enforced at DB level — the pool must exist for scheduling traceability.
+     */
+    poolId: text("pool_id")
+      .notNull()
+      .references(() => workerPools.workerPoolId),
+
+    /** Timestamp when the lease was acquired (Unix epoch seconds). */
+    leasedAt: integer("leased_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+
+    /**
+     * Timestamp when the lease expires if no heartbeat is received.
+     * Set at lease acquisition based on the pool's default_timeout_sec.
+     */
+    expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+
+    /**
+     * Timestamp of the most recent heartbeat from the worker.
+     * Updated on each heartbeat to track worker liveness. Nullable before
+     * the first heartbeat is received.
+     */
+    heartbeatAt: integer("heartbeat_at", { mode: "timestamp" }),
+
+    /**
+     * Current lease status in the worker lease lifecycle.
+     * Stored as text; validated at the application layer against
+     * WorkerLeaseStatus enum.
+     */
+    status: text("status").notNull(),
+
+    /**
+     * Reason the lease was reclaimed, if applicable.
+     * Nullable — only set when the lease transitions to RECLAIMED or
+     * TIMED_OUT status. Stored as text for flexibility.
+     */
+    reclaimReason: text("reclaim_reason"),
+
+    /**
+     * JSON array of artifact reference paths captured during crash recovery
+     * or lease reclaim. Enables the next worker to access partial results.
+     * Nullable — empty when no partial artifacts were captured.
+     */
+    partialResultArtifactRefs: text("partial_result_artifact_refs", { mode: "json" }),
+  },
+  (table) => [
+    /** Index for lookups by task — "what leases exist for this task?" */
+    index("idx_task_lease_task_id").on(table.taskId),
+    /** Index for lookups by worker — "what is this worker working on?" */
+    index("idx_task_lease_worker_id").on(table.workerId),
+    /** Index for filtering leases by status (e.g. all active leases). */
+    index("idx_task_lease_status").on(table.status),
+  ],
+);
+
+/**
+ * Review cycle table — tracks a single cycle of specialist + lead review
+ * for a task. Each rework cycle creates a new ReviewCycle record. A task may
+ * have many ReviewCycle records over its lifetime, but only one may be in a
+ * non-terminal status at any time (enforced at the application layer).
+ *
+ * `required_reviewers` and `optional_reviewers` are JSON arrays of reviewer
+ * pool/role identifiers. The review router populates these when the cycle
+ * is created.
+ *
+ * @see {@link file://docs/prd/002-data-model.md} §2.3 Entity: ReviewCycle
+ */
+export const reviewCycles = sqliteTable(
+  "review_cycle",
+  {
+    /** Unique identifier (UUID). */
+    reviewCycleId: text("review_cycle_id").primaryKey(),
+
+    /** FK to the task under review. Enforced at DB level. */
+    taskId: text("task_id")
+      .notNull()
+      .references(() => tasks.taskId),
+
+    /**
+     * Current status in the review cycle lifecycle.
+     * Stored as text; validated at the application layer against
+     * ReviewCycleStatus enum.
+     */
+    status: text("status").notNull(),
+
+    /**
+     * JSON array of reviewer identifiers that must submit reviews before
+     * the cycle can proceed to lead review consolidation.
+     */
+    requiredReviewers: text("required_reviewers", { mode: "json" }),
+
+    /**
+     * JSON array of reviewer identifiers whose reviews are informational
+     * but not required for cycle progression.
+     */
+    optionalReviewers: text("optional_reviewers", { mode: "json" }),
+
+    /** Timestamp when the review cycle was started (Unix epoch seconds). */
+    startedAt: integer("started_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+
+    /**
+     * Timestamp when the review cycle reached a terminal state.
+     * Nullable until the cycle completes.
+     */
+    completedAt: integer("completed_at", { mode: "timestamp" }),
+  },
+  (table) => [
+    /** Index for lookups by task — "what review cycles exist for this task?" */
+    index("idx_review_cycle_task_id").on(table.taskId),
+    /** Index for filtering cycles by status (e.g. all in-progress cycles). */
+    index("idx_review_cycle_status").on(table.status),
+  ],
+);
+
+/**
+ * Review packet table — stores the structured result of a single specialist
+ * reviewer's assessment of a task within a review cycle. Each reviewer
+ * produces one ReviewPacket per review cycle.
+ *
+ * The `severity_summary` JSON object contains counts of issues by severity
+ * level (e.g. { critical: 0, high: 1, medium: 3, low: 2 }). The full
+ * structured review is in `packet_json`.
+ *
+ * @see {@link file://docs/prd/002-data-model.md} §2.3 Entity: ReviewPacket
+ */
+export const reviewPackets = sqliteTable(
+  "review_packet",
+  {
+    /** Unique identifier (UUID). */
+    reviewPacketId: text("review_packet_id").primaryKey(),
+
+    /** FK to the task being reviewed. Enforced at DB level. */
+    taskId: text("task_id")
+      .notNull()
+      .references(() => tasks.taskId),
+
+    /** FK to the parent review cycle. Enforced at DB level. */
+    reviewCycleId: text("review_cycle_id")
+      .notNull()
+      .references(() => reviewCycles.reviewCycleId),
+
+    /**
+     * FK to the pool that dispatched the reviewer.
+     * Nullable text — no DB-level FK constraint until needed by query patterns.
+     */
+    reviewerPoolId: text("reviewer_pool_id"),
+
+    /**
+     * Type of reviewer that produced this packet (e.g. "developer", "reviewer").
+     * Stored as text; validated at the application layer.
+     */
+    reviewerType: text("reviewer_type").notNull(),
+
+    /**
+     * Specialist reviewer verdict: "approved", "changes_requested", or "escalated".
+     * Stored as text; validated at the application layer against ReviewVerdict enum.
+     */
+    verdict: text("verdict").notNull(),
+
+    /**
+     * JSON object summarizing issue counts by severity level.
+     * Example: { "critical": 0, "high": 1, "medium": 3, "low": 2 }
+     */
+    severitySummary: text("severity_summary", { mode: "json" }),
+
+    /**
+     * Full structured review packet as JSON. Contains the complete review
+     * output including issues, suggestions, and metadata. Schema validated
+     * at the application layer against ReviewPacket Zod schema.
+     */
+    packetJson: text("packet_json", { mode: "json" }),
+
+    /** Row creation timestamp (Unix epoch seconds). */
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => [
+    /** Composite index for the common query: "all reviews in a cycle for a task." */
+    index("idx_review_packet_task_cycle").on(table.taskId, table.reviewCycleId),
+    /** Index for filtering packets by verdict. */
+    index("idx_review_packet_verdict").on(table.verdict),
+  ],
+);
+
+/**
+ * Lead review decision table — stores the lead reviewer's consolidated
+ * decision for a review cycle. Each review cycle has at most one lead
+ * review decision. The lead reviewer considers all specialist ReviewPackets
+ * and makes a final determination.
+ *
+ * `follow_up_task_refs` is a JSON array of task reference identifiers
+ * for tasks created as follow-ups when the decision is "approved_with_follow_up".
+ *
+ * @see {@link file://docs/prd/002-data-model.md} §2.3 Entity: LeadReviewDecision
+ */
+export const leadReviewDecisions = sqliteTable(
+  "lead_review_decision",
+  {
+    /** Unique identifier (UUID). */
+    leadReviewDecisionId: text("lead_review_decision_id").primaryKey(),
+
+    /** FK to the task under review. Enforced at DB level. */
+    taskId: text("task_id")
+      .notNull()
+      .references(() => tasks.taskId),
+
+    /** FK to the parent review cycle. Enforced at DB level. */
+    reviewCycleId: text("review_cycle_id")
+      .notNull()
+      .references(() => reviewCycles.reviewCycleId),
+
+    /**
+     * Lead reviewer's consolidated decision.
+     * Stored as text; validated at the application layer against
+     * LeadReviewDecision enum values.
+     */
+    decision: text("decision").notNull(),
+
+    /**
+     * Count of blocking issues identified across all specialist reviews.
+     * Must be ≥ 1 when decision is "changes_requested" (enforced at app layer).
+     */
+    blockingIssueCount: integer("blocking_issue_count").notNull().default(0),
+
+    /**
+     * Count of non-blocking issues identified across all specialist reviews.
+     */
+    nonBlockingIssueCount: integer("non_blocking_issue_count").notNull().default(0),
+
+    /**
+     * JSON array of follow-up task reference identifiers.
+     * Populated when decision is "approved_with_follow_up".
+     * Nullable when no follow-up tasks are needed.
+     */
+    followUpTaskRefs: text("follow_up_task_refs", { mode: "json" }),
+
+    /**
+     * Full structured lead review decision packet as JSON. Contains the
+     * complete consolidation output. Schema validated at the application
+     * layer against LeadReviewDecisionPacket Zod schema.
+     */
+    packetJson: text("packet_json", { mode: "json" }),
+
+    /** Row creation timestamp (Unix epoch seconds). */
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => [
+    /** Index for lookups by task — "all lead decisions for this task." */
+    index("idx_lead_review_decision_task_id").on(table.taskId),
+    /** Index for lookups by review cycle — typically one decision per cycle. */
+    index("idx_lead_review_decision_cycle_id").on(table.reviewCycleId),
+  ],
+);

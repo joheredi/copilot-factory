@@ -276,3 +276,32 @@
 - T011, T012, T013 migrations are now unblocked (they depend on T006/T007/T009, all done)
 - T014 (entity repositories) still needs T010-T013 all done before starting
 - The `openTestDb()` helper in schema.test.ts now includes all T008-T010 tables — future tasks should continue this pattern
+
+## T011: Create migrations for TaskLease, ReviewCycle, ReviewPacket, LeadReviewDecision tables
+
+**Status:** Done  
+**Date:** 2026-03-11
+
+### What was done
+
+- Added Drizzle schema definitions for 4 tables in `apps/control-plane/src/infrastructure/database/schema.ts`:
+  - `task_lease` — tracks worker lease assignments with FK to task and worker_pool
+  - `review_cycle` — tracks review cycle lifecycle with FK to task, JSON arrays for reviewers
+  - `review_packet` — stores specialist reviewer results with FK to task and review_cycle
+  - `lead_review_decision` — stores lead reviewer consolidation with FK to task and review_cycle
+- Generated migration `0003_youthful_nicolaos.sql` via `pnpm db:generate`
+- Added 39 new tests (128 total in schema.test.ts, up from 89)
+
+### Patterns used
+
+- Same Drizzle schema patterns as T008-T010: text PKs, `{ mode: "json" }` for JSON columns, `{ mode: "timestamp" }` with `(unixepoch())` defaults
+- FK constraints enforced at DB level for task_id, pool_id, review_cycle_id
+- worker_id is text-only (no FK) since workers may be ephemeral
+- Indexes on frequently queried columns: task_id, status, worker_id, verdict
+
+### Next loop notes
+
+- T012 (MergeQueueItem, ValidationRun, Job) and T013 (AuditEvent, PolicySet) are now ready
+- T014 (entity repositories) will be ready once T011-T013 are all done
+- The test helper `openTestDb()` now creates all T008-T011 tables; future migrations should extend it
+- The `seedWorkerPool()` helper was added for tests that need a valid pool_id FK

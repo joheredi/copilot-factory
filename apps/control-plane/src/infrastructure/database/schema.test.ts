@@ -29,6 +29,10 @@ import {
   workers,
   promptTemplates,
   agentProfiles,
+  taskLeases,
+  reviewCycles,
+  reviewPackets,
+  leadReviewDecisions,
 } from "./schema.js";
 
 /**
@@ -196,6 +200,67 @@ function openTestDb() {
     );
 
     CREATE INDEX idx_agent_profile_pool_id ON agent_profile(pool_id);
+
+    -- T011: TaskLease, ReviewCycle, ReviewPacket, LeadReviewDecision
+    CREATE TABLE task_lease (
+      lease_id TEXT PRIMARY KEY NOT NULL,
+      task_id TEXT NOT NULL REFERENCES task(task_id),
+      worker_id TEXT NOT NULL,
+      pool_id TEXT NOT NULL REFERENCES worker_pool(worker_pool_id),
+      leased_at INTEGER NOT NULL DEFAULT (unixepoch()),
+      expires_at INTEGER NOT NULL,
+      heartbeat_at INTEGER,
+      status TEXT NOT NULL,
+      reclaim_reason TEXT,
+      partial_result_artifact_refs TEXT
+    );
+
+    CREATE INDEX idx_task_lease_task_id ON task_lease(task_id);
+    CREATE INDEX idx_task_lease_worker_id ON task_lease(worker_id);
+    CREATE INDEX idx_task_lease_status ON task_lease(status);
+
+    CREATE TABLE review_cycle (
+      review_cycle_id TEXT PRIMARY KEY NOT NULL,
+      task_id TEXT NOT NULL REFERENCES task(task_id),
+      status TEXT NOT NULL,
+      required_reviewers TEXT,
+      optional_reviewers TEXT,
+      started_at INTEGER NOT NULL DEFAULT (unixepoch()),
+      completed_at INTEGER
+    );
+
+    CREATE INDEX idx_review_cycle_task_id ON review_cycle(task_id);
+    CREATE INDEX idx_review_cycle_status ON review_cycle(status);
+
+    CREATE TABLE review_packet (
+      review_packet_id TEXT PRIMARY KEY NOT NULL,
+      task_id TEXT NOT NULL REFERENCES task(task_id),
+      review_cycle_id TEXT NOT NULL REFERENCES review_cycle(review_cycle_id),
+      reviewer_pool_id TEXT,
+      reviewer_type TEXT NOT NULL,
+      verdict TEXT NOT NULL,
+      severity_summary TEXT,
+      packet_json TEXT,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+
+    CREATE INDEX idx_review_packet_task_cycle ON review_packet(task_id, review_cycle_id);
+    CREATE INDEX idx_review_packet_verdict ON review_packet(verdict);
+
+    CREATE TABLE lead_review_decision (
+      lead_review_decision_id TEXT PRIMARY KEY NOT NULL,
+      task_id TEXT NOT NULL REFERENCES task(task_id),
+      review_cycle_id TEXT NOT NULL REFERENCES review_cycle(review_cycle_id),
+      decision TEXT NOT NULL,
+      blocking_issue_count INTEGER NOT NULL DEFAULT 0,
+      non_blocking_issue_count INTEGER NOT NULL DEFAULT 0,
+      follow_up_task_refs TEXT,
+      packet_json TEXT,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+
+    CREATE INDEX idx_lead_review_decision_task_id ON lead_review_decision(task_id);
+    CREATE INDEX idx_lead_review_decision_cycle_id ON lead_review_decision(review_cycle_id);
   `);
 
   const db = drizzle(sqlite);
@@ -2057,5 +2122,796 @@ describe("T010 — Cross-table relationships", () => {
     expect(result.worker_name).toBe("active-worker");
     expect(result.task_title).toBe("implement-feature");
     expect(result.pool_name).toBe("dev-pool");
+  });
+});
+
+// ─── T011: TaskLease table ──────────────────────────────────────────────────
+
+/**
+ * Helper: seed a worker pool and return its ID.
+ * Needed by TaskLease tests since pool_id has a DB-level FK constraint.
+ */
+function seedWorkerPool(db: ReturnType<typeof openTestDb>["db"]): string {
+  const poolId = randomUUID();
+  db.insert(workerPools)
+    .values({
+      workerPoolId: poolId,
+      name: `pool-${poolId.slice(0, 8)}`,
+      poolType: "developer",
+    })
+    .run();
+  return poolId;
+}
+
+/** Generate a minimal valid TaskLease row. */
+function makeTaskLease(
+  taskId: string,
+  poolId: string,
+  overrides: Partial<typeof taskLeases.$inferInsert> = {},
+) {
+  return {
+    leaseId: randomUUID(),
+    taskId,
+    workerId: `worker-${randomUUID().slice(0, 8)}`,
+    poolId,
+    expiresAt: new Date(Date.now() + 3600_000),
+    status: "LEASED",
+    ...overrides,
+  };
+}
+
+describe("T011 — TaskLease table", () => {
+  let db: ReturnType<typeof openTestDb>["db"];
+  let sqlite: ReturnType<typeof openTestDb>["sqlite"];
+  let testRepoId: string;
+  let testPoolId: string;
+
+  beforeEach(() => {
+    ({ db, sqlite } = openTestDb());
+    testRepoId = seedProjectAndRepo(db);
+    testPoolId = seedWorkerPool(db);
+  });
+  afterEach(() => {
+    sqlite.close();
+  });
+
+  /**
+   * @why Verifies basic CRUD for the lease table. Lease tracking is the
+   * foundation of the worker execution model — if a lease can't be created
+   * and read back, no task can be assigned to a worker.
+   */
+  it("inserts and retrieves a lease with all required fields", () => {
+    const t = makeTask(testRepoId);
+    db.insert(tasks).values(t).run();
+
+    const lease = makeTaskLease(t.taskId, testPoolId);
+    db.insert(taskLeases).values(lease).run();
+
+    const row = db.select().from(taskLeases).get();
+    expect(row).toBeDefined();
+    expect(row!.leaseId).toBe(lease.leaseId);
+    expect(row!.taskId).toBe(t.taskId);
+    expect(row!.workerId).toBe(lease.workerId);
+    expect(row!.poolId).toBe(testPoolId);
+    expect(row!.status).toBe("LEASED");
+    expect(row!.expiresAt).toBeDefined();
+  });
+
+  /**
+   * @why leased_at must auto-populate via DEFAULT (unixepoch()). The lease
+   * acquisition time is recorded automatically and used for timeout calculations.
+   */
+  it("auto-populates leased_at with a default timestamp", () => {
+    const t = makeTask(testRepoId);
+    db.insert(tasks).values(t).run();
+
+    const lease = makeTaskLease(t.taskId, testPoolId);
+    db.insert(taskLeases).values(lease).run();
+
+    const row = db.select().from(taskLeases).get();
+    expect(row!.leasedAt).toBeInstanceOf(Date);
+  });
+
+  /**
+   * @why heartbeat_at is nullable before the first heartbeat. It must accept
+   * a timestamp value when a heartbeat is received to track worker liveness.
+   */
+  it("stores heartbeat_at when provided", () => {
+    const t = makeTask(testRepoId);
+    db.insert(tasks).values(t).run();
+
+    const now = new Date();
+    const lease = makeTaskLease(t.taskId, testPoolId, { heartbeatAt: now });
+    db.insert(taskLeases).values(lease).run();
+
+    const row = db.select().from(taskLeases).get();
+    expect(row!.heartbeatAt).toBeInstanceOf(Date);
+  });
+
+  /**
+   * @why heartbeat_at must default to null before the first heartbeat arrives.
+   * The staleness detector uses null heartbeat_at to identify leases that
+   * never sent a heartbeat.
+   */
+  it("defaults heartbeat_at to null", () => {
+    const t = makeTask(testRepoId);
+    db.insert(tasks).values(t).run();
+
+    const lease = makeTaskLease(t.taskId, testPoolId);
+    db.insert(taskLeases).values(lease).run();
+
+    const row = db.select().from(taskLeases).get();
+    expect(row!.heartbeatAt).toBeNull();
+  });
+
+  /**
+   * @why reclaim_reason must be nullable (not set for successful leases)
+   * and accept a text value when a lease is reclaimed due to timeout or crash.
+   */
+  it("stores reclaim_reason when provided", () => {
+    const t = makeTask(testRepoId);
+    db.insert(tasks).values(t).run();
+
+    const lease = makeTaskLease(t.taskId, testPoolId, {
+      status: "RECLAIMED",
+      reclaimReason: "heartbeat_timeout",
+    });
+    db.insert(taskLeases).values(lease).run();
+
+    const row = db.select().from(taskLeases).get();
+    expect(row!.reclaimReason).toBe("heartbeat_timeout");
+  });
+
+  /**
+   * @why partial_result_artifact_refs must store a JSON array of artifact paths.
+   * Crash recovery uses these to provide the next worker with partial results
+   * from the failed execution.
+   */
+  it("stores partial_result_artifact_refs as a JSON array", () => {
+    const t = makeTask(testRepoId);
+    db.insert(tasks).values(t).run();
+
+    const refs = ["/artifacts/task-123/partial-diff.patch", "/artifacts/task-123/log.txt"];
+    const lease = makeTaskLease(t.taskId, testPoolId, {
+      status: "RECLAIMED",
+      partialResultArtifactRefs: refs,
+    });
+    db.insert(taskLeases).values(lease).run();
+
+    const row = db.select().from(taskLeases).get();
+    expect(row!.partialResultArtifactRefs).toEqual(refs);
+  });
+
+  /**
+   * @why FK from task_lease.task_id → task.task_id must be enforced.
+   * A lease cannot exist without a valid task.
+   */
+  it("rejects an invalid task_id FK reference", () => {
+    expect(() =>
+      db.insert(taskLeases).values(makeTaskLease("non-existent-task-id", testPoolId)).run(),
+    ).toThrow();
+  });
+
+  /**
+   * @why FK from task_lease.pool_id → worker_pool.worker_pool_id must be
+   * enforced. A lease must reference a valid pool for scheduling traceability.
+   */
+  it("rejects an invalid pool_id FK reference", () => {
+    const t = makeTask(testRepoId);
+    db.insert(tasks).values(t).run();
+
+    expect(() =>
+      db.insert(taskLeases).values(makeTaskLease(t.taskId, "non-existent-pool-id")).run(),
+    ).toThrow();
+  });
+
+  /**
+   * @why A task may have multiple leases over its lifetime (e.g. after reclaim
+   * and reassignment). The lease history must be preserved for audit.
+   */
+  it("supports multiple leases per task (lease history)", () => {
+    const t = makeTask(testRepoId);
+    db.insert(tasks).values(t).run();
+
+    db.insert(taskLeases)
+      .values(makeTaskLease(t.taskId, testPoolId, { status: "RECLAIMED" }))
+      .run();
+    db.insert(taskLeases)
+      .values(makeTaskLease(t.taskId, testPoolId, { status: "LEASED" }))
+      .run();
+
+    const rows = db.select().from(taskLeases).where(eq(taskLeases.taskId, t.taskId)).all();
+    expect(rows).toHaveLength(2);
+  });
+
+  /**
+   * @why Indexes on task_id, worker_id, and status must exist for efficient
+   * querying of active leases, worker assignments, and staleness detection.
+   */
+  it("has indexes on task_id, worker_id, and status", () => {
+    const indexes = sqlite
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'task_lease'")
+      .all() as Array<{ name: string }>;
+    const indexNames = indexes.map((i) => i.name);
+    expect(indexNames).toContain("idx_task_lease_task_id");
+    expect(indexNames).toContain("idx_task_lease_worker_id");
+    expect(indexNames).toContain("idx_task_lease_status");
+  });
+});
+
+// ─── T011: ReviewCycle table ────────────────────────────────────────────────
+
+/** Generate a minimal valid ReviewCycle row. */
+function makeReviewCycle(
+  taskId: string,
+  overrides: Partial<typeof reviewCycles.$inferInsert> = {},
+) {
+  return {
+    reviewCycleId: randomUUID(),
+    taskId,
+    status: "NOT_STARTED",
+    ...overrides,
+  };
+}
+
+describe("T011 — ReviewCycle table", () => {
+  let db: ReturnType<typeof openTestDb>["db"];
+  let sqlite: ReturnType<typeof openTestDb>["sqlite"];
+  let testRepoId: string;
+
+  beforeEach(() => {
+    ({ db, sqlite } = openTestDb());
+    testRepoId = seedProjectAndRepo(db);
+  });
+  afterEach(() => {
+    sqlite.close();
+  });
+
+  /**
+   * @why Verifies basic CRUD for review cycles. Every task that enters the
+   * review phase creates a ReviewCycle. If CRUD fails, the entire review
+   * pipeline is broken.
+   */
+  it("inserts and retrieves a review cycle with required fields", () => {
+    const t = makeTask(testRepoId);
+    db.insert(tasks).values(t).run();
+
+    const cycle = makeReviewCycle(t.taskId);
+    db.insert(reviewCycles).values(cycle).run();
+
+    const row = db.select().from(reviewCycles).get();
+    expect(row).toBeDefined();
+    expect(row!.reviewCycleId).toBe(cycle.reviewCycleId);
+    expect(row!.taskId).toBe(t.taskId);
+    expect(row!.status).toBe("NOT_STARTED");
+  });
+
+  /**
+   * @why started_at must auto-populate via DEFAULT (unixepoch()). The cycle
+   * start time is needed for timing metrics and SLA calculations.
+   */
+  it("auto-populates started_at with a default timestamp", () => {
+    const t = makeTask(testRepoId);
+    db.insert(tasks).values(t).run();
+
+    const cycle = makeReviewCycle(t.taskId);
+    db.insert(reviewCycles).values(cycle).run();
+
+    const row = db.select().from(reviewCycles).get();
+    expect(row!.startedAt).toBeInstanceOf(Date);
+  });
+
+  /**
+   * @why completed_at must be nullable (not set when cycle is in-progress)
+   * and accept a timestamp when the cycle reaches a terminal state.
+   */
+  it("stores completed_at when provided", () => {
+    const t = makeTask(testRepoId);
+    db.insert(tasks).values(t).run();
+
+    const now = new Date();
+    const cycle = makeReviewCycle(t.taskId, { status: "APPROVED", completedAt: now });
+    db.insert(reviewCycles).values(cycle).run();
+
+    const row = db.select().from(reviewCycles).get();
+    expect(row!.completedAt).toBeInstanceOf(Date);
+  });
+
+  /**
+   * @why completed_at defaults to null for in-progress cycles.
+   */
+  it("defaults completed_at to null", () => {
+    const t = makeTask(testRepoId);
+    db.insert(tasks).values(t).run();
+
+    const cycle = makeReviewCycle(t.taskId);
+    db.insert(reviewCycles).values(cycle).run();
+
+    const row = db.select().from(reviewCycles).get();
+    expect(row!.completedAt).toBeNull();
+  });
+
+  /**
+   * @why required_reviewers must store a JSON array of reviewer identifiers.
+   * The review router populates these when routing specialist reviewers.
+   */
+  it("stores required_reviewers as a JSON array", () => {
+    const t = makeTask(testRepoId);
+    db.insert(tasks).values(t).run();
+
+    const reviewers = ["pool-security", "pool-architecture"];
+    const cycle = makeReviewCycle(t.taskId, { requiredReviewers: reviewers });
+    db.insert(reviewCycles).values(cycle).run();
+
+    const row = db.select().from(reviewCycles).get();
+    expect(row!.requiredReviewers).toEqual(reviewers);
+  });
+
+  /**
+   * @why optional_reviewers must store a JSON array of reviewer identifiers.
+   * These are informational reviews that don't block cycle progression.
+   */
+  it("stores optional_reviewers as a JSON array", () => {
+    const t = makeTask(testRepoId);
+    db.insert(tasks).values(t).run();
+
+    const reviewers = ["pool-style", "pool-docs"];
+    const cycle = makeReviewCycle(t.taskId, { optionalReviewers: reviewers });
+    db.insert(reviewCycles).values(cycle).run();
+
+    const row = db.select().from(reviewCycles).get();
+    expect(row!.optionalReviewers).toEqual(reviewers);
+  });
+
+  /**
+   * @why FK from review_cycle.task_id → task.task_id must be enforced.
+   * A review cycle cannot exist without a valid task.
+   */
+  it("rejects an invalid task_id FK reference", () => {
+    expect(() =>
+      db.insert(reviewCycles).values(makeReviewCycle("non-existent-task-id")).run(),
+    ).toThrow();
+  });
+
+  /**
+   * @why A task may have multiple review cycles (one per rework round).
+   * The cycle history is preserved for audit and metrics.
+   */
+  it("supports multiple review cycles per task (rework history)", () => {
+    const t = makeTask(testRepoId);
+    db.insert(tasks).values(t).run();
+
+    db.insert(reviewCycles)
+      .values(makeReviewCycle(t.taskId, { status: "REJECTED" }))
+      .run();
+    db.insert(reviewCycles)
+      .values(makeReviewCycle(t.taskId, { status: "IN_PROGRESS" }))
+      .run();
+
+    const rows = db.select().from(reviewCycles).where(eq(reviewCycles.taskId, t.taskId)).all();
+    expect(rows).toHaveLength(2);
+  });
+
+  /**
+   * @why Indexes on task_id and status must exist for efficient querying of
+   * active review cycles and cycle history per task.
+   */
+  it("has indexes on task_id and status", () => {
+    const indexes = sqlite
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'review_cycle'")
+      .all() as Array<{ name: string }>;
+    const indexNames = indexes.map((i) => i.name);
+    expect(indexNames).toContain("idx_review_cycle_task_id");
+    expect(indexNames).toContain("idx_review_cycle_status");
+  });
+});
+
+// ─── T011: ReviewPacket table ───────────────────────────────────────────────
+
+/** Generate a minimal valid ReviewPacket row. */
+function makeReviewPacket(
+  taskId: string,
+  reviewCycleId: string,
+  overrides: Partial<typeof reviewPackets.$inferInsert> = {},
+) {
+  return {
+    reviewPacketId: randomUUID(),
+    taskId,
+    reviewCycleId,
+    reviewerType: "reviewer",
+    verdict: "approved",
+    ...overrides,
+  };
+}
+
+describe("T011 — ReviewPacket table", () => {
+  let db: ReturnType<typeof openTestDb>["db"];
+  let sqlite: ReturnType<typeof openTestDb>["sqlite"];
+  let testRepoId: string;
+  let testTaskId: string;
+  let testCycleId: string;
+
+  beforeEach(() => {
+    ({ db, sqlite } = openTestDb());
+    testRepoId = seedProjectAndRepo(db);
+
+    const t = makeTask(testRepoId);
+    testTaskId = t.taskId;
+    db.insert(tasks).values(t).run();
+
+    const cycle = makeReviewCycle(testTaskId);
+    testCycleId = cycle.reviewCycleId;
+    db.insert(reviewCycles).values(cycle).run();
+  });
+  afterEach(() => {
+    sqlite.close();
+  });
+
+  /**
+   * @why Verifies basic CRUD for review packets. Each specialist reviewer
+   * produces a ReviewPacket per cycle. If CRUD fails, review results
+   * cannot be persisted.
+   */
+  it("inserts and retrieves a review packet with required fields", () => {
+    const pkt = makeReviewPacket(testTaskId, testCycleId);
+    db.insert(reviewPackets).values(pkt).run();
+
+    const row = db.select().from(reviewPackets).get();
+    expect(row).toBeDefined();
+    expect(row!.reviewPacketId).toBe(pkt.reviewPacketId);
+    expect(row!.taskId).toBe(testTaskId);
+    expect(row!.reviewCycleId).toBe(testCycleId);
+    expect(row!.reviewerType).toBe("reviewer");
+    expect(row!.verdict).toBe("approved");
+  });
+
+  /**
+   * @why created_at must auto-populate. The creation timestamp is used for
+   * ordering reviews and tracking review latency.
+   */
+  it("auto-populates created_at with a default timestamp", () => {
+    const pkt = makeReviewPacket(testTaskId, testCycleId);
+    db.insert(reviewPackets).values(pkt).run();
+
+    const row = db.select().from(reviewPackets).get();
+    expect(row!.createdAt).toBeInstanceOf(Date);
+  });
+
+  /**
+   * @why severity_summary must store a JSON object with issue counts by level.
+   * The lead reviewer uses this to make a consolidated decision.
+   */
+  it("stores severity_summary as a JSON object", () => {
+    const summary = { critical: 0, high: 1, medium: 3, low: 2 };
+    const pkt = makeReviewPacket(testTaskId, testCycleId, { severitySummary: summary });
+    db.insert(reviewPackets).values(pkt).run();
+
+    const row = db.select().from(reviewPackets).get();
+    expect(row!.severitySummary).toEqual(summary);
+  });
+
+  /**
+   * @why packet_json must store the full structured review output as JSON.
+   * This is the primary payload containing issues, suggestions, and metadata.
+   */
+  it("stores packet_json as a JSON object", () => {
+    const packet = {
+      version: "1.0",
+      issues: [{ severity: "high", message: "Missing error handling", file: "src/index.ts" }],
+      suggestions: ["Add try-catch blocks"],
+    };
+    const pkt = makeReviewPacket(testTaskId, testCycleId, { packetJson: packet });
+    db.insert(reviewPackets).values(pkt).run();
+
+    const row = db.select().from(reviewPackets).get();
+    expect(row!.packetJson).toEqual(packet);
+  });
+
+  /**
+   * @why reviewer_pool_id is nullable — it tracks the origin pool for metrics
+   * but is not required for basic review packet storage.
+   */
+  it("stores reviewer_pool_id when provided", () => {
+    const pkt = makeReviewPacket(testTaskId, testCycleId, {
+      reviewerPoolId: "pool-security-123",
+    });
+    db.insert(reviewPackets).values(pkt).run();
+
+    const row = db.select().from(reviewPackets).get();
+    expect(row!.reviewerPoolId).toBe("pool-security-123");
+  });
+
+  /**
+   * @why FK from review_packet.task_id → task.task_id must be enforced.
+   */
+  it("rejects an invalid task_id FK reference", () => {
+    expect(() =>
+      db.insert(reviewPackets).values(makeReviewPacket("non-existent-task-id", testCycleId)).run(),
+    ).toThrow();
+  });
+
+  /**
+   * @why FK from review_packet.review_cycle_id → review_cycle.review_cycle_id
+   * must be enforced. Packets must belong to a valid cycle.
+   */
+  it("rejects an invalid review_cycle_id FK reference", () => {
+    expect(() =>
+      db.insert(reviewPackets).values(makeReviewPacket(testTaskId, "non-existent-cycle-id")).run(),
+    ).toThrow();
+  });
+
+  /**
+   * @why A review cycle may have multiple packets from different specialist
+   * reviewers. Each reviewer produces exactly one packet per cycle.
+   */
+  it("supports multiple packets per review cycle", () => {
+    db.insert(reviewPackets)
+      .values(
+        makeReviewPacket(testTaskId, testCycleId, {
+          reviewerType: "reviewer",
+          verdict: "approved",
+        }),
+      )
+      .run();
+    db.insert(reviewPackets)
+      .values(
+        makeReviewPacket(testTaskId, testCycleId, {
+          reviewerType: "reviewer",
+          verdict: "changes_requested",
+        }),
+      )
+      .run();
+
+    const rows = db
+      .select()
+      .from(reviewPackets)
+      .where(eq(reviewPackets.reviewCycleId, testCycleId))
+      .all();
+    expect(rows).toHaveLength(2);
+  });
+
+  /**
+   * @why Indexes on (task_id, review_cycle_id) and verdict must exist for
+   * efficient querying of review results.
+   */
+  it("has indexes on (task_id, review_cycle_id) and verdict", () => {
+    const indexes = sqlite
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'review_packet'")
+      .all() as Array<{ name: string }>;
+    const indexNames = indexes.map((i) => i.name);
+    expect(indexNames).toContain("idx_review_packet_task_cycle");
+    expect(indexNames).toContain("idx_review_packet_verdict");
+  });
+});
+
+// ─── T011: LeadReviewDecision table ─────────────────────────────────────────
+
+/** Generate a minimal valid LeadReviewDecision row. */
+function makeLeadReviewDecision(
+  taskId: string,
+  reviewCycleId: string,
+  overrides: Partial<typeof leadReviewDecisions.$inferInsert> = {},
+) {
+  return {
+    leadReviewDecisionId: randomUUID(),
+    taskId,
+    reviewCycleId,
+    decision: "approved",
+    ...overrides,
+  };
+}
+
+describe("T011 — LeadReviewDecision table", () => {
+  let db: ReturnType<typeof openTestDb>["db"];
+  let sqlite: ReturnType<typeof openTestDb>["sqlite"];
+  let testRepoId: string;
+  let testTaskId: string;
+  let testCycleId: string;
+
+  beforeEach(() => {
+    ({ db, sqlite } = openTestDb());
+    testRepoId = seedProjectAndRepo(db);
+
+    const t = makeTask(testRepoId);
+    testTaskId = t.taskId;
+    db.insert(tasks).values(t).run();
+
+    const cycle = makeReviewCycle(testTaskId);
+    testCycleId = cycle.reviewCycleId;
+    db.insert(reviewCycles).values(cycle).run();
+  });
+  afterEach(() => {
+    sqlite.close();
+  });
+
+  /**
+   * @why Verifies basic CRUD for lead review decisions. The lead reviewer's
+   * decision determines whether a task proceeds to merge, enters rework,
+   * or gets escalated. If this table fails, the review pipeline halts.
+   */
+  it("inserts and retrieves a decision with required fields", () => {
+    const dec = makeLeadReviewDecision(testTaskId, testCycleId);
+    db.insert(leadReviewDecisions).values(dec).run();
+
+    const row = db.select().from(leadReviewDecisions).get();
+    expect(row).toBeDefined();
+    expect(row!.leadReviewDecisionId).toBe(dec.leadReviewDecisionId);
+    expect(row!.taskId).toBe(testTaskId);
+    expect(row!.reviewCycleId).toBe(testCycleId);
+    expect(row!.decision).toBe("approved");
+  });
+
+  /**
+   * @why blocking_issue_count must default to 0. When the decision is
+   * "approved", there are no blocking issues.
+   */
+  it("defaults blocking_issue_count to 0", () => {
+    const dec = makeLeadReviewDecision(testTaskId, testCycleId);
+    db.insert(leadReviewDecisions).values(dec).run();
+
+    const row = db.select().from(leadReviewDecisions).get();
+    expect(row!.blockingIssueCount).toBe(0);
+  });
+
+  /**
+   * @why non_blocking_issue_count must default to 0.
+   */
+  it("defaults non_blocking_issue_count to 0", () => {
+    const dec = makeLeadReviewDecision(testTaskId, testCycleId);
+    db.insert(leadReviewDecisions).values(dec).run();
+
+    const row = db.select().from(leadReviewDecisions).get();
+    expect(row!.nonBlockingIssueCount).toBe(0);
+  });
+
+  /**
+   * @why blocking_issue_count and non_blocking_issue_count must accept
+   * explicit values. The lead reviewer sets these based on consolidated
+   * specialist review findings.
+   */
+  it("stores explicit issue counts", () => {
+    const dec = makeLeadReviewDecision(testTaskId, testCycleId, {
+      decision: "changes_requested",
+      blockingIssueCount: 3,
+      nonBlockingIssueCount: 7,
+    });
+    db.insert(leadReviewDecisions).values(dec).run();
+
+    const row = db.select().from(leadReviewDecisions).get();
+    expect(row!.blockingIssueCount).toBe(3);
+    expect(row!.nonBlockingIssueCount).toBe(7);
+  });
+
+  /**
+   * @why follow_up_task_refs must store a JSON array of task references.
+   * When the decision is "approved_with_follow_up", this array contains
+   * identifiers for follow-up tasks to be created.
+   */
+  it("stores follow_up_task_refs as a JSON array", () => {
+    const refs = ["task-follow-up-1", "task-follow-up-2"];
+    const dec = makeLeadReviewDecision(testTaskId, testCycleId, {
+      decision: "approved_with_follow_up",
+      followUpTaskRefs: refs,
+    });
+    db.insert(leadReviewDecisions).values(dec).run();
+
+    const row = db.select().from(leadReviewDecisions).get();
+    expect(row!.followUpTaskRefs).toEqual(refs);
+  });
+
+  /**
+   * @why packet_json must store the full structured lead review decision
+   * as JSON. This is the primary payload for the consolidation output.
+   */
+  it("stores packet_json as a JSON object", () => {
+    const packet = {
+      version: "1.0",
+      summary: "All blocking issues resolved",
+      consolidatedFindings: [{ category: "performance", count: 2 }],
+    };
+    const dec = makeLeadReviewDecision(testTaskId, testCycleId, { packetJson: packet });
+    db.insert(leadReviewDecisions).values(dec).run();
+
+    const row = db.select().from(leadReviewDecisions).get();
+    expect(row!.packetJson).toEqual(packet);
+  });
+
+  /**
+   * @why created_at must auto-populate. Decision timestamps are used for
+   * audit trails and metrics.
+   */
+  it("auto-populates created_at with a default timestamp", () => {
+    const dec = makeLeadReviewDecision(testTaskId, testCycleId);
+    db.insert(leadReviewDecisions).values(dec).run();
+
+    const row = db.select().from(leadReviewDecisions).get();
+    expect(row!.createdAt).toBeInstanceOf(Date);
+  });
+
+  /**
+   * @why FK from lead_review_decision.task_id → task.task_id must be enforced.
+   */
+  it("rejects an invalid task_id FK reference", () => {
+    expect(() =>
+      db
+        .insert(leadReviewDecisions)
+        .values(makeLeadReviewDecision("non-existent-task-id", testCycleId))
+        .run(),
+    ).toThrow();
+  });
+
+  /**
+   * @why FK from lead_review_decision.review_cycle_id →
+   * review_cycle.review_cycle_id must be enforced.
+   */
+  it("rejects an invalid review_cycle_id FK reference", () => {
+    expect(() =>
+      db
+        .insert(leadReviewDecisions)
+        .values(makeLeadReviewDecision(testTaskId, "non-existent-cycle-id"))
+        .run(),
+    ).toThrow();
+  });
+
+  /**
+   * @why Indexes on task_id and review_cycle_id must exist for efficient
+   * lookups of decisions by task and by cycle.
+   */
+  it("has indexes on task_id and review_cycle_id", () => {
+    const indexes = sqlite
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'lead_review_decision'",
+      )
+      .all() as Array<{ name: string }>;
+    const indexNames = indexes.map((i) => i.name);
+    expect(indexNames).toContain("idx_lead_review_decision_task_id");
+    expect(indexNames).toContain("idx_lead_review_decision_cycle_id");
+  });
+
+  /**
+   * @why Cross-table joins must work correctly. The review pipeline queries
+   * review cycles with their packets and lead decisions together. This
+   * validates the FK relationships are correct for join queries.
+   */
+  it("supports cross-table joins: task → review_cycle → review_packet + lead_decision", () => {
+    // Add a review packet
+    const pkt = makeReviewPacket(testTaskId, testCycleId, {
+      verdict: "changes_requested",
+      severitySummary: { critical: 0, high: 1, medium: 0, low: 0 },
+    });
+    db.insert(reviewPackets).values(pkt).run();
+
+    // Add a lead decision
+    const dec = makeLeadReviewDecision(testTaskId, testCycleId, {
+      decision: "changes_requested",
+      blockingIssueCount: 1,
+    });
+    db.insert(leadReviewDecisions).values(dec).run();
+
+    // Cross-table join
+    const result = sqlite
+      .prepare(
+        `SELECT rc.status AS cycle_status,
+                rp.verdict AS packet_verdict,
+                lrd.decision AS lead_decision,
+                lrd.blocking_issue_count AS blocking_issues,
+                t.title AS task_title
+         FROM review_cycle rc
+         JOIN task t ON rc.task_id = t.task_id
+         JOIN review_packet rp ON rp.review_cycle_id = rc.review_cycle_id
+         JOIN lead_review_decision lrd ON lrd.review_cycle_id = rc.review_cycle_id`,
+      )
+      .get() as {
+      cycle_status: string;
+      packet_verdict: string;
+      lead_decision: string;
+      blocking_issues: number;
+      task_title: string;
+    };
+
+    expect(result.cycle_status).toBe("NOT_STARTED");
+    expect(result.packet_verdict).toBe("changes_requested");
+    expect(result.lead_decision).toBe("changes_requested");
+    expect(result.blocking_issues).toBe(1);
   });
 });
