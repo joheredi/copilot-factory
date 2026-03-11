@@ -404,6 +404,33 @@ export type {
   PolicySnapshotServiceDependencies,
 } from "./services/policy-snapshot.service.js";
 
+// Ports — merge queue interfaces (PRD 010 §10.10)
+export type {
+  MergeQueueTask,
+  MergeQueueItemRecord,
+  NewMergeQueueItemData,
+  MergeQueueTaskRepositoryPort,
+  MergeQueueItemDataPort,
+  MergeQueueTransactionRepositories,
+  MergeQueueUnitOfWork,
+} from "./ports/merge-queue.ports.js";
+
+// Services — merge queue with ordering contract (PRD 010 §10.10)
+export {
+  createMergeQueueService,
+  getPriorityWeight,
+  DuplicateEnqueueError,
+  TaskNotApprovedError,
+} from "./services/merge-queue.service.js";
+export type {
+  EnqueueForMergeParams,
+  EnqueueForMergeResult,
+  DequeueNextParams,
+  DequeueNextResult,
+  MergeQueueService,
+  MergeQueueServiceDependencies,
+} from "./services/merge-queue.service.js";
+
 // Services — review routing (PRD 010 §10.6)
 export {
   createReviewRouterService,

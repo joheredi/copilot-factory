@@ -1,5 +1,25 @@
 # Progress Log
 
+## T063: Merge Queue with Ordering Contract — Done
+
+**What was implemented:**
+
+- Created `packages/application/src/ports/merge-queue.ports.ts`:
+  - `MergeQueueTaskRepositoryPort`, `MergeQueueItemDataPort` with ordering-aware queries
+  - `MergeQueueUnitOfWork` with `MergeQueueTransactionRepositories`
+  - Narrow entity shapes: `MergeQueueTask` (includes priority, repositoryId), `MergeQueueItemRecord`
+- Created `packages/application/src/services/merge-queue.service.ts`:
+  - `createMergeQueueService()` factory with `{unitOfWork, eventEmitter, idGenerator}` DI
+  - `enqueueForMerge`: validates APPROVED state, checks no duplicate, creates item, transitions task APPROVED → QUEUED_FOR_MERGE, recalculates positions, emits events
+  - `dequeueNext`: finds next ENQUEUED item by ordering contract (priority DESC → enqueue time ASC → ID ASC), atomically claims ENQUEUED → PREPARING, recalculates positions
+  - `recalculatePositions`: reassigns 1-indexed contiguous positions
+  - `getPriorityWeight()` utility: critical=4, high=3, medium=2, low=1
+  - Custom errors: `DuplicateEnqueueError`, `TaskNotApprovedError`
+- Created 23 tests covering: priority weights, happy-path enqueue, audit events, domain events, entity not found, non-approved task, duplicate enqueue, no events on failure, position assignment, empty queue, per-repo isolation, atomic claim, priority ordering, FIFO within priority, deterministic ID tie-breaking, skip non-ENQUEUED, contiguous positions, no-op on empty, repo isolation for positions
+- Updated `packages/application/src/index.ts` to export all new types and service
+
+**Patterns:** Follows dedicated UnitOfWork pattern (same as LeaseService, ReviewerDispatchService). Ordering contract implemented in the port (findNextEnqueued) so infrastructure can use SQL ORDER BY for efficiency. Position recalculation is a display-only concern done after mutations.
+
 ## T059: Specialist Reviewer Job Dispatch — Done
 
 **What was implemented:**

@@ -2480,6 +2480,7 @@
       "epic": "E013",
       "type": "feature",
       "priority": "P0",
+      "status": "done",
       "owner": "backend-engineer",
       "ai_exec": "Yes",
       "human_review": "Yes",
