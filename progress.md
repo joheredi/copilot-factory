@@ -319,3 +319,31 @@
 - T036 unblocks T037 (reverse-dependency recalculation) which should wire up readiness recomputation on task status changes
 - The ReadinessService ports (ReadinessTaskRepositoryPort, ReadinessTaskDependencyRepositoryPort) need infrastructure implementations in apps/control-plane — these can adapt the existing task.repository.ts and task-dependency.repository.ts
 - The readiness service is intentionally decoupled from the transition service — the reconciliation loop or dependency module should call computeReadiness() and then call transitionService.transitionTask() with the appropriate TransitionContext
+
+---
+
+## T037 — Implement reverse-dependency recalculation
+
+### Task
+
+T037 - Implement reverse-dependency recalculation (Epic E007: Dependency & Readiness Engine)
+
+### What was done
+
+Created ReverseDependencyService in `packages/application` that automatically recalculates readiness for downstream tasks when a prerequisite completes. The service composes ReadinessService (query) and TransitionService (command). Only DONE triggers recalculation; FAILED/CANCELLED leave dependents BLOCKED. 35 tests covering: single/multiple dependents, multi-dependency chains, edge type filtering, error handling, idempotency, and complex graph topologies.
+
+### Files created
+
+- `packages/application/src/ports/reverse-dependency.ports.ts`
+- `packages/application/src/services/reverse-dependency.service.ts`
+- `packages/application/src/services/reverse-dependency.service.test.ts`
+
+### Files modified
+
+- `packages/application/src/index.ts` (exports)
+
+### Patterns
+
+- Service composition pattern (composes ReadinessService + TransitionService)
+- Hexagonal ports for reverse-dependency repository queries
+- Idempotent recalculation with graceful error handling for InvalidTransitionError and VersionConflictError

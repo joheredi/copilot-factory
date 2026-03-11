@@ -157,9 +157,9 @@ See [phase documents](phases/) for details.
 | [T034](tasks/T034-crash-recovery-artifacts.md)      | Implement crash recovery with partial artifact capture                                | E006 | P1       | feature    | pending |
 | [T035](tasks/T035-dag-validation.md)                | Implement DAG validation with circular dependency detection                           | E007 | P0       | feature    | done    |
 | [T036](tasks/T036-readiness-computation.md)         | Implement readiness computation                                                       | E007 | P0       | feature    | done    |
-| [T037](tasks/T037-reverse-dep-recalc.md)            | Implement reverse-dependency recalculation                                            | E007 | P0       | feature    | pending |
+| [T037](tasks/T037-reverse-dep-recalc.md)            | Implement reverse-dependency recalculation                                            | E007 | P0       | feature    | done    |
 | [T038](tasks/T038-dep-reconciliation.md)            | Implement dependency reconciliation loop                                              | E007 | P1       | feature    | pending |
-| [T039](tasks/T039-worktree-creation.md)             | Implement git worktree creation per task                                              | E008 | P0       | feature    | pending |
+| [T039](tasks/T039-worktree-creation.md)             | Implement git worktree creation per task                                              | E008 | P0       | feature    | done    |
 | [T040](tasks/T040-workspace-mounting.md)            | Implement workspace packet and config mounting                                        | E008 | P0       | feature    | pending |
 | [T041](tasks/T041-workspace-cleanup.md)             | Implement workspace cleanup for terminal states                                       | E008 | P1       | feature    | pending |
 | [T042](tasks/T042-reconcile-workspaces.md)          | Implement ReconcileWorkspacesCommand                                                  | E008 | P1       | feature    | pending |

@@ -212,3 +212,22 @@ export type {
   ParentReadinessResult,
   ReadinessService,
 } from "./services/readiness.service.js";
+
+// Ports — reverse-dependency recalculation interfaces
+export type {
+  ReverseDependencyTask,
+  ReverseDependencyEdge,
+  ReverseDependencyTaskRepositoryPort,
+  ReverseDependencyEdgeRepositoryPort,
+  ReverseDependencyTransactionRepositories,
+  ReverseDependencyUnitOfWork,
+} from "./ports/reverse-dependency.ports.js";
+
+// Services — reverse-dependency recalculation on task completion
+export { createReverseDependencyService } from "./services/reverse-dependency.service.js";
+export type {
+  TransitionedTask,
+  SkippedTask,
+  RecalculationResult,
+  ReverseDependencyService,
+} from "./services/reverse-dependency.service.js";

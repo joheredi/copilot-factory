@@ -5,7 +5,7 @@
 | **ID**                    | T037                                                                         |
 | **Epic**                  | [E007: Dependency & Readiness Engine](../epics/E007-dependency-readiness.md) |
 | **Type**                  | feature                                                                      |
-| **Status**                | pending                                                                      |
+| **Status**                | done                                                                         |
 | **Priority**              | P0                                                                           |
 | **Owner**                 | backend-engineer                                                             |
 | **AI Executable**         | Yes                                                                          |
@@ -52,10 +52,10 @@ The implementing agent should read these files before starting:
 
 ## Acceptance Criteria
 
-- [ ] Completing a task unblocks ready dependents automatically
-- [ ] Only hard-block dependencies are considered
-- [ ] Multiple dependencies correctly evaluated (all must be satisfied)
-- [ ] FAILED dependencies keep dependents BLOCKED
+- [x] Completing a task unblocks ready dependents automatically
+- [x] Only hard-block dependencies are considered
+- [x] Multiple dependencies correctly evaluated (all must be satisfied)
+- [x] FAILED dependencies keep dependents BLOCKED
 
 ## Definition of Done
 
