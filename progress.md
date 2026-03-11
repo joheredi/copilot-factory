@@ -165,6 +165,39 @@
 - T003: Set up ESLint and Prettier.
 - T015: Implement Task state machine (depends on T007 ✅ and T014).
 
+## 2026-03-11 — T008: Create migrations for Project, Repository, WorkflowTemplate tables
+
+**Status:** Done
+
+**What was done:**
+
+- Added Drizzle ORM schema definitions for `workflow_template`, `project`, and `repository` tables in `apps/control-plane/src/infrastructure/database/schema.ts`.
+- Generated migration `drizzle/0000_chunky_hellion.sql` via `drizzle-kit generate`.
+- Created 24 tests in `schema.test.ts` covering all three tables: insert/select, JSON policy round-trips, FK enforcement (Repository→Project, Project→WorkflowTemplate), unique constraint on project name, nullable columns, timestamp auto-population, index verification, and cross-table join queries.
+- Also fixed T003 status in backlog index (was marked `pending` but already fully implemented).
+
+**Schema design decisions:**
+
+- Text primary keys (UUID format) — suitable for distributed systems, consistent across all entities.
+- Integer timestamps with `mode: "timestamp"` — stores Unix epoch seconds, Drizzle returns `Date` objects. Uses `DEFAULT (unixepoch())` for auto-population.
+- JSON policy columns use `text({ mode: "json" })` — Drizzle handles serialization/deserialization automatically. Schema validated at application layer, stored opaquely in DB.
+- FK constraints only to tables in the same migration (Repository→Project, Project→WorkflowTemplate). References to not-yet-created tables (PolicySet from T013) stored as nullable text without DB-level FK constraints — FKs will be added when those tables are created.
+- Indexes on `repository.project_id` and `repository.status` for common query patterns.
+- Unique constraint on `project.name` to prevent duplicate project names.
+
+**Patterns established:**
+
+- Schema definitions go in `apps/control-plane/src/infrastructure/database/schema.ts` (single file, incrementally extended by T009–T013).
+- Table definitions use `sqliteTable()` from `drizzle-orm/sqlite-core`.
+- Schema tests use in-memory SQLite with tables created from SQL DDL matching the schema, avoiding coupling to migration files.
+- Test helpers (`makeProject`, `makeRepository`, `makeWorkflowTemplate`) generate valid rows with sensible defaults and accept overrides.
+
+**Next steps:**
+
+- T009: Create migrations for Task and TaskDependency tables (depends on T006 ✅, T007 ✅).
+- T010–T013: Remaining migration tasks (same dependencies, can run in parallel with T009).
+- T014: Entity repositories (depends on T008 ✅ + T009–T013).
+
 ## T003 — Set up ESLint and Prettier (2026-03-11)
 
 ### What was done

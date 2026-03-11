@@ -5,7 +5,7 @@
 | **ID**                    | T008                                                                          |
 | **Epic**                  | [E002: Domain Model & Persistence](../epics/E002-domain-model-persistence.md) |
 | **Type**                  | foundation                                                                    |
-| **Status**                | pending                                                                       |
+| **Status**                | done                                                                          |
 | **Priority**              | P0                                                                            |
 | **Owner**                 | backend-engineer                                                              |
 | **AI Executable**         | Yes                                                                           |
@@ -56,9 +56,9 @@ The implementing agent should read these files before starting:
 
 ## Acceptance Criteria
 
-- [ ] Migration creates all three tables with correct columns and types
-- [ ] Foreign key from Repository to Project is enforced
-- [ ] drizzle-kit migrate runs without errors
+- [x] Migration creates all three tables with correct columns and types
+- [x] Foreign key from Repository to Project is enforced
+- [x] drizzle-kit migrate runs without errors
 
 ## Definition of Done
 
