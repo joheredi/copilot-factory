@@ -203,4 +203,14 @@ export interface FileSystem {
    * @param path - Absolute file path to remove.
    */
   unlink(path: string): Promise<void>;
+
+  /**
+   * Atomically rename a file from oldPath to newPath.
+   * On POSIX systems this is an atomic operation on the same filesystem.
+   * Used for crash-safe writes: write to a temp file, then rename into place.
+   *
+   * @param oldPath - Absolute path of the existing file.
+   * @param newPath - Absolute path for the renamed file.
+   */
+  rename(oldPath: string, newPath: string): Promise<void>;
 }

@@ -97,3 +97,20 @@ export type {
 } from "./validation/index.js";
 
 export { createCheckExecutor } from "./validation/index.js";
+
+// ─── Artifact Storage ────────────────────────────────────────────────────────
+export type { ArtifactStoreConfig } from "./artifacts/index.js";
+
+export {
+  ArtifactStore,
+  ArtifactStorageError,
+  ArtifactNotFoundError,
+  taskBasePath,
+  packetPath,
+  runLogPath,
+  runOutputPath,
+  runValidationPath,
+  reviewArtifactPath,
+  mergeArtifactPath,
+  summaryPath,
+} from "./artifacts/index.js";

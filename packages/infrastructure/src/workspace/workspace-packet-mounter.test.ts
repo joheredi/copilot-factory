@@ -56,6 +56,14 @@ function createMockFs(
     unlink: vi.fn().mockImplementation(async (path: string) => {
       written.delete(path);
     }),
+    rename: vi.fn().mockImplementation(async (oldPath: string, newPath: string) => {
+      const content = written.get(oldPath);
+      if (content === undefined) {
+        throw new Error(`ENOENT: no such file: ${oldPath}`);
+      }
+      written.delete(oldPath);
+      written.set(newPath, content);
+    }),
     ...overrides,
   } as FileSystem & { [K in keyof FileSystem]: ReturnType<typeof vi.fn> };
 }

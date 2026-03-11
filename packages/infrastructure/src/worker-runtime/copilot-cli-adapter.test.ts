@@ -202,6 +202,15 @@ class FakeFileSystem implements FileSystem {
   async unlink(path: string): Promise<void> {
     this.files.delete(path);
   }
+
+  async rename(oldPath: string, newPath: string): Promise<void> {
+    const content = this.files.get(oldPath);
+    if (content === undefined) {
+      throw new Error(`ENOENT: no such file or directory, rename '${oldPath}'`);
+    }
+    this.files.delete(oldPath);
+    this.files.set(newPath, content);
+  }
 }
 
 /**

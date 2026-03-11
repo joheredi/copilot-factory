@@ -58,6 +58,7 @@ The `eng/` directory is excluded from ESLint (utility scripts with Node.js globa
 - **Build command:** Each workspace uses `tsc --build`. Run `pnpm build` from root to build all.
 - **Important:** `outDir`/`rootDir` are set per-workspace (not in base config) because tsconfig `extends` resolves relative paths from the originating config file.
 - **Notable dependencies:** `@factory/infrastructure` depends on `@factory/domain` (for policy evaluation) and `zod` (for schema validation in the Copilot CLI adapter). The `worker-runtime` module exports `CopilotCliAdapter` and related types.
+- **Artifact storage:** `@factory/infrastructure` provides `ArtifactStore` in `src/artifacts/` for filesystem-based artifact persistence with atomic writes. Uses the `FileSystem` abstraction (same as workspace module). Path builders (`packetPath`, `runLogPath`, etc.) produce the §7.11 directory layout. All stored paths are relative to the artifact root.
 
 # Database (SQLite + Drizzle ORM)
 

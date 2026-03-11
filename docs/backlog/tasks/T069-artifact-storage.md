@@ -5,7 +5,7 @@
 | **ID**                    | T069                                                                                                                                                   |
 | **Epic**                  | [E014: Artifact Service](../epics/E014-artifact-service.md)                                                                                            |
 | **Type**                  | feature                                                                                                                                                |
-| **Status**                | pending                                                                                                                                                |
+| **Status**                | done                                                                                                                                                   |
 | **Priority**              | P0                                                                                                                                                     |
 | **Owner**                 | backend-engineer                                                                                                                                       |
 | **AI Executable**         | Yes                                                                                                                                                    |

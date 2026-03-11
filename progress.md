@@ -1,181 +1,31 @@
 # Progress Log
 
-## T056: Implement ValidationResultPacket emission (2026-03-11)
+## T069: Filesystem Artifact Storage — Done
 
-**What was done:**
+**What was implemented:**
 
-- Created `packages/application/src/ports/validation-packet-emitter.ports.ts` — port for artifact persistence (`ValidationPacketArtifactPort`) and emission params/result types.
-- Created `packages/application/src/services/validation-packet-emitter.service.ts` — service that assembles a `ValidationResultPacket` from a `ValidationRunResult`, validates it against the Zod schema, and persists it via the artifact store port.
-- Created `packages/application/src/services/validation-packet-emitter.service.test.ts` — 34 tests covering: packet assembly, run_scope mapping (all 5 values), check outcome mapping (check_type resolution, tool_name extraction, status mapping including error→failed), overall status mapping (passed→success, failed→failed), schema validation, artifact persistence, mixed check statuses, post-merge runs, and error propagation.
-- Updated `packages/application/src/index.ts` — added exports for the new port types and service.
+- Created `packages/infrastructure/src/artifacts/` module with:
+  - `ArtifactStore` class: filesystem-based artifact storage with atomic writes (write to `.tmp`, rename)
+  - `ArtifactStorageError` / `ArtifactNotFoundError`: domain-specific error classes
+  - Path builder functions (`taskBasePath`, `packetPath`, `runLogPath`, `runOutputPath`, `runValidationPath`, `reviewArtifactPath`, `mergeArtifactPath`, `summaryPath`)
+- Directory layout matches §7.11: `repositories/{repoId}/tasks/{taskId}/{packets,runs,reviews,merges,summaries}`
+- All returned paths are relative to artifact root (suitable as `artifact_refs`)
+- Added `rename` method to `FileSystem` interface for atomic writes
+- Updated `createNodeFileSystem` and all existing test fakes (3 files)
+- 42 new tests covering: atomic writes, directory idempotency, all typed helpers, read/write, error handling, path resolution, edge cases
+- Exported from `@factory/infrastructure` package
 
-**Key patterns:**
+**Patterns:**
 
-- Separate emitter service (not extending the runner) follows single-responsibility principle matching existing patterns (e.g., PolicySnapshotService).
-- Check name → check_type mapping: known names (test, lint, build, typecheck, security, schema, policy) map directly; unknown names default to "policy".
-- Tool name extracted as first whitespace-delimited token of the command string.
-- Runner status "error" collapsed to schema status "failed" since the packet schema only supports passed/failed/skipped.
-- Runner overall status "passed" maps to packet status "success" per PRD 008 §8.2.3.
-- Zod validation runs BEFORE persistence; only the Zod-parsed packet is persisted.
-- `mapCheckOutcomeToResult` is exported for direct unit testing of the mapping logic.
+- Uses the existing `FileSystem` abstraction (same as workspace module)
+- Atomic write pattern: writeFile(tmp) → rename(tmp → final), cleanup tmp on failure
+- Generic `storeArtifact`/`storeJSON` plus typed helpers that build §7.11 paths
 
-**Next loop should know:**
+**Next loop notes:**
 
-- T057 (validation gate checking for state transitions) is now unblocked by T056.
-- The emitter produces a `ValidationResultPacket` that T057 can inspect for gating decisions.
-
-## T055: Implement test/lint/build command execution (2026-03-11)
-
-**What was done:**
-
-- Created `packages/infrastructure/src/validation/check-executor.ts` — concrete `CheckExecutorPort` implementation that executes validation commands (test, lint, build) via the policy-aware command wrapper from T047.
-- Created `packages/infrastructure/src/validation/check-executor.test.ts` — 21 tests covering: passed (exit 0), failed (non-zero exit), killed by signal/timeout, policy violations, workspace path forwarding, config forwarding (timeout, maxOutputBytes, maxOutputChars), output truncation, unexpected errors, and combined stdout/stderr output.
-- Created `packages/infrastructure/src/validation/index.ts` — barrel export.
-- Updated `packages/infrastructure/src/index.ts` — added validation module exports.
-
-**Key patterns:**
-
-- Infrastructure must NOT depend on `@factory/application` (layered architecture). The `CheckExecutorPort` interface is defined structurally in infrastructure; TypeScript's structural typing ensures compatibility.
-- Status mapping: exit 0 → "passed", non-zero exit → "failed", policy violation → "error", unexpected exception → "error". The "failed" vs "error" distinction matters for the validation runner's aggregation logic.
-- Uses `setProcessRunner` / `restoreDefaultProcessRunner` from command-wrapper for test isolation (no real process spawning).
-
-**Next loop should know:**
-
-- T056 (ValidationResultPacket emission) is now unblocked and depends on this executor.
-- The `createCheckExecutor()` factory requires a `CommandPolicy` and returns a `CheckExecutorPort`. The validation runner service (T054) consumes it.
-
-## T053: Implement effective policy snapshot generation (2026-03-11)
-
-**What was done:**
-
-- Created `packages/application/src/ports/policy-snapshot.ports.ts` — defines `ConfigLayerLoaderPort` for loading ordered config layers, `PolicySnapshotArtifactPort` for persisting snapshots, and `PolicySnapshotContext` for identifying the task/pool/run.
-- Created `packages/application/src/services/policy-snapshot.service.ts` — the `PolicySnapshotService` that loads config layers, resolves them via `@factory/config`'s hierarchical resolver, assembles a `PolicySnapshot` mapping domain types to schema types, validates against the Zod schema, and persists as an immutable run-level artifact.
-- Created 26 tests covering: system-defaults-only generation, custom layer overrides, source tracking metadata, artifact persistence, error handling (loader failures, persistence failures), snapshot structure validation, deterministic output, and error class behavior.
-- Added `@factory/config` as a dependency of `@factory/application` (package.json + tsconfig project reference).
-- Updated `packages/application/src/index.ts` with all new exports.
-
-**Key patterns:**
-
-- The service bridges domain types (e.g., `AllowedCommand` with `arg_prefixes`) to schema types (e.g., `allowed_args_prefixes`) in the `assembleSnapshot` function.
-- `derivePolicySetId` walks layers from highest to lowest precedence to find the most specific source identifier.
-- Typed errors `PolicySnapshotValidationError` and `ConfigLayerLoadError` provide structured diagnostics.
-
-**Next loop should know:**
-
-- The `@factory/application` package now depends on `@factory/config` for the hierarchical resolver.
-- The `assembleSnapshot` function handles the domain↔schema type mapping for command policy fields. If new fields are added to the domain or schema types, this function must be updated.
-
-## T054: Implement validation runner abstraction (2026-03-11)
-
-**What was done:**
-
-- Created `packages/application/src/ports/validation-runner.ports.ts` — defines `CheckExecutorPort` for executing individual checks, `ValidationCheckOutcome` for per-check results, and `ValidationRunResult` for aggregated results.
-- Created `packages/application/src/services/validation-runner.service.ts` — the `ValidationRunnerService` that loads profiles from `ValidationPolicy`, executes required checks then optional checks sequentially via the port, and aggregates results per PRD §9.5 rules.
-- Created 27 tests covering: profile loading errors, execution order, required/optional failure semantics, skipped check handling (`fail_on_skipped_required_check`), result aggregation, multi-profile support, and edge cases.
-- Updated `packages/application/src/index.ts` with all new exports.
-
-**Patterns used:**
-
-- Factory function pattern (`createValidationRunnerService(checkExecutor)`) consistent with all other application services.
-- Port-based DI: `CheckExecutorPort` will be implemented in T055 with real command execution.
-- No transactions needed (read-only orchestration with no DB writes).
-- Fake executor in tests (pattern similar to `FakeCliProcess` in infrastructure).
-
-**Next loop should know:**
-
-- T055 (validation command execution) should implement `CheckExecutorPort` to run shell commands.
-- T056 (validation packet emission) should use `ValidationRunResult` to build `ValidationResultPacket`.
-- T057 (validation gates) should use the runner to check whether transitions are allowed.
-- The runner is async (`Promise<ValidationRunResult>`) to support future parallel check execution.
-
-## T046: Implement structured output capture and validation (2026-03-11)
-
-**What was done:**
-
-- Created `packages/application/src/ports/output-validator.ports.ts` with port interfaces: `ArtifactExistencePort`, `SchemaFailureTrackerPort`, `OutputValidationAuditPort`, and full result/context types
-- Created `packages/application/src/services/output-validator.service.ts` with the full validation pipeline:
-  - `extractPacket()` — file-based extraction (priority) with stdout delimiter fallback
-  - `validateSchema()` — Zod-based validation using a packet schema registry
-  - `attemptSchemaRepair()` — conservative repair for missing arrays→[] and nullables→null
-  - `verifyIds()` — checks task_id, repository_id, and stage-specific IDs match orchestrator context
-  - `verifyArtifacts()` — checks artifact_refs resolve to existing files via port
-  - `createOutputValidatorService()` — factory with consecutive failure tracking per agent profile (threshold=3 disables profile) and schema_violation audit event recording
-- Created 54 comprehensive tests covering all acceptance criteria
-- Added `@factory/schemas` and `zod` as dependencies to `@factory/application`
-- Updated tsconfig references to include `@factory/schemas`
-
-**Patterns used:**
-
-- Hexagonal architecture: ports for artifact checking, failure tracking, audit recording
-- Pure functions for extraction, schema validation, ID verification (testable without infrastructure)
-- Service factory pattern matching existing services (e.g., `createGracefulCompletionService`)
-- Fake ports in tests (same pattern as `FakeCliProcess`, `FakeFileSystem` in infrastructure)
-
-**What the next loop should know:**
-
-- The output validator is a pure application-layer service — it does NOT do state transitions. The caller (e.g., worker completion flow) is responsible for using the result to drive transitions.
-- Schema repair is intentionally conservative: only repairs missing arrays (→[]) and nullable fields (→null). It does NOT default required strings or numbers.
-- The `PACKET_STAGE_ID_FIELDS` map in the service specifies which stage-specific IDs to verify per packet type.
-- T045 (Copilot CLI adapter) was already done but the backlog index was stale — corrected in this commit.
-
-## T080: Implement NestJS application bootstrap and module structure (2026-03-11)
-
-**What was done:**
-
-- Bootstrapped NestJS application in `apps/control-plane` with Fastify adapter
-- Created `src/main.ts` with CORS (localhost origins), OpenAPI/Swagger at `/api/docs`, global exception filter, and Zod validation pipe
-- Created `src/app.module.ts` root module importing 9 feature modules matching domain boundaries
-- Created `src/health/` with `HealthController` (GET /health → 200 with status, service name, timestamp)
-- Created `src/common/filters/global-exception.filter.ts` — structured JSON error responses for all exception types (HttpException → proper status, unknown → safe 500)
-- Created `src/common/pipes/zod-validation.pipe.ts` — validates request data against Zod schemas attached as static `schema` property on DTO classes
-- Created 8 feature module shells: Projects, Tasks, Workers, Review, Merge, Validation, Audit, Policy
-- Added 16 new tests (health controller, exception filter, validation pipe, app module wiring)
-- Added `dev` (tsx) and `start` (node) scripts to package.json
-
-**Key decisions:**
-
-- Used Fastify adapter (not Express) per PRD §7.1 recommendation
-- Used Zod for validation (not class-validator) since codebase already uses Zod in @factory/schemas
-- Overrode `verbatimModuleSyntax: false` and added `experimentalDecorators`/`emitDecoratorMetadata` in control-plane tsconfig only (NestJS decorators require these; doesn't affect other packages)
-- Feature modules are empty shells — endpoint implementation is in T081–T085
-
-**Dependencies added:** @nestjs/core, @nestjs/common, @nestjs/platform-fastify, @nestjs/swagger, reflect-metadata, fastify, @fastify/static, zod, @nestjs/testing
-
-**What next loop should know:**
-
-- The NestJS app coexists with existing infrastructure code (database, repositories, unit-of-work)
-- Feature modules need controllers and services wired to existing repository adapters (via NestJS providers)
-- The Zod validation pipe expects DTOs with a static `schema: ZodSchema` property
-- CORS is configured for `localhost:*` origins (for web-ui dev server)
-
-## T043: Define Worker Runtime Interface (2026-03-11)
-
-**What was done:**
-
-- Created `packages/infrastructure/src/worker-runtime/types.ts` with all runtime types: `RunContext`, `PreparedRun`, `FinalizeResult`, `RunOutputStream`, `RunLogEntry`, `CancelResult`, `CollectedArtifacts`, `WorkspacePaths`, `TimeoutSettings`, `OutputSchemaExpectation`, `RunStatus`
-- Created `packages/infrastructure/src/worker-runtime/runtime.interface.ts` with the `WorkerRuntime` interface defining all 6 lifecycle methods: `prepareRun`, `startRun`, `streamRun`, `cancelRun`, `collectArtifacts`, `finalizeRun`
-- Created `packages/infrastructure/src/worker-runtime/registry.ts` with `RuntimeRegistry` (singleton factory pattern), `RuntimeNotFoundError`, and `DuplicateRuntimeError`
-- Created barrel exports via `worker-runtime/index.ts` and updated `packages/infrastructure/src/index.ts`
-- Added `@factory/schemas` as workspace dependency and TypeScript project reference
-- Created 22 tests across two test files covering interface satisfaction, full lifecycle, concurrent runs, registry CRUD, error handling
-
-**Patterns used:**
-
-- Lifecycle method signatures match PRD 010 §10.8.2: prepare → start → stream → cancel → collect → finalize
-- `RunContext` imports `TaskPacket` and `PolicySnapshot` types from `@factory/schemas` for type-safe adapter contracts
-- `streamRun` returns `AsyncIterable<RunOutputStream>` for live output streaming
-- Registry uses factory pattern (`WorkerRuntimeFactory = () => WorkerRuntime`) for lazy, per-retrieval adapter instantiation
-- All types use `readonly` fields for immutability
-- Comprehensive JSDoc with PRD cross-references on every type and method
-
-**Next loop should know:**
-
-- T044 (Worker Supervisor) is now unblocked — it will orchestrate the `WorkerRuntime` lifecycle and manage heartbeat tracking
-- T045 (Copilot CLI Adapter) is now unblocked — it must implement the `WorkerRuntime` interface with Copilot CLI process spawning
-- The `RuntimeRegistry` is a singleton; bootstrap code should call `RuntimeRegistry.create()` and register adapters before dispatch
-- `streamRun` uses `AsyncIterable` — adapters should implement it as an async generator function
-
----
+- T070 (artifact retrieval) can build on `readArtifact`/`readJSON`/`exists` methods
+- Port implementations (ValidationPacketArtifactPort, PolicySnapshotArtifactPort, ArtifactExistencePort) can delegate to ArtifactStore
+- T071/T072 (retry summarization, partial work snapshot) depend on this store
 
 ## T039: Git Worktree Creation — Done
 

@@ -49,6 +49,7 @@ function createMockFs(
     writeFile: vi.fn().mockResolvedValue(undefined),
     readFile: vi.fn().mockResolvedValue(""),
     unlink: vi.fn().mockResolvedValue(undefined),
+    rename: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   } as FileSystem & { [K in keyof FileSystem]: ReturnType<typeof vi.fn> };
 }

@@ -3,7 +3,7 @@
  * Production {@link FileSystem} implementation using Node.js `fs/promises`.
  */
 
-import { mkdir, access, writeFile, readFile, unlink } from "node:fs/promises";
+import { mkdir, access, writeFile, readFile, unlink, rename } from "node:fs/promises";
 
 import type { FileSystem } from "./types.js";
 
@@ -52,6 +52,10 @@ export function createNodeFileSystem(): FileSystem {
         }
         throw err;
       }
+    },
+
+    async rename(oldPath: string, newPath: string): Promise<void> {
+      await rename(oldPath, newPath);
     },
   };
 }
