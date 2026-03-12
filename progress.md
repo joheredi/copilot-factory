@@ -1,5 +1,32 @@
 # Progress Log
 
+## T083: Implement WorkerPool and AgentProfile Endpoints — Done
+
+**What was implemented:**
+
+- Created `apps/control-plane/src/workers/pools.controller.ts`: REST endpoints for pool CRUD (POST/GET/PUT/DELETE /pools, GET /pools/:id/workers)
+- Created `apps/control-plane/src/workers/pools.service.ts`: Pool business logic with pagination, filtering (poolType, enabled), and enriched detail (worker count, active task count, profiles)
+- Created `apps/control-plane/src/workers/profiles.controller.ts`: REST endpoints for agent profile CRUD nested under pools (POST/GET/PUT/DELETE /pools/:poolId/profiles)
+- Created `apps/control-plane/src/workers/profiles.service.ts`: Profile business logic with pool-scoped ownership enforcement
+- Created 5 DTO files with Zod validation: CreatePoolDto, UpdatePoolDto, PoolFilterQueryDto, CreateProfileDto, UpdateProfileDto
+- Updated `workers.module.ts` to register all controllers and services
+- 48 new tests: 10 pool controller, 9 profile controller, 15 pool service integration, 14 profile service integration
+
+**Patterns used:**
+
+- Followed exact existing NestJS controller/service/DTO pattern from tasks module
+- Nested routes (`/pools/:poolId/profiles`) enforce pool→profile ownership at API level
+- Service integration tests use in-memory SQLite with real Drizzle migrations
+- Controller tests use mocked services (same pattern as TasksController tests)
+- Profile CRUD validates pool ownership on all operations (read/update/delete)
+- `z.record(z.string(), z.unknown())` for JSON schema fields (Zod requires 2-arg form)
+
+**Next loop should know:**
+
+- T083 blocks T089 (React SPA init) per task file, though index shows T089 depends on T001+T081
+- Pool detail endpoint enriches response with live worker counts from worker table
+- `enabled` field stored as integer (0/1) in SQLite, converted from boolean in DTO
+
 ## T057: Validation Gate Checking for State Transitions — Done
 
 **What was implemented:**

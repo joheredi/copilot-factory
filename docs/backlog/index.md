@@ -203,7 +203,7 @@ See [phase documents](phases/) for details.
 | [T080](tasks/T080-nestjs-bootstrap.md)              | Implement NestJS application bootstrap and module structure                           | E017 | P0       | foundation | done    |
 | [T081](tasks/T081-api-project-repo.md)              | Implement Project and Repository CRUD endpoints                                       | E017 | P0       | feature    | done    |
 | [T082](tasks/T082-api-task-management.md)           | Implement Task management endpoints                                                   | E017 | P0       | feature    | done    |
-| [T083](tasks/T083-api-worker-pool.md)               | Implement WorkerPool and AgentProfile endpoints                                       | E017 | P1       | feature    | pending |
+| [T083](tasks/T083-api-worker-pool.md)               | Implement WorkerPool and AgentProfile endpoints                                       | E017 | P1       | feature    | done    |
 | [T084](tasks/T084-api-artifacts-reviews.md)         | Implement Artifact and Review packet retrieval endpoints                              | E017 | P1       | feature    | pending |
 | [T085](tasks/T085-api-audit-policy-config.md)       | Implement Audit, Policy, and Config endpoints                                         | E017 | P1       | feature    | pending |
 | [T086](tasks/T086-websocket-gateway.md)             | Implement WebSocket gateway for live events                                           | E018 | P1       | feature    | pending |

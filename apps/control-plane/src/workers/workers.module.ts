@@ -1,14 +1,22 @@
 /**
- * NestJS module for worker pool and agent management.
+ * NestJS module for worker pool and agent profile management.
  *
- * Will own controllers and services for worker pool configuration,
- * worker registration/heartbeat, and agent profile management
- * once T083 is implemented.
+ * Registers controllers and services for pool CRUD, pool worker listing,
+ * and agent profile CRUD (nested under pools). Worker registration and
+ * heartbeat handling will be added in a future task.
  *
  * @module @factory/control-plane
  */
 import { Module } from "@nestjs/common";
 
-/** Feature module for worker pool and agent endpoints. */
-@Module({})
+import { PoolsController } from "./pools.controller.js";
+import { PoolsService } from "./pools.service.js";
+import { ProfilesController } from "./profiles.controller.js";
+import { ProfilesService } from "./profiles.service.js";
+
+/** Feature module for worker pool and agent profile endpoints. */
+@Module({
+  controllers: [PoolsController, ProfilesController],
+  providers: [PoolsService, ProfilesService],
+})
 export class WorkersModule {}
