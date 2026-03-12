@@ -404,3 +404,20 @@ T110 - Integration test: lease timeout and crash recovery (Epic E022: Integratio
 
 - T097 (review center view), T099 (config editor), T100 (audit explorer), T104 (operator controls in task detail), T105 (operator controls in pool/merge UI) are remaining pending tasks
 - T105 is now unblocked by T098 completion (also needs T096 done + T101 done, both are done)
+
+## T097: Build review center view (2026-03-12)
+
+- Replaced the placeholder review center page with a full implementation
+- Created ReviewCycleStatusBadge for the 8 review cycle lifecycle statuses
+- Created ReviewVerdictBadge for specialist verdicts and lead decisions
+- Created ReviewCycleDetail expandable panel showing packets + lead decision
+- Main page fetches tasks in IN_REVIEW and CHANGES_REQUESTED states using existing useTasks hook
+- Click-through task rows expand to show review cycle history via useReviewHistory
+- Further expansion into cycles shows specialist packets via useReviewCyclePackets
+- Status filter bar toggles between IN_REVIEW and CHANGES_REQUESTED
+- Warning banner when tasks have changes requested
+- Round count warning badge when approaching max review rounds (≥3)
+- 15 tests covering rendering, filtering, expand/collapse, loading, error, and empty states
+- Followed the merge-queue page pattern: status filter, table, loading/error/empty states
+- Reused TaskStatusBadge and TaskPriorityBadge from tasks feature
+- Fixed T096 status in backlog index (was done in task file, pending in index)
