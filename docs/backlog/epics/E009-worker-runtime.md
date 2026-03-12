@@ -42,13 +42,21 @@ Copilot CLI integration details may require experimentation. Command wrapper mus
 
 ## Tasks
 
-| ID                                                 | Title                                              | Priority | Status  |
-| -------------------------------------------------- | -------------------------------------------------- | -------- | ------- |
-| [T043](../tasks/T043-worker-runtime-interface.md)  | Define worker runtime interface                    | P0       | pending |
-| [T044](../tasks/T044-worker-supervisor.md)         | Implement Worker Supervisor                        | P0       | pending |
-| [T045](../tasks/T045-copilot-cli-adapter.md)       | Implement Copilot CLI execution adapter            | P0       | pending |
-| [T046](../tasks/T046-output-capture-validation.md) | Implement structured output capture and validation | P0       | pending |
-| [T047](../tasks/T047-command-wrapper.md)           | Implement policy-aware command wrapper             | P0       | pending |
+| ID                                                     | Title                                              | Priority | Status  |
+| ------------------------------------------------------ | -------------------------------------------------- | -------- | ------- |
+| [T043](../tasks/T043-worker-runtime-interface.md)      | Define worker runtime interface                    | P0       | done    |
+| [T044](../tasks/T044-worker-supervisor.md)             | Implement Worker Supervisor                        | P0       | done    |
+| [T045](../tasks/T045-copilot-cli-adapter.md)           | Implement Copilot CLI execution adapter            | P0       | done    |
+| [T046](../tasks/T046-output-capture-validation.md)     | Implement structured output capture and validation | P0       | pending |
+| [T047](../tasks/T047-command-wrapper.md)               | Implement policy-aware command wrapper             | P0       | pending |
+| [T132](../tasks/T132-worker-dispatch-service.md)       | Implement WorkerDispatchService                    | P0       | pending |
+| [T133](../tasks/T133-worker-dispatch-tests.md)         | Unit tests for WorkerDispatchService               | P0       | pending |
+| [T134](../tasks/T134-worker-dispatch-adapter.md)       | Wire dispatch unit-of-work adapter                 | P0       | pending |
+| [T135](../tasks/T135-heartbeat-forwarder-adapter.md)   | Implement HeartbeatForwarderPort adapter           | P0       | pending |
+| [T136](../tasks/T136-infrastructure-adapter-wiring.md) | Wire workspace/runtime/packet adapters             | P0       | pending |
+| [T137](../tasks/T137-wire-dispatch-automation.md)      | Integrate dispatch into AutomationService          | P0       | pending |
+| [T138](../tasks/T138-dispatch-integration-test.md)     | End-to-end dispatch integration test               | P0       | pending |
+| [T139](../tasks/T139-worker-runner-exports.md)         | Update worker-runner package exports               | P2       | pending |
 
 ## Sequencing Notes
 
