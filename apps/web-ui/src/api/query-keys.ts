@@ -22,7 +22,13 @@
  * @module
  */
 
-import type { AuditListParams, PaginationParams, PoolListParams, TaskListParams } from "./types";
+import type {
+  AuditListParams,
+  MergeQueueListParams,
+  PaginationParams,
+  PoolListParams,
+  TaskListParams,
+} from "./types";
 
 export const queryKeys = {
   /** Health check query key. */
@@ -100,5 +106,12 @@ export const queryKeys = {
       [...queryKeys.policies.all, "list", params ?? {}] as const,
     detail: (id: string) => [...queryKeys.policies.all, "detail", id] as const,
     effective: () => [...queryKeys.policies.all, "effective"] as const,
+  },
+
+  /** Merge queue list query keys. */
+  mergeQueue: {
+    all: ["mergeQueue"] as const,
+    lists: (params?: MergeQueueListParams) =>
+      [...queryKeys.mergeQueue.all, "list", params ?? {}] as const,
   },
 } as const;

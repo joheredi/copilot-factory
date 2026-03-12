@@ -11,10 +11,12 @@ import { Module } from "@nestjs/common";
 
 import { MergeDetailsController } from "./merge-details.controller.js";
 import { MergeDetailsService } from "./merge-details.service.js";
+import { MergeQueueController } from "./merge-queue.controller.js";
+import { MergeQueueService } from "./merge-queue.service.js";
 
 /** Feature module for merge queue and merge detail endpoints. */
 @Module({
-  controllers: [MergeDetailsController],
-  providers: [MergeDetailsService],
+  controllers: [MergeDetailsController, MergeQueueController],
+  providers: [MergeDetailsService, MergeQueueService],
 })
 export class MergeModule {}

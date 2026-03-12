@@ -370,3 +370,37 @@ T110 - Integration test: lease timeout and crash recovery (Epic E022: Integratio
 - T088 (queue/worker event broadcasting) is P2 and ready (depends on T086 which is done)
 - T096-T100 (UI views) and T104-T105 (operator controls UI) are P2 and ready
 - Consider creating permanent HeartbeatUnitOfWork and ReclaimUnitOfWork infrastructure implementations (currently only exist as test helpers)
+
+---
+
+## T098: Build merge queue view (2026-03-12)
+
+### What was done
+
+- Created `GET /merge-queue` backend list endpoint with pagination and status/repositoryId filters
+  - `MergeQueueController` + `MergeQueueService` in `apps/control-plane/src/merge/`
+  - Joins merge_queue_item with task table for enriched data (task title, task status)
+  - Ordered by queue position ascending
+  - DTO with Zod validation following existing TaskFilterQueryDto pattern
+- Built full merge queue UI page replacing placeholder
+  - Table view with position, task link, status badge, enqueued/started/completed times
+  - Active merge progress indicator (purple highlight for PREPARING/REBASING/VALIDATING/MERGING items)
+  - Queue pause warning when FAILED items exist
+  - Status filter bar with all 8 merge queue states
+  - Loading skeleton, error state, empty state
+  - Click-through task links to `/tasks/:id`
+- Added `MergeQueueStatusBadge` component with color-coded statuses
+- Added `useMergeQueue` TanStack Query hook + `mergeQueue` query keys
+- Updated WebSocket invalidation to include `mergeQueue.all` on Queue channel events and merge_queue_item.state_changed events
+- Full test coverage: 7 backend tests (controller + service with in-memory SQLite), 12 frontend tests
+
+### Patterns used
+
+- Backend: Same controller → service → repository pattern as TasksController/TasksService
+- Frontend: Same hooks/query-keys/page structure as PoolsPage (T096)
+- Tests: Backend uses mocked service (controller) + real SQLite (service). Frontend uses mocked fetch + QueryClient + MemoryRouter.
+
+### For next loop
+
+- T097 (review center view), T099 (config editor), T100 (audit explorer), T104 (operator controls in task detail), T105 (operator controls in pool/merge UI) are remaining pending tasks
+- T105 is now unblocked by T098 completion (also needs T096 done + T101 done, both are done)

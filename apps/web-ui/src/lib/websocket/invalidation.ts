@@ -31,7 +31,7 @@ import { EventChannel } from "./types";
 const CHANNEL_INVALIDATION_MAP: Record<EventChannel, readonly unknown[][]> = {
   [EventChannel.Tasks]: [queryKeys.tasks.all, queryKeys.reviews.all, queryKeys.audit.all],
   [EventChannel.Workers]: [queryKeys.pools.all, queryKeys.audit.all],
-  [EventChannel.Queue]: [queryKeys.tasks.all, queryKeys.audit.all],
+  [EventChannel.Queue]: [queryKeys.tasks.all, queryKeys.audit.all, queryKeys.mergeQueue.all],
 };
 
 /**
@@ -43,7 +43,7 @@ const CHANNEL_INVALIDATION_MAP: Record<EventChannel, readonly unknown[][]> = {
  */
 const EVENT_TYPE_EXTRA_INVALIDATIONS: Record<string, readonly unknown[][]> = {
   "task.state_changed": [queryKeys.pools.all],
-  "merge_queue_item.state_changed": [queryKeys.reviews.all],
+  "merge_queue_item.state_changed": [queryKeys.reviews.all, queryKeys.mergeQueue.all],
 };
 
 /**

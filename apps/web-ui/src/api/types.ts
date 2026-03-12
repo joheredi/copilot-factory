@@ -427,6 +427,31 @@ export interface MergeDetail {
 }
 
 // ---------------------------------------------------------------------------
+// Merge Queue
+// ---------------------------------------------------------------------------
+
+/** A merge queue item enriched with associated task data. */
+export interface MergeQueueItem {
+  readonly mergeQueueItemId: string;
+  readonly taskId: string;
+  readonly repositoryId: string;
+  readonly status: string;
+  readonly position: number;
+  readonly approvedCommitSha: string | null;
+  readonly enqueuedAt: string;
+  readonly startedAt: string | null;
+  readonly completedAt: string | null;
+  readonly taskTitle: string;
+  readonly taskStatus: string;
+}
+
+/** Query parameters for the merge queue list endpoint. */
+export interface MergeQueueListParams extends PaginationParams {
+  readonly status?: string;
+  readonly repositoryId?: string;
+}
+
+// ---------------------------------------------------------------------------
 // Audit
 // ---------------------------------------------------------------------------
 

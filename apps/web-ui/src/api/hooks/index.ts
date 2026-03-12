@@ -70,3 +70,5 @@ export {
 } from "./use-reviews";
 
 export { usePolicies, usePolicy, useEffectiveConfig, useUpdatePolicy } from "./use-policies";
+
+export { useMergeQueue } from "./use-merge-queue";
