@@ -137,3 +137,15 @@ The main runtime components described across the docs are the control plane serv
 - Keep configuration hierarchical and reproducible. The docs expect layered config resolution and require each worker run to persist its effective configuration snapshot.
 - When editing docs, keep them aligned across files. Concepts such as task states, worker roles, pools/profiles, review flow, and local-first topology are intentionally repeated in different documents from different angles; update related docs together when changing those concepts.
 - Do not assume implemented modules, apps, or scripts already exist just because the docs describe them. Verify the repository contents first, then write changes that match the current state of the repo.
+
+## Web UI (apps/web-ui)
+
+- **Framework:** Vite + React + TypeScript SPA
+- **Dev server:** `cd apps/web-ui && pnpm dev` (port 5173, proxies `/api` and `/socket.io` to localhost:3000)
+- **Build:** `pnpm build` runs `vite build`, producing output in `dist/`
+- **Type check:** `pnpm typecheck` runs `tsc --build` (separate from Vite build)
+- **UI library:** Tailwind CSS v3 + shadcn/ui components in `src/components/ui/`
+- **Routing:** React Router v7 with lazy-loaded routes in `src/app/routes.tsx`
+- **Tests:** Vitest with jsdom environment. Each test file needs `// @vitest-environment jsdom` docblock and `import "@testing-library/jest-dom/vitest"` for DOM matchers.
+- **tsconfig:** Overrides base config with `jsx: "react-jsx"`, `module: "ESNext"`, `moduleResolution: "bundler"`, `emitDeclarationOnly: true`
+- **Imports:** Use relative imports (not `@/` path alias) for Vitest workspace compatibility

@@ -475,3 +475,38 @@ Also fixed T072 backlog index status (was `pending` but task file was `done`).
 - T079 (starter metrics inventory) is now unblocked — it should use the `createCounter`, `createHistogram`, `createGauge` factories to register the §10.13.3 metrics
 - The `METRICS_HANDLE` is exported from MetricsModule for other modules to inject when registering custom metrics
 - Label cardinality rules from §10.13.4 must be followed: never use task_id, run_id, or branch_name as Prometheus labels
+
+---
+
+## T089: Initialize React SPA with Vite, Tailwind, shadcn/ui — DONE
+
+**Date:** 2026-03-12
+
+### What was done
+
+- Transformed the empty `apps/web-ui` skeleton into a full Vite + React + TypeScript SPA
+- Configured Tailwind CSS v3 with shadcn/ui CSS variables (light/dark theme support)
+- Installed and configured shadcn/ui component primitives: Button, Card, Badge, Table, Dialog, Tabs
+- Set up React Router v7 with lazy-loaded routes and code splitting
+- Created app shell layout with sidebar navigation (Dashboard, Tasks, Workers, Reviews, Merge Queue, Config, Audit Log)
+- Created dashboard placeholder page with status cards
+- Added Vite proxy config for API (`/api`) and WebSocket (`/socket.io`) forwarding to backend
+- Added comprehensive tests: 7 test files covering cn() utility, Button, Card, Badge, Table, Tabs components, and App routing
+- All 3,581 tests pass, build succeeds (Vite produces 315KB bundle), lint clean
+
+### Patterns used
+
+- shadcn/ui components use relative imports (not `@/` path alias) for Vitest workspace compatibility
+- Vitest jsdom environment set via `// @vitest-environment jsdom` docblock in each test file
+- `@testing-library/jest-dom/vitest` imported directly in each test file for custom matchers
+- `defineProject` from `vitest/config` for workspace mode compatibility
+- `emitDeclarationOnly: true` in tsconfig — tsc handles type checking, Vite handles bundling
+- `moduleResolution: "bundler"` and `module: "ESNext"` for Vite compatibility (overrides base NodeNext)
+
+### Notes for next loop
+
+- T090 (API client with TanStack Query), T091 (WebSocket client), T092 (App shell) are now unblocked
+- Dashboard page has placeholder cards — wire up real data in T090
+- shadcn/ui components.json is configured for future `npx shadcn add` usage
+- PostCSS + Tailwind config follows standard shadcn/ui setup
+- React Router v7 is installed (package name is still `react-router-dom`)
