@@ -20,6 +20,7 @@ export {
   TaskTypeSchema,
   TaskPrioritySchema,
   RiskLevelSchema,
+  EstimatedSizeSchema,
   // Object schemas
   FileChangeSummarySchema,
   IssueSchema,
@@ -142,3 +143,18 @@ export type {
   ReviewPolicy,
   AllowedCommand,
 } from "./policy-snapshot.js";
+
+// ─── Task Import (T112) ─────────────────────────────────────────────────────
+export {
+  ParseWarningSeveritySchema,
+  ParseWarningSchema,
+  ImportedTaskSchema,
+  ImportManifestSchema,
+} from "./import/index.js";
+
+export type {
+  ParseWarningSeverity,
+  ParseWarning,
+  ImportedTask,
+  ImportManifest,
+} from "./import/index.js";

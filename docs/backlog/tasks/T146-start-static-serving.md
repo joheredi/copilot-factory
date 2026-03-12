@@ -55,6 +55,7 @@ The implementing agent should read these files before starting:
 
 1. `cd apps/control-plane && pnpm add @fastify/static`
 2. Create `apps/control-plane/src/static-serve/static-serve.module.ts`:
+
    ```typescript
    @Module({})
    export class StaticServeModule implements OnModuleInit {
@@ -82,6 +83,7 @@ The implementing agent should read these files before starting:
      }
    }
    ```
+
 3. Alternative approach: configure in `main.ts` after `app.init()` but before `app.listen()`:
    ```typescript
    if (process.env.SERVE_STATIC === "true") {

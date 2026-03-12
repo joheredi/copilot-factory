@@ -33,6 +33,7 @@ import {
   TaskType,
   TaskPriority,
   RiskLevel,
+  EstimatedSize,
 } from "@factory/domain";
 
 // ─── Helper ──────────────────────────────────────────────────────────────────
@@ -174,6 +175,16 @@ export const TaskPrioritySchema = zodEnumFromConst(TaskPriority);
  * @see {@link file://docs/prd/002-data-model.md} §2.3 Entity: Task (risk_level)
  */
 export const RiskLevelSchema = zodEnumFromConst(RiskLevel);
+
+/**
+ * Zod schema for {@link EstimatedSize} enum values.
+ *
+ * T-shirt sizing for effort estimation and scheduling hints:
+ * xs, s, m, l, xl.
+ *
+ * @see {@link file://docs/prd/002-data-model.md} §2.3 Entity: Task (estimated_size)
+ */
+export const EstimatedSizeSchema = zodEnumFromConst(EstimatedSize);
 
 // ─── Shared Object Schemas ──────────────────────────────────────────────────
 

@@ -353,3 +353,30 @@ T110 - Integration test: lease timeout and crash recovery (Epic E022: Integratio
 
 - T100 (audit explorer), T104 (operator controls in task detail), T105 (operator controls in pool/merge UI) remain as the last pending tasks
 - Prompt template viewer and routing rule display are not yet implemented (no API endpoints exist for prompt templates)
+
+## T112: Define task import Zod schemas — DONE
+
+### What was done
+
+- Created `packages/schemas/src/import/task-import.ts` with four Zod schemas:
+  - `ParseWarningSeveritySchema` — enum for warning levels (info/warning/error)
+  - `ParseWarningSchema` — structured parser warning with file, field, message, severity
+  - `ImportedTaskSchema` — validated task record with title/taskType required, priority defaults to "medium", optional fields for description, riskLevel, estimatedSize, acceptanceCriteria, definitionOfDone, dependencies, suggestedFileScope, externalRef, source, metadata
+  - `ImportManifestSchema` — top-level import result with sourcePath, tasks array, warnings array, optional formatVersion/discoveredProjectName/discoveredRepositoryName
+- Created `packages/schemas/src/import/index.ts` barrel export
+- Added `EstimatedSizeSchema` to `packages/schemas/src/shared.ts` (was missing, domain had the enum but schemas didn't wrap it)
+- Updated `packages/schemas/src/index.ts` with new exports
+- Created comprehensive test file with 64 tests covering acceptance, rejection, defaults, boundary cases, all enum values
+
+### Patterns used
+
+- `zodEnumFromConst()` helper from shared.ts wraps domain const-objects as Zod enums
+- Export both `XxxSchema` and inferred `type Xxx = z.infer<typeof XxxSchema>`
+- `.min(1)` for non-empty strings, `.optional()` for truly optional, `.optional().default()` for optional-with-default
+- `z.record(z.string(), z.unknown())` for flexible metadata
+- Tests use safeParse() for both acceptance and rejection, JSDoc on every test
+
+### For next loop
+
+- T113 (Markdown task parser) and T114 (YAML task parser) are now unblocked by T112
+- T119 (Crash recovery) and T135 (Queue worker events) are also P0 ready candidates

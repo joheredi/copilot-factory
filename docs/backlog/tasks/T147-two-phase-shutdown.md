@@ -59,6 +59,7 @@ The implementing agent should read these files before starting:
 ## Implementation Guidance
 
 1. Create `apps/cli/src/shutdown.ts`:
+
    ```typescript
    export function setupShutdownHandlers(
      app: NestFastifyApplication,
@@ -98,6 +99,7 @@ The implementing agent should read these files before starting:
      });
    }
    ```
+
 2. `drain()` function:
    - Access the NestJS DI container to get the scheduler service
    - Call a method to pause scheduling (or set a flag that prevents new job claims)

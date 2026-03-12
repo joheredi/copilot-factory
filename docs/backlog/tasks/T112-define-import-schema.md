@@ -5,7 +5,7 @@
 | **ID**                    | T112                                                                         |
 | **Epic**                  | [E023: Task Import Pipeline](../epics/E023-task-import.md)                   |
 | **Type**                  | foundation                                                                   |
-| **Status**                | pending                                                                      |
+| **Status**                | done                                                                         |
 | **Priority**              | P0                                                                           |
 | **Owner**                 | backend-engineer                                                             |
 | **AI Executable**         | Yes                                                                          |
