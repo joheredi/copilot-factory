@@ -1,5 +1,22 @@
 # Progress Log
 
+## T038: Mark dependency reconciliation loop as done — DONE (2026-03-12)
+
+**Status:** Done
+
+**What was done:**
+
+- Verified T038 (dependency reconciliation loop) was already fully implemented as part of the reconciliation sweep service (T029)
+- `sweepBlockedTasks()` in `packages/application/src/services/reconciliation-sweep.service.ts` queries all BLOCKED tasks, evaluates readiness via `ReadinessService.computeReadiness()`, and transitions eligible ones to READY
+- Tests already exist in `reconciliation-sweep.service.test.ts` covering: correct transition, still-blocked tasks, error isolation, idempotency
+- All 946 application tests pass including reconciliation sweep tests
+- Marked T038 as done in task file and backlog index
+
+**Notes for next loops:**
+
+- T038 was implemented as part of T029's reconciliation sweep — the sweep has 4 operations: stale leases, orphaned jobs, stuck tasks, and blocked task readiness recalculation
+- E007 (Dependency & Readiness Engine) is now complete with all tasks done (T035-T038)
+
 ## T034: Implement crash recovery with partial artifact capture — DONE (2026-03-12)
 
 **Status:** Done
