@@ -27,7 +27,7 @@ import {
   InvalidTransitionError,
   VersionConflictError,
 } from "@factory/application";
-import type { TransitionService, ActorInfo, DomainEventEmitter } from "@factory/application";
+import type { TransitionService, ActorInfo } from "@factory/application";
 import { TaskStatus, isTerminalState } from "@factory/domain";
 import type { TransitionContext } from "@factory/domain";
 
@@ -36,6 +36,7 @@ import { createSqliteUnitOfWork } from "../infrastructure/unit-of-work/sqlite-un
 import { createTaskRepository } from "../infrastructure/repositories/task.repository.js";
 import { createAuditEventRepository } from "../infrastructure/repositories/audit-event.repository.js";
 import { createMergeQueueItemRepository } from "../infrastructure/repositories/merge-queue-item.repository.js";
+import { DomainEventBroadcasterAdapter } from "../events/domain-event-broadcaster.adapter.js";
 import type { DatabaseConnection } from "../infrastructure/database/connection.js";
 import type { Task } from "../infrastructure/repositories/task.repository.js";
 import type {
@@ -59,35 +60,30 @@ export interface OperatorActionResult {
 }
 
 /**
- * No-op domain event emitter for operator actions.
- *
- * Domain event publishing will be wired to the WebSocket gateway
- * once T086/T087 are implemented. For now, operator actions commit
- * state changes and audit events atomically, but do not broadcast
- * real-time events.
- */
-const noOpEventEmitter: DomainEventEmitter = {
-  emit: () => {
-    /* no-op until WebSocket gateway (T086) is available */
-  },
-};
-
-/**
  * Orchestrates all operator actions on tasks.
  *
  * Uses the application-layer {@link TransitionService} for state-change
  * actions that map to valid state machine transitions. Uses direct
  * database writes for metadata-only actions and operator-override
  * transitions that bypass the normal state machine.
+ *
+ * Domain events from state transitions are broadcast to WebSocket clients
+ * via the injected {@link DomainEventBroadcasterAdapter}.
  */
 @Injectable()
 export class OperatorActionsService {
   private readonly transitionService: TransitionService;
 
-  /** @param conn Injected database connection. */
-  constructor(@Inject(DATABASE_CONNECTION) private readonly conn: DatabaseConnection) {
+  /**
+   * @param conn Injected database connection.
+   * @param eventBroadcaster Adapter that broadcasts domain events via WebSocket.
+   */
+  constructor(
+    @Inject(DATABASE_CONNECTION) private readonly conn: DatabaseConnection,
+    eventBroadcaster: DomainEventBroadcasterAdapter,
+  ) {
     const unitOfWork = createSqliteUnitOfWork(conn);
-    this.transitionService = createTransitionService(unitOfWork, noOpEventEmitter);
+    this.transitionService = createTransitionService(unitOfWork, eventBroadcaster);
   }
 
   /**

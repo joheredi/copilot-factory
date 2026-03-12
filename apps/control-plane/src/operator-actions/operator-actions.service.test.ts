@@ -30,6 +30,9 @@ import { createAuditEventRepository } from "../infrastructure/repositories/audit
 import { createMergeQueueItemRepository } from "../infrastructure/repositories/merge-queue-item.repository.js";
 import { createProjectRepository } from "../infrastructure/repositories/project.repository.js";
 import { createRepositoryRepository } from "../infrastructure/repositories/repository.repository.js";
+import { DomainEventBroadcasterAdapter } from "../events/domain-event-broadcaster.adapter.js";
+import { EventBroadcasterService } from "../events/event-broadcaster.service.js";
+import { EventsGateway } from "../events/events.gateway.js";
 import type { DatabaseConnection } from "../infrastructure/database/connection.js";
 
 /** Resolve the drizzle migrations folder relative to this test file. */
@@ -127,8 +130,14 @@ describe("OperatorActionsService", () => {
     conn = createTestConnection();
     createPrerequisites(conn);
     // Construct the service directly with the test connection,
-    // bypassing NestJS DI for unit testing.
-    service = new OperatorActionsService(conn);
+    // bypassing NestJS DI for unit testing. The DomainEventBroadcasterAdapter
+    // is constructed with a real EventBroadcasterService backed by a
+    // gateway with no server — events are silently dropped (acceptable
+    // for unit tests that don't verify WebSocket delivery).
+    const gateway = new EventsGateway();
+    const broadcaster = new EventBroadcasterService(gateway);
+    const eventAdapter = new DomainEventBroadcasterAdapter(broadcaster);
+    service = new OperatorActionsService(conn, eventAdapter);
   });
 
   // ─── Pause ──────────────────────────────────────────────────────────────

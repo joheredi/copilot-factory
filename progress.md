@@ -1,5 +1,29 @@
 # Progress Log
 
+## T087: Implement task state change event broadcasting (2026-03-12)
+
+**What was done:**
+
+- Created `apps/control-plane/src/events/domain-event-broadcaster.adapter.ts` — adapter implementing `DomainEventEmitter` port that maps domain events to WebSocket `FactoryEvent` payloads and broadcasts via `EventBroadcasterService`
+- Created `apps/control-plane/src/events/domain-event-broadcaster.adapter.test.ts` — 14 tests covering: all entity types (task, lease, review-cycle, merge-queue-item, worker), event type mapping, payload structure, error handling (no-throw contract), unknown entity types, server-not-ready graceful handling
+- Updated `EventsModule` to register and export `DomainEventBroadcasterAdapter`
+- Updated `OperatorActionsModule` to import `EventsModule` for DI access
+- Updated `OperatorActionsService` to inject `DomainEventBroadcasterAdapter` instead of the no-op emitter
+- Updated `OperatorActionsService` tests to provide the real adapter (with no-server gateway for safe unit testing)
+
+**Patterns used:**
+
+- Adapter pattern: `DomainEventBroadcasterAdapter` bridges application-layer `DomainEventEmitter` port to infrastructure-layer `EventBroadcasterService`
+- Entity-type-to-channel mapping table for clean routing (task→Tasks, lease→Workers, review→Tasks, merge→Queue)
+- Domain event type to WS event type mapping (past-tense "transitioned" → present-tense "state_changed")
+- Error swallowing with logging per the port contract (state is already committed, can't roll back)
+
+**What the next loop should know:**
+
+- All domain events from TransitionService now broadcast to WebSocket clients via the adapter
+- The `DomainEventBroadcasterAdapter` is exported from `EventsModule` — any module creating a `TransitionService` should import `EventsModule` and inject the adapter
+- T088 (queue and worker status broadcasting) can reuse the same adapter — it already handles all entity types including workers and merge-queue-items
+
 ## T086: Implement WebSocket gateway for live events (2026-03-12)
 
 **What was done:**
