@@ -34,6 +34,15 @@ import {
   CancelActionDto,
   ResolveEscalationDto,
 } from "./dtos/operator-action.dto.js";
+import { mapTask } from "../common/response-mappers.js";
+
+/** Maps the internal OperatorActionResult to the web-ui API contract. */
+function mapActionResult(result: OperatorActionResult) {
+  return {
+    task: mapTask(result.task),
+    auditEvent: result.auditEvent,
+  };
+}
 
 /**
  * Handles HTTP requests for operator actions on tasks.
@@ -62,8 +71,8 @@ export class OperatorActionsController {
   @ApiResponse({ status: 200, description: "Task paused (moved to ESCALATED)." })
   @ApiResponse({ status: 400, description: "Invalid action for current state." })
   @ApiResponse({ status: 404, description: "Task not found." })
-  pause(@Param("id") id: string, @Body() dto: PauseActionDto): OperatorActionResult {
-    return this.service.pause(id, dto.actorId, dto.reason);
+  pause(@Param("id") id: string, @Body() dto: PauseActionDto) {
+    return mapActionResult(this.service.pause(id, dto.actorId, dto.reason));
   }
 
   /**
@@ -80,8 +89,8 @@ export class OperatorActionsController {
   @ApiResponse({ status: 200, description: "Task resumed (moved to ASSIGNED)." })
   @ApiResponse({ status: 400, description: "Task is not in ESCALATED state." })
   @ApiResponse({ status: 404, description: "Task not found." })
-  resume(@Param("id") id: string, @Body() dto: ResumeActionDto): OperatorActionResult {
-    return this.service.resume(id, dto.actorId, dto.reason);
+  resume(@Param("id") id: string, @Body() dto: ResumeActionDto) {
+    return mapActionResult(this.service.resume(id, dto.actorId, dto.reason));
   }
 
   /**
@@ -98,8 +107,8 @@ export class OperatorActionsController {
   @ApiResponse({ status: 200, description: "Task requeued (moved to READY)." })
   @ApiResponse({ status: 400, description: "Task is not in ASSIGNED or IN_DEVELOPMENT state." })
   @ApiResponse({ status: 404, description: "Task not found." })
-  requeue(@Param("id") id: string, @Body() dto: RequeueActionDto): OperatorActionResult {
-    return this.service.requeue(id, dto.actorId, dto.reason);
+  requeue(@Param("id") id: string, @Body() dto: RequeueActionDto) {
+    return mapActionResult(this.service.requeue(id, dto.actorId, dto.reason));
   }
 
   /**
@@ -116,8 +125,8 @@ export class OperatorActionsController {
   @ApiResponse({ status: 200, description: "Task unblocked (moved to READY)." })
   @ApiResponse({ status: 400, description: "Task is not in BLOCKED state." })
   @ApiResponse({ status: 404, description: "Task not found." })
-  forceUnblock(@Param("id") id: string, @Body() dto: ForceUnblockActionDto): OperatorActionResult {
-    return this.service.forceUnblock(id, dto.actorId, dto.reason);
+  forceUnblock(@Param("id") id: string, @Body() dto: ForceUnblockActionDto) {
+    return mapActionResult(this.service.forceUnblock(id, dto.actorId, dto.reason));
   }
 
   /**
@@ -133,11 +142,8 @@ export class OperatorActionsController {
   @ApiParam({ name: "id", description: "Task UUID" })
   @ApiResponse({ status: 200, description: "Task priority updated." })
   @ApiResponse({ status: 404, description: "Task not found." })
-  changePriority(
-    @Param("id") id: string,
-    @Body() dto: ChangePriorityActionDto,
-  ): OperatorActionResult {
-    return this.service.changePriority(id, dto);
+  changePriority(@Param("id") id: string, @Body() dto: ChangePriorityActionDto) {
+    return mapActionResult(this.service.changePriority(id, dto));
   }
 
   /**
@@ -154,8 +160,8 @@ export class OperatorActionsController {
   @ApiResponse({ status: 200, description: "Pool assignment recorded." })
   @ApiResponse({ status: 400, description: "Task is in a terminal state." })
   @ApiResponse({ status: 404, description: "Task not found." })
-  reassignPool(@Param("id") id: string, @Body() dto: ReassignPoolActionDto): OperatorActionResult {
-    return this.service.reassignPool(id, dto);
+  reassignPool(@Param("id") id: string, @Body() dto: ReassignPoolActionDto) {
+    return mapActionResult(this.service.reassignPool(id, dto));
   }
 
   /**
@@ -172,8 +178,8 @@ export class OperatorActionsController {
   @ApiResponse({ status: 200, description: "Task moved to DEV_COMPLETE for re-review." })
   @ApiResponse({ status: 400, description: "Task is not in APPROVED or IN_REVIEW state." })
   @ApiResponse({ status: 404, description: "Task not found." })
-  rerunReview(@Param("id") id: string, @Body() dto: RerunReviewActionDto): OperatorActionResult {
-    return this.service.rerunReview(id, dto.actorId, dto.reason);
+  rerunReview(@Param("id") id: string, @Body() dto: RerunReviewActionDto) {
+    return mapActionResult(this.service.rerunReview(id, dto.actorId, dto.reason));
   }
 
   /**
@@ -190,11 +196,8 @@ export class OperatorActionsController {
   @ApiResponse({ status: 200, description: "Merge queue order updated." })
   @ApiResponse({ status: 400, description: "Task not in QUEUED_FOR_MERGE or no queue item." })
   @ApiResponse({ status: 404, description: "Task not found." })
-  overrideMergeOrder(
-    @Param("id") id: string,
-    @Body() dto: OverrideMergeOrderActionDto,
-  ): OperatorActionResult {
-    return this.service.overrideMergeOrder(id, dto);
+  overrideMergeOrder(@Param("id") id: string, @Body() dto: OverrideMergeOrderActionDto) {
+    return mapActionResult(this.service.overrideMergeOrder(id, dto));
   }
 
   /**
@@ -211,8 +214,8 @@ export class OperatorActionsController {
   @ApiResponse({ status: 200, description: "Task reopened (moved to BACKLOG)." })
   @ApiResponse({ status: 400, description: "Task is not in DONE, FAILED, or CANCELLED state." })
   @ApiResponse({ status: 404, description: "Task not found." })
-  reopen(@Param("id") id: string, @Body() dto: ReopenActionDto): OperatorActionResult {
-    return this.service.reopen(id, dto.actorId, dto.reason);
+  reopen(@Param("id") id: string, @Body() dto: ReopenActionDto) {
+    return mapActionResult(this.service.reopen(id, dto.actorId, dto.reason));
   }
 
   /**
@@ -233,8 +236,10 @@ export class OperatorActionsController {
       "Task is already in a terminal state, in MERGING, or has in-progress work without acknowledgment.",
   })
   @ApiResponse({ status: 404, description: "Task not found." })
-  cancel(@Param("id") id: string, @Body() dto: CancelActionDto): OperatorActionResult {
-    return this.service.cancel(id, dto.actorId, dto.reason, dto.acknowledgeInProgressWork);
+  cancel(@Param("id") id: string, @Body() dto: CancelActionDto) {
+    return mapActionResult(
+      this.service.cancel(id, dto.actorId, dto.reason, dto.acknowledgeInProgressWork),
+    );
   }
 
   /**
@@ -260,10 +265,7 @@ export class OperatorActionsController {
   })
   @ApiResponse({ status: 400, description: "Task is not in ESCALATED state or invalid payload." })
   @ApiResponse({ status: 404, description: "Task not found." })
-  resolveEscalation(
-    @Param("id") id: string,
-    @Body() dto: ResolveEscalationDto,
-  ): OperatorActionResult {
-    return this.service.resolveEscalation(id, dto);
+  resolveEscalation(@Param("id") id: string, @Body() dto: ResolveEscalationDto) {
+    return mapActionResult(this.service.resolveEscalation(id, dto));
   }
 }

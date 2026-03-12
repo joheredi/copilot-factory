@@ -54,12 +54,14 @@ describe("ConfigController", () => {
    * operators to inspect active configuration.
    */
   it("should delegate to service and return effective config", () => {
-    const expected = fakeEffectiveConfig();
-    service.resolveEffective.mockReturnValue(expected);
+    const serviceResponse = fakeEffectiveConfig();
+    service.resolveEffective.mockReturnValue(serviceResponse);
 
     const result = controller.getEffective();
 
     expect(service.resolveEffective).toHaveBeenCalled();
-    expect(result).toEqual(expected);
+    // Controller maps { config, sources, layerCount } → { effective, layers }
+    expect(result.effective).toEqual(serviceResponse.config);
+    expect(result.layers).toHaveLength(Object.keys(serviceResponse.sources).length);
   });
 });

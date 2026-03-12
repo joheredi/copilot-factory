@@ -27,8 +27,12 @@ import { CreateRepositoryDto } from "./dtos/create-repository.dto.js";
 import { PaginationQueryDto } from "./dtos/pagination-query.dto.js";
 import { UpdateRepositoryDto } from "./dtos/update-repository.dto.js";
 import { RepositoriesService } from "./repositories.service.js";
-import type { PaginatedResponse } from "./projects.service.js";
-import type { Repository } from "../infrastructure/repositories/repository.repository.js";
+import {
+  mapRepository,
+  mapPaginated,
+  type RepositoryResponse,
+  type MappedPaginatedResponse,
+} from "../common/response-mappers.js";
 
 /**
  * Handles HTTP requests for repository management.
@@ -59,8 +63,11 @@ export class RepositoriesController {
   @ApiResponse({ status: 201, description: "Repository created." })
   @ApiResponse({ status: 400, description: "Validation failed." })
   @ApiResponse({ status: 409, description: "Duplicate repository." })
-  create(@Param("projectId") projectId: string, @Body() dto: CreateRepositoryDto): Repository {
-    return this.repositoriesService.create(projectId, dto);
+  create(
+    @Param("projectId") projectId: string,
+    @Body() dto: CreateRepositoryDto,
+  ): RepositoryResponse {
+    return mapRepository(this.repositoriesService.create(projectId, dto));
   }
 
   /**
@@ -77,8 +84,11 @@ export class RepositoriesController {
   findByProjectId(
     @Param("projectId") projectId: string,
     @Query() query: PaginationQueryDto,
-  ): PaginatedResponse<Repository> {
-    return this.repositoriesService.findByProjectId(projectId, query.page, query.limit);
+  ): MappedPaginatedResponse<RepositoryResponse> {
+    return mapPaginated(
+      this.repositoriesService.findByProjectId(projectId, query.page, query.limit),
+      mapRepository,
+    );
   }
 
   /**
@@ -93,12 +103,12 @@ export class RepositoriesController {
   @ApiParam({ name: "id", description: "Repository UUID" })
   @ApiResponse({ status: 200, description: "Repository found." })
   @ApiResponse({ status: 404, description: "Repository not found." })
-  findById(@Param("id") id: string): Repository {
+  findById(@Param("id") id: string): RepositoryResponse {
     const repository = this.repositoriesService.findById(id);
     if (!repository) {
       throw new NotFoundException(`Repository with ID "${id}" not found`);
     }
-    return repository;
+    return mapRepository(repository);
   }
 
   /**
@@ -115,12 +125,12 @@ export class RepositoriesController {
   @ApiResponse({ status: 200, description: "Repository updated." })
   @ApiResponse({ status: 400, description: "Validation failed." })
   @ApiResponse({ status: 404, description: "Repository not found." })
-  update(@Param("id") id: string, @Body() dto: UpdateRepositoryDto): Repository {
+  update(@Param("id") id: string, @Body() dto: UpdateRepositoryDto): RepositoryResponse {
     const repository = this.repositoriesService.update(id, dto);
     if (!repository) {
       throw new NotFoundException(`Repository with ID "${id}" not found`);
     }
-    return repository;
+    return mapRepository(repository);
   }
 
   /**

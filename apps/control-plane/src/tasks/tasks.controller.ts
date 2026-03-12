@@ -33,9 +33,14 @@ import { UpdateTaskDto } from "./dtos/update-task.dto.js";
 import { TasksService } from "./tasks.service.js";
 import { AuditService } from "../audit/audit.service.js";
 import { TimelineQueryDto } from "../audit/dtos/audit-query.dto.js";
-import type { PaginatedAuditResponse } from "../audit/audit.service.js";
-import type { PaginatedResponse, TaskDetail } from "./tasks.service.js";
-import type { Task } from "../infrastructure/repositories/task.repository.js";
+import {
+  mapTask,
+  mapAuditEvent,
+  mapPaginated,
+  type TaskResponse,
+  type AuditEventResponse,
+  type MappedPaginatedResponse,
+} from "../common/response-mappers.js";
 
 /**
  * Handles HTTP requests for task management.
@@ -71,8 +76,8 @@ export class TasksController {
   @ApiOperation({ summary: "Create a task" })
   @ApiResponse({ status: 201, description: "Task created in BACKLOG state." })
   @ApiResponse({ status: 400, description: "Validation failed." })
-  create(@Body() dto: CreateTaskDto): Task {
-    return this.tasksService.create(dto);
+  create(@Body() dto: CreateTaskDto): TaskResponse {
+    return mapTask(this.tasksService.create(dto));
   }
 
   /**
@@ -89,8 +94,8 @@ export class TasksController {
   @ApiOperation({ summary: "Create multiple tasks in a batch" })
   @ApiResponse({ status: 201, description: "Tasks created in BACKLOG state." })
   @ApiResponse({ status: 400, description: "Validation failed." })
-  createBatch(@Body() dtos: CreateTaskDto[]): Task[] {
-    return this.tasksService.createBatch(dtos);
+  createBatch(@Body() dtos: CreateTaskDto[]): TaskResponse[] {
+    return this.tasksService.createBatch(dtos).map(mapTask);
   }
 
   /**
@@ -109,13 +114,16 @@ export class TasksController {
   @ApiQuery({ name: "priority", required: false, description: "Filter by priority" })
   @ApiQuery({ name: "taskType", required: false, description: "Filter by task type" })
   @ApiResponse({ status: 200, description: "Paginated task list." })
-  findAll(@Query() query: TaskFilterQueryDto): PaginatedResponse<Task> {
-    return this.tasksService.findAll(query.page, query.limit, {
-      status: query.status,
-      repositoryId: query.repositoryId,
-      priority: query.priority,
-      taskType: query.taskType,
-    });
+  findAll(@Query() query: TaskFilterQueryDto): MappedPaginatedResponse<TaskResponse> {
+    return mapPaginated(
+      this.tasksService.findAll(query.page, query.limit, {
+        status: query.status,
+        repositoryId: query.repositoryId,
+        priority: query.priority,
+        taskType: query.taskType,
+      }),
+      mapTask,
+    );
   }
 
   /**
@@ -133,12 +141,12 @@ export class TasksController {
   @ApiParam({ name: "id", description: "Task UUID" })
   @ApiResponse({ status: 200, description: "Task detail with related entities." })
   @ApiResponse({ status: 404, description: "Task not found." })
-  findById(@Param("id") id: string): TaskDetail {
+  findById(@Param("id") id: string) {
     const detail = this.tasksService.findDetailById(id);
     if (!detail) {
       throw new NotFoundException(`Task with ID "${id}" not found`);
     }
-    return detail;
+    return { ...detail, task: mapTask(detail.task) };
   }
 
   /**
@@ -165,12 +173,18 @@ export class TasksController {
   })
   @ApiResponse({ status: 200, description: "Paginated audit event timeline." })
   @ApiResponse({ status: 404, description: "Task not found." })
-  getTimeline(@Param("id") id: string, @Query() query: TimelineQueryDto): PaginatedAuditResponse {
+  getTimeline(
+    @Param("id") id: string,
+    @Query() query: TimelineQueryDto,
+  ): MappedPaginatedResponse<AuditEventResponse> {
     const task = this.tasksService.findById(id);
     if (!task) {
       throw new NotFoundException(`Task with ID "${id}" not found`);
     }
-    return this.auditService.getEntityTimeline("task", id, query.page, query.limit);
+    return mapPaginated(
+      this.auditService.getEntityTimeline("task", id, query.page, query.limit),
+      mapAuditEvent,
+    );
   }
 
   /**
@@ -192,11 +206,11 @@ export class TasksController {
   @ApiResponse({ status: 400, description: "Validation failed." })
   @ApiResponse({ status: 404, description: "Task not found." })
   @ApiResponse({ status: 409, description: "Version conflict (concurrent update)." })
-  update(@Param("id") id: string, @Body() dto: UpdateTaskDto): Task {
+  update(@Param("id") id: string, @Body() dto: UpdateTaskDto): TaskResponse {
     const task = this.tasksService.update(id, dto);
     if (!task) {
       throw new NotFoundException(`Task with ID "${id}" not found`);
     }
-    return task;
+    return mapTask(task);
   }
 }

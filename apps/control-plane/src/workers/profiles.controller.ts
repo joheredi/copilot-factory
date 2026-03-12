@@ -30,7 +30,7 @@ import { ApiOperation, ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { CreateProfileDto } from "./dtos/create-profile.dto.js";
 import { UpdateProfileDto } from "./dtos/update-profile.dto.js";
 import { ProfilesService } from "./profiles.service.js";
-import type { AgentProfile } from "../infrastructure/repositories/agent-profile.repository.js";
+import { mapProfile, type ProfileResponse } from "../common/response-mappers.js";
 
 /**
  * REST controller for agent profile CRUD, nested under pools.
@@ -66,12 +66,12 @@ export class ProfilesController {
   @ApiResponse({ status: 201, description: "Profile created." })
   @ApiResponse({ status: 400, description: "Validation failed." })
   @ApiResponse({ status: 404, description: "Pool not found." })
-  create(@Param("poolId") poolId: string, @Body() dto: CreateProfileDto): AgentProfile {
+  create(@Param("poolId") poolId: string, @Body() dto: CreateProfileDto): ProfileResponse {
     const profile = this.profilesService.create(poolId, dto);
     if (!profile) {
       throw new NotFoundException(`Pool with ID "${poolId}" not found`);
     }
-    return profile;
+    return mapProfile(profile);
   }
 
   /**
@@ -84,8 +84,8 @@ export class ProfilesController {
   @ApiOperation({ summary: "List agent profiles for a pool" })
   @ApiParam({ name: "poolId", description: "Parent pool UUID" })
   @ApiResponse({ status: 200, description: "Profile list." })
-  findByPoolId(@Param("poolId") poolId: string): AgentProfile[] {
-    return this.profilesService.findByPoolId(poolId);
+  findByPoolId(@Param("poolId") poolId: string): ProfileResponse[] {
+    return this.profilesService.findByPoolId(poolId).map(mapProfile);
   }
 
   /**
@@ -102,12 +102,15 @@ export class ProfilesController {
   @ApiParam({ name: "profileId", description: "Profile UUID" })
   @ApiResponse({ status: 200, description: "Profile detail." })
   @ApiResponse({ status: 404, description: "Profile not found." })
-  findById(@Param("poolId") poolId: string, @Param("profileId") profileId: string): AgentProfile {
+  findById(
+    @Param("poolId") poolId: string,
+    @Param("profileId") profileId: string,
+  ): ProfileResponse {
     const profile = this.profilesService.findById(poolId, profileId);
     if (!profile) {
       throw new NotFoundException(`Profile with ID "${profileId}" not found in pool "${poolId}"`);
     }
-    return profile;
+    return mapProfile(profile);
   }
 
   /**
@@ -132,12 +135,12 @@ export class ProfilesController {
     @Param("poolId") poolId: string,
     @Param("profileId") profileId: string,
     @Body() dto: UpdateProfileDto,
-  ): AgentProfile {
+  ): ProfileResponse {
     const profile = this.profilesService.update(poolId, profileId, dto);
     if (!profile) {
       throw new NotFoundException(`Profile with ID "${profileId}" not found in pool "${poolId}"`);
     }
-    return profile;
+    return mapProfile(profile);
   }
 
   /**

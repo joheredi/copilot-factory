@@ -359,7 +359,7 @@ export class QueueWorkerEventsService implements OnModuleInit, OnModuleDestroy {
    */
   getQueueDepthSnapshot(): QueueDepthSnapshot {
     const repo = createJobRepository(this.conn.db);
-    const pendingJobs = repo.findByStatus("PENDING");
+    const pendingJobs = repo.findByStatus("pending");
 
     const depths: Record<string, number> = {};
     for (const job of pendingJobs) {

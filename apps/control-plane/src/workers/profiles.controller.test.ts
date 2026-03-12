@@ -30,6 +30,12 @@ function fakeProfile(overrides: Record<string, unknown> = {}) {
   };
 }
 
+/** Map a fake profile to the expected response shape (agentProfileId → id). */
+function expectedProfile(profile: ReturnType<typeof fakeProfile>) {
+  const { agentProfileId, ...rest } = profile;
+  return { id: agentProfileId, ...rest };
+}
+
 describe("ProfilesController", () => {
   let controller: ProfilesController;
   let service: {
@@ -64,7 +70,7 @@ describe("ProfilesController", () => {
     const result = controller.create("pool-1", dto);
 
     expect(service.create).toHaveBeenCalledWith("pool-1", dto);
-    expect(result).toEqual(profile);
+    expect(result).toEqual(expectedProfile(profile));
   });
 
   /**
@@ -100,7 +106,7 @@ describe("ProfilesController", () => {
     const result = controller.findById("pool-1", "profile-1");
 
     expect(service.findById).toHaveBeenCalledWith("pool-1", "profile-1");
-    expect(result).toEqual(profile);
+    expect(result).toEqual(expectedProfile(profile));
   });
 
   /**
@@ -124,7 +130,7 @@ describe("ProfilesController", () => {
     const result = controller.update("pool-1", "profile-1", dto);
 
     expect(service.update).toHaveBeenCalledWith("pool-1", "profile-1", dto);
-    expect(result).toEqual(profile);
+    expect(result).toEqual(expectedProfile(profile));
   });
 
   /**

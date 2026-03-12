@@ -23,8 +23,12 @@ import { ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from "@nestjs/
 import { PoliciesService } from "./policies.service.js";
 import { PolicyQueryDto } from "./dtos/policy-query.dto.js";
 import { UpdatePolicySetDto } from "./dtos/update-policy-set.dto.js";
-import type { PaginatedPolicySetResponse } from "./policies.service.js";
-import type { PolicySet } from "../infrastructure/repositories/policy-set.repository.js";
+import {
+  mapPolicySet,
+  mapPaginated,
+  type PolicySetResponse,
+  type MappedPaginatedResponse,
+} from "../common/response-mappers.js";
 
 /**
  * Handles HTTP requests for policy set management.
@@ -54,8 +58,8 @@ export class PoliciesController {
     description: "Items per page (1-100, default: 20)",
   })
   @ApiResponse({ status: 200, description: "Paginated policy set list." })
-  findAll(@Query() query: PolicyQueryDto): PaginatedPolicySetResponse {
-    return this.policiesService.findAll(query.page, query.limit);
+  findAll(@Query() query: PolicyQueryDto): MappedPaginatedResponse<PolicySetResponse> {
+    return mapPaginated(this.policiesService.findAll(query.page, query.limit), mapPolicySet);
   }
 
   /**
@@ -70,12 +74,12 @@ export class PoliciesController {
   @ApiParam({ name: "id", description: "Policy set UUID" })
   @ApiResponse({ status: 200, description: "Policy set detail." })
   @ApiResponse({ status: 404, description: "Policy set not found." })
-  findById(@Param("id") id: string): PolicySet {
+  findById(@Param("id") id: string): PolicySetResponse {
     const policySet = this.policiesService.findById(id);
     if (!policySet) {
       throw new NotFoundException(`Policy set with ID "${id}" not found`);
     }
-    return policySet;
+    return mapPolicySet(policySet);
   }
 
   /**
@@ -95,11 +99,11 @@ export class PoliciesController {
   @ApiResponse({ status: 200, description: "Policy set updated." })
   @ApiResponse({ status: 400, description: "Validation failed." })
   @ApiResponse({ status: 404, description: "Policy set not found." })
-  update(@Param("id") id: string, @Body() dto: UpdatePolicySetDto): PolicySet {
+  update(@Param("id") id: string, @Body() dto: UpdatePolicySetDto): PolicySetResponse {
     const policySet = this.policiesService.update(id, dto);
     if (!policySet) {
       throw new NotFoundException(`Policy set with ID "${id}" not found`);
     }
-    return policySet;
+    return mapPolicySet(policySet);
   }
 }

@@ -12,7 +12,12 @@ import { Controller, Get, Inject } from "@nestjs/common";
 import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 
 import { ConfigService } from "./config.service.js";
-import type { EffectiveConfigResponse } from "./config.service.js";
+
+/** Response shape matching the web-ui EffectiveConfig interface. */
+interface MappedEffectiveConfigResponse {
+  effective: Record<string, unknown>;
+  layers: Record<string, unknown>[];
+}
 
 /**
  * Handles HTTP requests for configuration resolution.
@@ -44,7 +49,14 @@ export class ConfigController {
     status: 200,
     description: "Resolved configuration with source tracking.",
   })
-  getEffective(): EffectiveConfigResponse {
-    return this.configService.resolveEffective();
+  getEffective(): MappedEffectiveConfigResponse {
+    const result = this.configService.resolveEffective();
+    return {
+      effective: result.config as unknown as Record<string, unknown>,
+      layers: Object.entries(result.sources).map(([name, fields]) => ({
+        name,
+        fields,
+      })),
+    };
   }
 }

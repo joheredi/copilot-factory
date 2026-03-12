@@ -526,7 +526,7 @@ function makeJob(overrides: Record<string, unknown> = {}) {
   return {
     jobId: randomUUID(),
     jobType: "execute-task",
-    status: "PENDING",
+    status: "pending",
     ...overrides,
   };
 }
@@ -1834,7 +1834,7 @@ describe("Job repository", () => {
     const row = repo.create(data as never);
     expect(row.jobId).toBe(data.jobId);
     expect(row.jobType).toBe("execute-task");
-    expect(row.status).toBe("PENDING");
+    expect(row.status).toBe("pending");
     expect(row.attemptCount).toBe(0);
   });
 
@@ -1869,10 +1869,10 @@ describe("Job repository", () => {
 
   /** @why findByStatus filters jobs by queue status. */
   it("findByStatus returns jobs matching the status", () => {
-    repo.create(makeJob({ status: "PENDING" }) as never);
-    repo.create(makeJob({ status: "CLAIMED" }) as never);
-    expect(repo.findByStatus("PENDING")).toHaveLength(1);
-    expect(repo.findByStatus("CLAIMED")).toHaveLength(1);
+    repo.create(makeJob({ status: "pending" }) as never);
+    repo.create(makeJob({ status: "claimed" }) as never);
+    expect(repo.findByStatus("pending")).toHaveLength(1);
+    expect(repo.findByStatus("claimed")).toHaveLength(1);
   });
 
   /** @why findByJobGroupId groups related jobs. */
@@ -1892,31 +1892,32 @@ describe("Job repository", () => {
     expect(repo.findByParentJobId(parent.jobId)).toHaveLength(2);
   });
 
-  /** @why findClaimable returns PENDING jobs whose runAfter is in the past. */
+  /** @why findClaimable returns pending jobs whose runAfter is null or in the past. */
   it("findClaimable returns eligible jobs", () => {
     const past = new Date(Date.now() - 60_000);
     const future = new Date(Date.now() + 3600_000);
+    repo.create(makeJob() as never);
     repo.create(makeJob({ runAfter: past }) as never);
     repo.create(makeJob({ runAfter: future }) as never);
-    repo.create(makeJob({ status: "CLAIMED", runAfter: past }) as never);
+    repo.create(makeJob({ status: "claimed", runAfter: past }) as never);
 
     const claimable = repo.findClaimable(new Date());
-    expect(claimable).toHaveLength(1);
-    expect(claimable[0]!.status).toBe("PENDING");
+    expect(claimable).toHaveLength(2);
+    expect(claimable[0]!.status).toBe("pending");
   });
 
-  /** @why claimJob on a PENDING job must atomically set CLAIMED, assign owner, increment attemptCount. */
+  /** @why claimJob on a pending job must atomically set claimed, assign owner, increment attemptCount. */
   it("claimJob succeeds on a PENDING job", () => {
     const created = repo.create(makeJob() as never);
     const claimed = repo.claimJob(created.jobId, "worker-1");
     expect(claimed).toBeDefined();
-    expect(claimed!.status).toBe("CLAIMED");
+    expect(claimed!.status).toBe("claimed");
     expect(claimed!.leaseOwner).toBe("worker-1");
     expect(claimed!.attemptCount).toBe(1);
   });
 
   /** @why claimJob must fail gracefully when the job is already claimed. */
-  it("claimJob returns undefined on an already-CLAIMED job", () => {
+  it("claimJob returns undefined on an already-claimed job", () => {
     const created = repo.create(makeJob() as never);
     repo.claimJob(created.jobId, "worker-1");
     const second = repo.claimJob(created.jobId, "worker-2");

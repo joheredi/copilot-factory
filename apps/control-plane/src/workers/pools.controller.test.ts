@@ -108,7 +108,8 @@ describe("PoolsController", () => {
     const result = controller.create(dto);
 
     expect(service.create).toHaveBeenCalledWith(dto);
-    expect(result).toEqual(pool);
+    expect(result.id).toBe("pool-1");
+    expect(result).not.toHaveProperty("workerPoolId");
   });
 
   /**
@@ -133,7 +134,8 @@ describe("PoolsController", () => {
       poolType: "developer",
       enabled: undefined,
     });
-    expect(result).toEqual(response);
+    expect(result.data[0].id).toBe("pool-1");
+    expect(result.data[0]).not.toHaveProperty("workerPoolId");
   });
 
   /**
@@ -147,7 +149,9 @@ describe("PoolsController", () => {
     const result = controller.findById("pool-1");
 
     expect(service.findDetailById).toHaveBeenCalledWith("pool-1");
-    expect(result).toEqual(detail);
+    expect(result.id).toBe("pool-1");
+    expect(result).not.toHaveProperty("workerPoolId");
+    expect(result.enabled).toBe(true);
   });
 
   /**
@@ -170,7 +174,8 @@ describe("PoolsController", () => {
     const result = controller.update("pool-1", { name: "Updated Pool" });
 
     expect(service.update).toHaveBeenCalledWith("pool-1", { name: "Updated Pool" });
-    expect(result).toEqual(pool);
+    expect(result.id).toBe("pool-1");
+    expect(result).not.toHaveProperty("workerPoolId");
   });
 
   /**

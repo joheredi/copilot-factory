@@ -32,9 +32,13 @@ import { CreatePoolDto } from "./dtos/create-pool.dto.js";
 import { PoolFilterQueryDto } from "./dtos/pool-filter-query.dto.js";
 import { UpdatePoolDto } from "./dtos/update-pool.dto.js";
 import { PoolsService } from "./pools.service.js";
-import type { PaginatedResponse, PoolDetail } from "./pools.service.js";
-import type { WorkerPool } from "../infrastructure/repositories/worker-pool.repository.js";
 import type { Worker } from "../infrastructure/repositories/worker.repository.js";
+import {
+  mapPool,
+  mapPaginated,
+  type PoolResponse,
+  type MappedPaginatedResponse,
+} from "../common/response-mappers.js";
 
 /**
  * REST controller for worker pool CRUD and worker listing.
@@ -67,8 +71,8 @@ export class PoolsController {
   @ApiOperation({ summary: "Create a worker pool" })
   @ApiResponse({ status: 201, description: "Pool created." })
   @ApiResponse({ status: 400, description: "Validation failed." })
-  create(@Body() dto: CreatePoolDto): WorkerPool {
-    return this.poolsService.create(dto);
+  create(@Body() dto: CreatePoolDto): PoolResponse {
+    return mapPool(this.poolsService.create(dto));
   }
 
   /**
@@ -85,11 +89,12 @@ export class PoolsController {
   @ApiQuery({ name: "poolType", required: false, description: "Filter by pool type" })
   @ApiQuery({ name: "enabled", required: false, description: "Filter by enabled status" })
   @ApiResponse({ status: 200, description: "Paginated pool list." })
-  findAll(@Query() query: PoolFilterQueryDto): PaginatedResponse<WorkerPool> {
-    return this.poolsService.findAll(query.page, query.limit, {
+  findAll(@Query() query: PoolFilterQueryDto): MappedPaginatedResponse<PoolResponse> {
+    const result = this.poolsService.findAll(query.page, query.limit, {
       poolType: query.poolType,
       enabled: query.enabled,
     });
+    return mapPaginated(result, mapPool);
   }
 
   /**
@@ -107,12 +112,12 @@ export class PoolsController {
   @ApiParam({ name: "id", description: "Pool UUID" })
   @ApiResponse({ status: 200, description: "Pool detail with worker counts and profiles." })
   @ApiResponse({ status: 404, description: "Pool not found." })
-  findById(@Param("id") id: string): PoolDetail {
+  findById(@Param("id") id: string): PoolResponse {
     const detail = this.poolsService.findDetailById(id);
     if (!detail) {
       throw new NotFoundException(`Pool with ID "${id}" not found`);
     }
-    return detail;
+    return mapPool(detail.pool);
   }
 
   /**
@@ -132,12 +137,12 @@ export class PoolsController {
   @ApiResponse({ status: 200, description: "Pool updated." })
   @ApiResponse({ status: 400, description: "Validation failed." })
   @ApiResponse({ status: 404, description: "Pool not found." })
-  update(@Param("id") id: string, @Body() dto: UpdatePoolDto): WorkerPool {
+  update(@Param("id") id: string, @Body() dto: UpdatePoolDto): PoolResponse {
     const pool = this.poolsService.update(id, dto);
     if (!pool) {
       throw new NotFoundException(`Pool with ID "${id}" not found`);
     }
-    return pool;
+    return mapPool(pool);
   }
 
   /**

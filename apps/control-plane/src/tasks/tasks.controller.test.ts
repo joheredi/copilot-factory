@@ -48,6 +48,12 @@ function fakeTask(overrides: Record<string, unknown> = {}) {
   };
 }
 
+/** Map a fake task to the expected response shape (taskId → id). */
+function expectedTask(task: ReturnType<typeof fakeTask>) {
+  const { taskId, ...rest } = task;
+  return { id: taskId, ...rest };
+}
+
 /** Factory for a fake task detail response. */
 function fakeTaskDetail(overrides: Record<string, unknown> = {}) {
   return {
@@ -112,7 +118,7 @@ describe("TasksController", () => {
     const result = controller.create(dto);
 
     expect(service.create).toHaveBeenCalledWith(dto);
-    expect(result).toEqual(task);
+    expect(result).toEqual(expectedTask(task));
   });
 
   /**
@@ -172,7 +178,10 @@ describe("TasksController", () => {
       priority: undefined,
       taskType: undefined,
     });
-    expect(result).toEqual(response);
+    expect(result).toEqual({
+      data: response.data.map(expectedTask),
+      meta: response.meta,
+    });
   });
 
   /**
@@ -186,7 +195,7 @@ describe("TasksController", () => {
     const result = controller.findById("task-1");
 
     expect(service.findDetailById).toHaveBeenCalledWith("task-1");
-    expect(result).toEqual(detail);
+    expect(result).toEqual({ ...detail, task: expectedTask(detail.task) });
   });
 
   /**
@@ -210,7 +219,7 @@ describe("TasksController", () => {
     const result = controller.update("task-1", { title: "Updated", version: 1 });
 
     expect(service.update).toHaveBeenCalledWith("task-1", { title: "Updated", version: 1 });
-    expect(result).toEqual(task);
+    expect(result).toEqual(expectedTask(task));
   });
 
   /**

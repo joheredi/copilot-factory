@@ -10,7 +10,7 @@
  * @see {@link file://docs/prd/002-data-model.md} §2.3 Job
  */
 
-import { eq, and, lte, sql } from "drizzle-orm";
+import { and, eq, isNull, lte, or, sql } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import { jobs } from "../database/schema.js";
@@ -62,7 +62,7 @@ export function createJobRepository(db: BetterSQLite3Database) {
     },
 
     /**
-     * Find jobs that are eligible to be claimed: status is "PENDING" and
+     * Find jobs that are eligible to be claimed: status is "pending" and
      * `runAfter` is either null or in the past. Results are ordered by
      * creation time (FIFO).
      */
@@ -70,16 +70,16 @@ export function createJobRepository(db: BetterSQLite3Database) {
       return db
         .select()
         .from(jobs)
-        .where(and(eq(jobs.status, "PENDING"), lte(jobs.runAfter, now)))
+        .where(and(eq(jobs.status, "pending"), or(isNull(jobs.runAfter), lte(jobs.runAfter, now))))
         .all();
     },
 
     /**
      * Atomically claim a job for processing.
      *
-     * Sets the job status to "CLAIMED", assigns `leaseOwner`, increments
+     * Sets the job status to "claimed", assigns `leaseOwner`, increments
      * `attemptCount`, and updates `updatedAt` — but only if the job is
-     * currently in "PENDING" status. If the job was already claimed (or is
+     * currently in "pending" status. If the job was already claimed (or is
      * in any other status), the WHERE clause matches zero rows and the
      * method returns `undefined`.
      *
@@ -93,12 +93,12 @@ export function createJobRepository(db: BetterSQLite3Database) {
       return db
         .update(jobs)
         .set({
-          status: "CLAIMED",
+          status: "claimed",
           leaseOwner,
           attemptCount: sql`${jobs.attemptCount} + 1`,
           updatedAt: new Date(),
         })
-        .where(and(eq(jobs.jobId, jobId), eq(jobs.status, "PENDING")))
+        .where(and(eq(jobs.jobId, jobId), eq(jobs.status, "pending")))
         .returning()
         .get();
     },

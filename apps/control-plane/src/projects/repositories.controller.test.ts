@@ -30,6 +30,12 @@ function fakeRepository(overrides: Record<string, unknown> = {}) {
   };
 }
 
+/** Map a fake repository to the expected response shape (repositoryId → id). */
+function expectedRepository(repo: ReturnType<typeof fakeRepository>) {
+  const { repositoryId, ...rest } = repo;
+  return { id: repositoryId, ...rest };
+}
+
 describe("RepositoriesController", () => {
   let controller: RepositoriesController;
   let service: {
@@ -73,7 +79,7 @@ describe("RepositoriesController", () => {
     const result = controller.create("proj-1", dto);
 
     expect(service.create).toHaveBeenCalledWith("proj-1", dto);
-    expect(result).toEqual(repo);
+    expect(result).toEqual(expectedRepository(repo));
   });
 
   /**
@@ -92,7 +98,10 @@ describe("RepositoriesController", () => {
     });
 
     expect(service.findByProjectId).toHaveBeenCalledWith("proj-1", 1, 20);
-    expect(result).toEqual(response);
+    expect(result).toEqual({
+      data: response.data.map(expectedRepository),
+      meta: response.meta,
+    });
   });
 
   /**
@@ -104,7 +113,7 @@ describe("RepositoriesController", () => {
 
     const result = controller.findById("repo-1");
 
-    expect(result).toEqual(repo);
+    expect(result).toEqual(expectedRepository(repo));
   });
 
   /**
@@ -125,7 +134,7 @@ describe("RepositoriesController", () => {
 
     const result = controller.update("repo-1", { name: "Updated" });
 
-    expect(result).toEqual(repo);
+    expect(result).toEqual(expectedRepository(repo));
   });
 
   /**

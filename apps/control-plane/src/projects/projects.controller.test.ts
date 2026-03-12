@@ -29,6 +29,12 @@ function fakeProject(overrides: Record<string, unknown> = {}) {
   };
 }
 
+/** Map a fake project to the expected response shape (projectId → id). */
+function expectedProject(project: ReturnType<typeof fakeProject>) {
+  const { projectId, ...rest } = project;
+  return { id: projectId, ...rest };
+}
+
 describe("ProjectsController", () => {
   let controller: ProjectsController;
   let service: {
@@ -67,7 +73,7 @@ describe("ProjectsController", () => {
       name: "Test Project",
       owner: "alice",
     });
-    expect(result).toEqual(project);
+    expect(result).toEqual(expectedProject(project));
   });
 
   /**
@@ -83,7 +89,10 @@ describe("ProjectsController", () => {
     const result = controller.findAll({ page: 1, limit: 20 });
 
     expect(service.findAll).toHaveBeenCalledWith(1, 20);
-    expect(result).toEqual(response);
+    expect(result).toEqual({
+      data: response.data.map(expectedProject),
+      meta: response.meta,
+    });
   });
 
   /**
@@ -95,7 +104,7 @@ describe("ProjectsController", () => {
 
     const result = controller.findById("proj-1");
 
-    expect(result).toEqual(project);
+    expect(result).toEqual(expectedProject(project));
   });
 
   /**
@@ -117,7 +126,7 @@ describe("ProjectsController", () => {
 
     const result = controller.update("proj-1", { name: "Updated" });
 
-    expect(result).toEqual(project);
+    expect(result).toEqual(expectedProject(project));
   });
 
   /**

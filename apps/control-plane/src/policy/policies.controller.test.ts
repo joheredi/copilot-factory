@@ -42,6 +42,12 @@ function fakePolicySet(overrides: Partial<PolicySet> = {}): PolicySet {
   };
 }
 
+/** Map a fake policy set to the expected response shape (policySetId → id). */
+function expectedPolicySet(ps: PolicySet) {
+  const { policySetId, ...rest } = ps;
+  return { id: policySetId, ...rest };
+}
+
 describe("PoliciesController", () => {
   let controller: PoliciesController;
   let service: {
@@ -72,7 +78,10 @@ describe("PoliciesController", () => {
     const result = controller.findAll({ page: 1, limit: 20 });
 
     expect(service.findAll).toHaveBeenCalledWith(1, 20);
-    expect(result).toEqual(expected);
+    expect(result).toEqual({
+      data: expected.data.map(expectedPolicySet),
+      meta: expected.meta,
+    });
   });
 
   /**
@@ -85,7 +94,7 @@ describe("PoliciesController", () => {
     const result = controller.findById("ps-1");
 
     expect(service.findById).toHaveBeenCalledWith("ps-1");
-    expect(result).toEqual(policySet);
+    expect(result).toEqual(expectedPolicySet(policySet));
   });
 
   /**
@@ -108,7 +117,7 @@ describe("PoliciesController", () => {
     const result = controller.update("ps-1", { name: "strict" });
 
     expect(service.update).toHaveBeenCalledWith("ps-1", { name: "strict" });
-    expect(result).toEqual(updated);
+    expect(result).toEqual(expectedPolicySet(updated));
   });
 
   /**

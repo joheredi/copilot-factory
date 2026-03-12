@@ -27,8 +27,12 @@ import { CreateProjectDto } from "./dtos/create-project.dto.js";
 import { PaginationQueryDto } from "./dtos/pagination-query.dto.js";
 import { UpdateProjectDto } from "./dtos/update-project.dto.js";
 import { ProjectsService } from "./projects.service.js";
-import type { PaginatedResponse } from "./projects.service.js";
-import type { Project } from "../infrastructure/repositories/project.repository.js";
+import {
+  mapProject,
+  mapPaginated,
+  type ProjectResponse,
+  type MappedPaginatedResponse,
+} from "../common/response-mappers.js";
 
 /**
  * Handles HTTP requests for project management.
@@ -55,8 +59,8 @@ export class ProjectsController {
   @ApiResponse({ status: 201, description: "Project created." })
   @ApiResponse({ status: 400, description: "Validation failed." })
   @ApiResponse({ status: 409, description: "Project name already exists." })
-  create(@Body() dto: CreateProjectDto): Project {
-    return this.projectsService.create(dto);
+  create(@Body() dto: CreateProjectDto): ProjectResponse {
+    return mapProject(this.projectsService.create(dto));
   }
 
   /**
@@ -68,8 +72,8 @@ export class ProjectsController {
   @Get()
   @ApiOperation({ summary: "List projects" })
   @ApiResponse({ status: 200, description: "Paginated project list." })
-  findAll(@Query() query: PaginationQueryDto): PaginatedResponse<Project> {
-    return this.projectsService.findAll(query.page, query.limit);
+  findAll(@Query() query: PaginationQueryDto): MappedPaginatedResponse<ProjectResponse> {
+    return mapPaginated(this.projectsService.findAll(query.page, query.limit), mapProject);
   }
 
   /**
@@ -84,12 +88,12 @@ export class ProjectsController {
   @ApiParam({ name: "id", description: "Project UUID" })
   @ApiResponse({ status: 200, description: "Project found." })
   @ApiResponse({ status: 404, description: "Project not found." })
-  findById(@Param("id") id: string): Project {
+  findById(@Param("id") id: string): ProjectResponse {
     const project = this.projectsService.findById(id);
     if (!project) {
       throw new NotFoundException(`Project with ID "${id}" not found`);
     }
-    return project;
+    return mapProject(project);
   }
 
   /**
@@ -107,12 +111,12 @@ export class ProjectsController {
   @ApiResponse({ status: 400, description: "Validation failed." })
   @ApiResponse({ status: 404, description: "Project not found." })
   @ApiResponse({ status: 409, description: "Project name already exists." })
-  update(@Param("id") id: string, @Body() dto: UpdateProjectDto): Project {
+  update(@Param("id") id: string, @Body() dto: UpdateProjectDto): ProjectResponse {
     const project = this.projectsService.update(id, dto);
     if (!project) {
       throw new NotFoundException(`Project with ID "${id}" not found`);
     }
-    return project;
+    return mapProject(project);
   }
 
   /**

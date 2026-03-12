@@ -11,6 +11,7 @@
 import { Module } from "@nestjs/common";
 
 import { AuditModule } from "./audit/audit.module.js";
+import { AutomationModule } from "./automation/automation.module.js";
 import { EventsModule } from "./events/events.module.js";
 import { HealthModule } from "./health/health.module.js";
 import { DatabaseModule } from "./infrastructure/database/database.module.js";
@@ -45,6 +46,7 @@ import { WorkersModule } from "./workers/workers.module.js";
   imports: [
     DatabaseModule,
     EventsModule,
+    AutomationModule,
     HealthModule,
     MetricsModule,
     ProjectsModule,

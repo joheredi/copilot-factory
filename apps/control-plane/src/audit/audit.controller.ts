@@ -14,7 +14,12 @@ import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
 
 import { AuditService } from "./audit.service.js";
 import { AuditQueryDto } from "./dtos/audit-query.dto.js";
-import type { PaginatedAuditResponse } from "./audit.service.js";
+import {
+  mapAuditEvent,
+  mapPaginated,
+  type AuditEventResponse,
+  type MappedPaginatedResponse,
+} from "../common/response-mappers.js";
 
 /**
  * Handles HTTP requests for audit event queries.
@@ -75,15 +80,18 @@ export class AuditController {
     description: "Filter for events on or before this ISO 8601 timestamp",
   })
   @ApiResponse({ status: 200, description: "Paginated audit event list." })
-  search(@Query() query: AuditQueryDto): PaginatedAuditResponse {
-    return this.auditService.search(query.page, query.limit, {
-      entityType: query.entityType,
-      entityId: query.entityId,
-      eventType: query.eventType,
-      actorType: query.actorType,
-      actorId: query.actorId,
-      startTime: query.start,
-      endTime: query.end,
-    });
+  search(@Query() query: AuditQueryDto): MappedPaginatedResponse<AuditEventResponse> {
+    return mapPaginated(
+      this.auditService.search(query.page, query.limit, {
+        entityType: query.entityType,
+        entityId: query.entityId,
+        eventType: query.eventType,
+        actorType: query.actorType,
+        actorId: query.actorId,
+        startTime: query.start,
+        endTime: query.end,
+      }),
+      mapAuditEvent,
+    );
   }
 }
