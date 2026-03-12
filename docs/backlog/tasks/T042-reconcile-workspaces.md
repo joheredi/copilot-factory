@@ -5,7 +5,7 @@
 | **ID**                    | T042                                                                        |
 | **Epic**                  | [E008: Workspace Management](../epics/E008-workspace-management.md)         |
 | **Type**                  | feature                                                                     |
-| **Status**                | pending                                                                     |
+| **Status**                | done                                                                        |
 | **Priority**              | P1                                                                          |
 | **Owner**                 | backend-engineer                                                            |
 | **AI Executable**         | Yes                                                                         |
@@ -54,9 +54,9 @@ The implementing agent should read these files before starting:
 
 ## Acceptance Criteria
 
-- [ ] Expired workspaces cleaned up automatically
-- [ ] Orphaned workspaces detected and removed
-- [ ] Cleanup runs periodically without manual intervention
+- [x] Expired workspaces cleaned up automatically
+- [x] Orphaned workspaces detected and removed
+- [x] Cleanup runs periodically without manual intervention
 
 ## Definition of Done
 

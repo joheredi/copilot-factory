@@ -732,3 +732,34 @@ export type {
   ReconciliationSweepService,
   ReconciliationSweepDependencies,
 } from "./services/reconciliation-sweep.service.js";
+
+// Ports — workspace reconciliation interfaces (PRD 007 §7.10, T042)
+export type {
+  ExpiredWorkspaceRecord,
+  WorkspaceDirectoryEntry,
+  ExpiredWorkspaceQueryPort,
+  WorkspaceDirectoryScannerPort,
+  CleanupJobQueryPort,
+  WorkspaceReconciliationTransactionRepositories,
+  WorkspaceReconciliationUnitOfWork,
+} from "./ports/workspace-reconciliation.ports.js";
+
+// Services — workspace reconciliation for automated cleanup (PRD 007 §7.10, T042)
+export {
+  createWorkspaceReconciliationService,
+  DEFAULT_RECONCILIATION_INTERVAL_MS,
+  DEFAULT_RECONCILIATION_LEASE_OWNER,
+  DEFAULT_WORKSPACE_RETENTION_POLICY,
+} from "./services/workspace-reconciliation.service.js";
+export type {
+  WorkspaceReconciliationConfig,
+  InitializeReconciliationResult,
+  ExpiredWorkspaceCleanupAction,
+  OrphanedWorkspaceCleanupAction,
+  WorkspaceReconciliationSummary,
+  ReconciliationProcessedResult,
+  ReconciliationSkippedResult,
+  ProcessReconciliationResult,
+  WorkspaceReconciliationService,
+  WorkspaceReconciliationDependencies,
+} from "./services/workspace-reconciliation.service.js";
