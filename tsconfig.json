@@ -11,6 +11,7 @@
     { "path": "packages/ui-components" },
     { "path": "apps/control-plane" },
     { "path": "apps/web-ui" },
-    { "path": "apps/worker-runner" }
+    { "path": "apps/worker-runner" },
+    { "path": "apps/cli" }
   ]
 }

@@ -5,7 +5,7 @@
 | **ID**                    | T119                                                                       |
 | **Epic**                  | [E024: CLI Package & Single-Command Startup](../epics/E024-cli-package.md) |
 | **Type**                  | foundation                                                                 |
-| **Status**                | pending                                                                    |
+| **Status**                | done                                                                       |
 | **Priority**              | P0                                                                         |
 | **Owner**                 | platform-engineer                                                          |
 | **AI Executable**         | Yes                                                                        |

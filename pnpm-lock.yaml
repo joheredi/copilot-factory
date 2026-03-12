@@ -45,6 +45,12 @@ importers:
         specifier: ^4.0.18
         version: 4.0.18(@opentelemetry/api@1.9.0)(@types/node@25.4.0)(jiti@1.21.7)(jsdom@28.1.0)(tsx@4.21.0)(yaml@2.8.2)
 
+  apps/cli:
+    dependencies:
+      '@factory/control-plane':
+        specifier: workspace:*
+        version: link:../control-plane
+
   apps/control-plane:
     dependencies:
       '@factory/application':

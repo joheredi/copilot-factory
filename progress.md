@@ -1,5 +1,27 @@
 # Progress Log
 
+## T119: Scaffold CLI Workspace (2026-03-12)
+
+**What was done:**
+
+- Created `apps/cli/package.json` — `@copilot/factory` package with `bin.factory` pointing to `./dist/cli.js`, workspace dependency on `@factory/control-plane`
+- Created `apps/cli/tsconfig.json` — extends base config with `composite: true`, references control-plane
+- Created `apps/cli/src/cli.ts` — shebang-bearing entry point with startup banner (version 0.1.0)
+- Updated root `tsconfig.json` — added `apps/cli` project reference
+- Verified: `pnpm install` succeeds, `pnpm build` compiles CLI, `node apps/cli/dist/cli.js` prints banner, all 4,079 tests pass
+
+**Key design decisions:**
+
+- Followed the `worker-runner` workspace pattern (simplest app pattern) rather than control-plane (NestJS-specific)
+- Package name is `@copilot/factory` (not `@factory/cli`) per task spec — this is the public npm package name
+- No test/test:watch scripts added since there's no test-worthy logic yet (T121 will add CLI logic)
+
+**What the next loop should know:**
+
+- T119 unblocks T120 (bundle-web-ui) and T121 (cli-entry-point)
+- The `apps/cli` workspace is covered by the `apps/*` glob in both `pnpm-workspace.yaml` and `vitest.workspace.ts`
+- The `@factory/control-plane` dependency means CLI must be built after control-plane in the project reference graph
+
 ## T132: Implement WorkerDispatchService (2025-07-17)
 
 **What was done:**

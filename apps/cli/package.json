@@ -1,0 +1,31 @@
+{
+  "name": "@copilot/factory",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "CLI entry point for the Autonomous Software Factory — single-command startup for the control plane, worker runtime, and web UI.",
+  "bin": {
+    "factory": "./dist/cli.js"
+  },
+  "main": "./dist/cli.js",
+  "types": "./dist/cli.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/cli.d.ts",
+      "import": "./dist/cli.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc --build",
+    "dev": "tsx src/cli.ts",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "lint": "eslint .",
+    "format": "prettier --write ."
+  },
+  "dependencies": {
+    "@factory/control-plane": "workspace:*"
+  }
+}
