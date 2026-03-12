@@ -101,9 +101,9 @@ export function TaskTimelineTab({ taskId }: TaskTimelineTabProps) {
   const [page, setPage] = useState(1);
   const { data, isLoading, isError } = useTaskTimeline(taskId, { page, limit: 50 });
 
-  const events = data?.items ?? [];
-  const total = data?.total ?? 0;
-  const hasMore = data?.hasMore ?? false;
+  const events = data?.data ?? [];
+  const total = data?.meta?.total ?? 0;
+  const hasMore = data?.meta ? data.meta.page * data.meta.limit < data.meta.total : false;
 
   if (isLoading) {
     return (

@@ -71,11 +71,8 @@ describe("useProjects", () => {
    */
   it("fetches paginated project list", async () => {
     const data = {
-      items: [{ id: "1", name: "Test" }],
-      page: 1,
-      limit: 20,
-      total: 1,
-      hasMore: false,
+      data: [{ id: "1", name: "Test" }],
+      meta: { page: 1, limit: 20, total: 1, totalPages: 1 },
     };
     fetchSpy.mockImplementation(() => Promise.resolve(fakeResponse(data)));
 

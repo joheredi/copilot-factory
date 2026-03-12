@@ -55,7 +55,7 @@ describe("usePolicies", () => {
    * Validates that usePolicies fetches from /api/policies.
    */
   it("fetches paginated policies", async () => {
-    const data = { items: [], page: 1, limit: 20, total: 0, hasMore: false };
+    const data = { data: [], meta: { page: 1, limit: 20, total: 0, totalPages: 1 } };
     fetchSpy.mockImplementation(() => Promise.resolve(fakeResponse(data)));
 
     const { wrapper } = createWrapper();

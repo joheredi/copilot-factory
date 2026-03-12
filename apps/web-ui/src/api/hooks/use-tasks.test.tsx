@@ -67,7 +67,7 @@ describe("useTasks", () => {
    * filtering UI.
    */
   it("fetches tasks with filter params", async () => {
-    const data = { items: [], page: 1, limit: 20, total: 0, hasMore: false };
+    const data = { data: [], meta: { page: 1, limit: 20, total: 0, totalPages: 1 } };
     fetchSpy.mockImplementation(() => Promise.resolve(fakeResponse(data)));
 
     const { wrapper } = createWrapper();
@@ -112,7 +112,7 @@ describe("useTaskTimeline", () => {
    * The task detail view depends on this for audit history.
    */
   it("fetches timeline for a task", async () => {
-    const data = { items: [], page: 1, limit: 50, total: 0, hasMore: false };
+    const data = { data: [], meta: { page: 1, limit: 50, total: 0, totalPages: 1 } };
     fetchSpy.mockImplementation(() => Promise.resolve(fakeResponse(data)));
 
     const { wrapper } = createWrapper();

@@ -124,7 +124,7 @@ export function PoliciesTab() {
     });
   }, [selectedId, editedFields, editedName, allFieldsValid, updateMutation]);
 
-  const policies = policiesData?.items ?? [];
+  const policies = policiesData?.data ?? [];
 
   // --- Loading state ---
   if (isLoadingList) {

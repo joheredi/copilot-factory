@@ -200,7 +200,7 @@ describe("apiGet", () => {
    * Validates that apiGet sends a GET request and appends query params.
    */
   it("sends GET with query parameters", async () => {
-    fetchSpy.mockResolvedValue(fakeResponse({ items: [] }));
+    fetchSpy.mockResolvedValue(fakeResponse({ data: [] }));
     await apiGet("/tasks", { page: 2, limit: 10 });
     const [url, init] = fetchSpy.mock.calls[0]!;
     expect(url).toBe("/api/tasks?page=2&limit=10");

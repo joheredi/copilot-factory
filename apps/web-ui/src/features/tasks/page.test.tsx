@@ -48,7 +48,7 @@ function makePaginatedResponse(
   page = 1,
   limit = 20,
 ): PaginatedResponse<Task> {
-  return { items, page, limit, total, hasMore: page * limit < total };
+  return { data: items, meta: { page, limit, total, totalPages: Math.ceil(total / limit) } };
 }
 
 /** Creates a minimal valid Task object for testing. */

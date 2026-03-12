@@ -182,8 +182,8 @@ export default function ReviewsPage() {
   const isLoading = inReviewQuery.isLoading || changesRequestedQuery.isLoading;
   const isError = inReviewQuery.isError || changesRequestedQuery.isError;
 
-  const inReviewTasks = inReviewQuery.data?.items ?? [];
-  const changesRequestedTasks = changesRequestedQuery.data?.items ?? [];
+  const inReviewTasks = inReviewQuery.data?.data ?? [];
+  const changesRequestedTasks = changesRequestedQuery.data?.data ?? [];
   const allTasks = [...inReviewTasks, ...changesRequestedTasks];
 
   const filteredTasks = statusFilter ? allTasks.filter((t) => t.status === statusFilter) : allTasks;

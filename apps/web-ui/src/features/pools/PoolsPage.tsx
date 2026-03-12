@@ -43,8 +43,8 @@ export default function PoolsPage() {
 
   const { data, isLoading, isError } = usePools(params);
 
-  const pools = data?.items ?? [];
-  const total = data?.total ?? 0;
+  const pools = data?.data ?? [];
+  const total = data?.meta?.total ?? 0;
 
   const activeFilterCount =
     (poolTypeFilter !== undefined ? 1 : 0) + (enabledFilter !== undefined ? 1 : 0);

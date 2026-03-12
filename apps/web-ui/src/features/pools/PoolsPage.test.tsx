@@ -39,11 +39,8 @@ function fakeResponse(body: unknown, status = 200): Response {
 
 function paginatedResponse<T>(items: T[], total?: number) {
   return {
-    items,
-    page: 1,
-    limit: items.length || 1,
-    total: total ?? items.length,
-    hasMore: false,
+    data: items,
+    meta: { page: 1, limit: items.length || 1, total: total ?? items.length, totalPages: 1 },
   };
 }
 

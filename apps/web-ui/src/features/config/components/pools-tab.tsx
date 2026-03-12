@@ -175,7 +175,7 @@ export function PoolsTab() {
     });
   }, [selectedId, form, allValid, updateMutation]);
 
-  const pools = poolsData?.items ?? [];
+  const pools = poolsData?.data ?? [];
 
   // --- Loading ---
   if (isLoadingList) {

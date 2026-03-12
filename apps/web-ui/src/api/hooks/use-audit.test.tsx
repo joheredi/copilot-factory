@@ -47,7 +47,7 @@ describe("useAuditLog", () => {
    * The audit explorer applies entity type, actor, and time range filters.
    */
   it("fetches audit log with filters", async () => {
-    const data = { items: [], page: 1, limit: 20, total: 0, hasMore: false };
+    const data = { data: [], meta: { page: 1, limit: 20, total: 0, totalPages: 1 } };
     fetchSpy.mockImplementation(() => Promise.resolve(fakeResponse(data)));
 
     const { wrapper } = createWrapper();
@@ -67,7 +67,7 @@ describe("useAuditLog", () => {
    * Validates that useAuditLog works without any filters (fetches all).
    */
   it("fetches without filters", async () => {
-    const data = { items: [], page: 1, limit: 20, total: 0, hasMore: false };
+    const data = { data: [], meta: { page: 1, limit: 20, total: 0, totalPages: 1 } };
     fetchSpy.mockImplementation(() => Promise.resolve(fakeResponse(data)));
 
     const { wrapper } = createWrapper();

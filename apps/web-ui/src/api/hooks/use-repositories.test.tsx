@@ -54,7 +54,7 @@ describe("useRepositories", () => {
    * Validates the nested endpoint: /projects/:id/repositories.
    */
   it("fetches repositories for a project", async () => {
-    const data = { items: [], page: 1, limit: 20, total: 0, hasMore: false };
+    const data = { data: [], meta: { page: 1, limit: 20, total: 0, totalPages: 1 } };
     fetchSpy.mockImplementation(() => Promise.resolve(fakeResponse(data)));
 
     const { wrapper } = createWrapper();

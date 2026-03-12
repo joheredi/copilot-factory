@@ -87,7 +87,7 @@ function makeTaskDetail(taskOverrides?: Partial<Task>): TaskDetail {
 }
 
 function makeEmptyTimeline(): PaginatedResponse<AuditEvent> {
-  return { items: [], page: 1, limit: 50, total: 0, hasMore: false };
+  return { data: [], meta: { page: 1, limit: 50, total: 0, totalPages: 1 } };
 }
 
 function makeEmptyReviewHistory(): ReviewHistoryResponse {

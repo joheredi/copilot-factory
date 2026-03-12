@@ -28,12 +28,12 @@ function fakeResponse(body: unknown, status = 200): Response {
 }
 
 function emptyAuditResponse() {
-  return { items: [], page: 1, limit: 20, total: 0, hasMore: false };
+  return { data: [], meta: { page: 1, limit: 20, total: 0, totalPages: 1 } };
 }
 
 function populatedAuditResponse() {
   return {
-    items: [
+    data: [
       {
         id: "evt-001",
         entityType: "task",
@@ -59,10 +59,7 @@ function populatedAuditResponse() {
         timestamp: "2024-06-15T14:29:00Z",
       },
     ],
-    page: 1,
-    limit: 20,
-    total: 2,
-    hasMore: false,
+    meta: { page: 1, limit: 20, total: 2, totalPages: 1 },
   };
 }
 
@@ -230,7 +227,7 @@ describe("AuditPage", () => {
     fetchSpy.mockImplementation(() =>
       Promise.resolve(
         fakeResponse({
-          items: [
+          data: [
             {
               id: "evt-001",
               entityType: "task",
@@ -244,10 +241,7 @@ describe("AuditPage", () => {
               timestamp: "2024-06-15T14:30:00Z",
             },
           ],
-          page: 1,
-          limit: 20,
-          total: 50,
-          hasMore: true,
+          meta: { page: 1, limit: 20, total: 50, totalPages: 2 },
         }),
       ),
     );

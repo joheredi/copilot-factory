@@ -90,7 +90,7 @@ function taskCountQuery(status: string) {
     queryKey: [...queryKeys.tasks.all, "dashboard-count", status] as const,
     queryFn: async () => {
       const response = await apiGet<PaginatedResponse<Task>>("/tasks", params);
-      return response.total;
+      return response.meta.total;
     },
     staleTime: 15_000,
   };
@@ -150,7 +150,7 @@ export function useDashboardData(): DashboardData {
     staleTime: 30_000,
   });
 
-  const pools = poolsQuery.data?.items ?? [];
+  const pools = poolsQuery.data?.data ?? [];
   const poolSummary: PoolSummary = {
     totalPools: pools.length,
     enabledPools: pools.filter((p) => p.enabled).length,
@@ -164,7 +164,7 @@ export function useDashboardData(): DashboardData {
     staleTime: 10_000,
   });
 
-  const recentActivity = auditQuery.data?.items ?? [];
+  const recentActivity = auditQuery.data?.data ?? [];
 
   // --- Aggregate loading/error state -----------------------------------------
   const isLoading =

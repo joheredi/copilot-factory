@@ -125,7 +125,7 @@ function makeTaskDetail(overrides?: Partial<TaskDetail>): TaskDetail {
 
 /** Creates a timeline response. */
 function makeTimelineResponse(events: AuditEvent[] = []): PaginatedResponse<AuditEvent> {
-  return { items: events, page: 1, limit: 50, total: events.length, hasMore: false };
+  return { data: events, meta: { page: 1, limit: 50, total: events.length, totalPages: 1 } };
 }
 
 /** Creates a sample audit event. */

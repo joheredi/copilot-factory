@@ -34,8 +34,8 @@ export default function AuditPage() {
 
   const { data, isLoading, isError } = useAuditLog(filterState.params);
 
-  const events = data?.items ?? [];
-  const total = data?.total ?? 0;
+  const events = data?.data ?? [];
+  const total = data?.meta?.total ?? 0;
 
   return (
     <div className="space-y-6">

@@ -13,11 +13,13 @@
 
 /** Standard paginated response envelope used by all list endpoints. */
 export interface PaginatedResponse<T> {
-  readonly items: T[];
-  readonly page: number;
-  readonly limit: number;
-  readonly total: number;
-  readonly hasMore: boolean;
+  readonly data: T[];
+  readonly meta: {
+    readonly page: number;
+    readonly limit: number;
+    readonly total: number;
+    readonly totalPages: number;
+  };
 }
 
 /** Pagination query parameters accepted by list endpoints. */
