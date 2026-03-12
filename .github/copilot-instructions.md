@@ -149,3 +149,4 @@ The main runtime components described across the docs are the control plane serv
 - **Tests:** Vitest with jsdom environment. Each test file needs `// @vitest-environment jsdom` docblock and `import "@testing-library/jest-dom/vitest"` for DOM matchers.
 - **tsconfig:** Overrides base config with `jsx: "react-jsx"`, `module: "ESNext"`, `moduleResolution: "bundler"`, `emitDeclarationOnly: true`
 - **Imports:** Use relative imports (not `@/` path alias) for Vitest workspace compatibility
+- **Test cleanup:** In vitest workspace mode, `setupFiles` from per-project `vitest.config.ts` may not execute when running from root. Always add explicit `afterEach(cleanup)` from `@testing-library/react` + `vitest` in web-ui test files to ensure DOM cleanup between tests.

@@ -379,3 +379,29 @@ Also fixed T072 backlog index status (was `pending` but task file was `done`).
 - All hooks re-exported from `src/api/hooks/index.ts` and `src/api/index.ts`
 - Types are manually maintained — consider OpenAPI codegen if backend DTOs drift
 - T091 (WebSocket) and T092 (App Shell) are now unblocked
+
+## T092: Build app shell with navigation layout (2026-03-12)
+
+**What was done:**
+
+- Enhanced `apps/web-ui/src/app/layout.tsx` with responsive sidebar (collapses on mobile with hamburger toggle), breadcrumbs header bar, and WebSocket connection status indicator
+- Created `src/components/layout/breadcrumbs.tsx` — route-aware breadcrumb trail using React Router location
+- Created `src/components/layout/connection-status.tsx` — WebSocket connection indicator (connected/disconnected states with accessible ARIA attributes)
+- Created 6 placeholder feature pages: tasks, workers, reviews, merge-queue, config, audit
+- Updated `src/app/routes.tsx` with lazy-loaded routes for all 7 views
+- Added comprehensive tests for layout, breadcrumbs, and connection status (25 new tests)
+- Fixed test cleanup issue: vitest workspace mode from root doesn't load per-project setupFiles; added explicit `afterEach(cleanup)` to test files
+
+**Patterns used:**
+
+- React Router NavLink with `isActive` for sidebar highlighting
+- Lucide icons for navigation items and connection status
+- Tailwind responsive classes (`md:hidden`, `md:static`, etc.) for sidebar collapse
+- `aria-label`, `aria-live="polite"`, `aria-current="page"` for accessibility
+- `afterEach(cleanup)` from @testing-library/react in each test file (required for vitest workspace mode)
+
+**What next loop should know:**
+
+- ConnectionStatus currently hardcoded to `connected={false}`. T091 (WebSocket client) will wire it to real state.
+- All 6 feature pages are placeholders — T093-T100 implement the actual views.
+- Test cleanup must be explicit in web-ui test files (add `afterEach(cleanup)` import from vitest + @testing-library/react).

@@ -11,14 +11,22 @@ import { AppLayout } from "./layout";
  * @see docs/prd/007-technical-architecture.md §7.16 — UI screen list
  */
 const DashboardPage = lazy(() => import("../features/dashboard/page.js"));
+const TasksPage = lazy(() => import("../features/tasks/page.js"));
+const WorkersPage = lazy(() => import("../features/workers/page.js"));
+const ReviewsPage = lazy(() => import("../features/reviews/page.js"));
+const MergeQueuePage = lazy(() => import("../features/merge-queue/page.js"));
+const ConfigPage = lazy(() => import("../features/config/page.js"));
+const AuditPage = lazy(() => import("../features/audit/page.js"));
 const NotFoundPage = lazy(() => import("../features/not-found/page.js"));
 
 /**
  * Application route definitions.
  *
  * Uses React Router v6 data router with lazy-loaded feature pages.
- * The AppLayout wraps all routes providing the navigation shell.
- * Placeholder routes are defined for future feature views (T090+).
+ * The AppLayout wraps all routes providing the navigation shell
+ * with sidebar, breadcrumbs, and connection status.
+ *
+ * Each route maps to a sidebar navigation item defined in `layout.tsx`.
  */
 const routes: RouteObject[] = [
   {
@@ -31,6 +39,54 @@ const routes: RouteObject[] = [
         element: (
           <Suspense fallback={<PageSkeleton />}>
             <DashboardPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "tasks",
+        element: (
+          <Suspense fallback={<PageSkeleton />}>
+            <TasksPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "workers",
+        element: (
+          <Suspense fallback={<PageSkeleton />}>
+            <WorkersPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "reviews",
+        element: (
+          <Suspense fallback={<PageSkeleton />}>
+            <ReviewsPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "merge-queue",
+        element: (
+          <Suspense fallback={<PageSkeleton />}>
+            <MergeQueuePage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "config",
+        element: (
+          <Suspense fallback={<PageSkeleton />}>
+            <ConfigPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "audit",
+        element: (
+          <Suspense fallback={<PageSkeleton />}>
+            <AuditPage />
           </Suspense>
         ),
       },
