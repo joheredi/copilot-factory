@@ -219,7 +219,7 @@ See [phase documents](phases/) for details.
 | [T096](tasks/T096-ui-worker-pools.md)               | Build worker pool monitoring panel                                                    | E020 | P2       | feature    | done    |
 | [T097](tasks/T097-ui-review-center.md)              | Build review center view                                                              | E020 | P2       | feature    | done    |
 | [T098](tasks/T098-ui-merge-queue.md)                | Build merge queue view                                                                | E020 | P2       | feature    | done    |
-| [T099](tasks/T099-ui-config-editor.md)              | Build configuration editor view                                                       | E020 | P2       | feature    | pending |
+| [T099](tasks/T099-ui-config-editor.md)              | Build configuration editor view                                                       | E020 | P2       | feature    | done    |
 | [T100](tasks/T100-ui-audit-explorer.md)             | Build audit explorer view                                                             | E020 | P2       | feature    | pending |
 | [T101](tasks/T101-api-operator-actions.md)          | Implement operator action API endpoints                                               | E021 | P1       | feature    | done    |
 | [T102](tasks/T102-operator-guards.md)               | Implement state transition guards for manual actions                                  | E021 | P1       | feature    | done    |

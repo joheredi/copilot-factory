@@ -421,3 +421,29 @@ T110 - Integration test: lease timeout and crash recovery (Epic E022: Integratio
 - Followed the merge-queue page pattern: status filter, table, loading/error/empty states
 - Reused TaskStatusBadge and TaskPriorityBadge from tasks feature
 - Fixed T096 status in backlog index (was done in task file, pending in index)
+
+## T099: Build configuration editor view (2026-03-12)
+
+- Replaced the placeholder config page with a full tabbed configuration editor
+- Three tabs: Policies, Pools, Effective Config
+- **Policies tab**: Two-panel layout with policy set list (left) and multi-field JSON editor (right). Edits all 6 policy JSON fields (scheduling, review, merge, security, validation, budget). Dirty tracking, reset, save with confirmation dialog, success/error badges.
+- **Pools tab**: Two-panel layout with pool list and form editor. Editable fields: name, maxConcurrency, enabled toggle, provider, runtime, model, timeout, token budget, cost profile. JSON editors for capabilities and repoScopeRules.
+- **Effective Config tab**: Read-only view of resolved configuration from GET /config/effective with individual layer display and priority labels.
+- Created reusable JsonEditor component: textarea-based JSON editor with real-time validation, Format button, error display, and read-only mode
+- Created SaveConfirmationDialog: modal confirmation before persisting config changes
+- Added shadcn/ui Input, Textarea, and Label primitives
+- 35 new tests: 16 for JsonEditor (unit + component), 22 for ConfigPage (page structure, policies tab, pools tab, effective config tab)
+- Used userEvent for Radix UI Tab switching in tests (fireEvent.click doesn't trigger Radix pointer events)
+
+### Patterns used
+
+- Two-panel layout: list on left (lg:col-span-1), editor on right (lg:col-span-2)
+- Controlled form state with useState, dirty tracking, reset to original values
+- useEffect to sync form state when selected entity changes
+- Existing API hooks: usePolicies, usePolicy, useUpdatePolicy, usePools, usePool, useUpdatePool, useEffectiveConfig
+- Tests: fetch spy with URL-based routing, QueryClient with retry:false, WebSocketProvider with autoConnect:false
+
+### For next loop
+
+- T100 (audit explorer), T104 (operator controls in task detail), T105 (operator controls in pool/merge UI) remain as the last pending tasks
+- Prompt template viewer and routing rule display are not yet implemented (no API endpoints exist for prompt templates)
