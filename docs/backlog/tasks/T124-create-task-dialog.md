@@ -6,7 +6,7 @@
 | **Epic**                  | [E025: Web UI Creation & Editing Forms](../epics/E025-web-ui-forms.md) |
 | **Type**                  | feature                                                                |
 | **Status**                | pending                                                                |
-| **Priority**              | P0                                                                     |
+| **Priority**              | P1                                                                     |
 | **Owner**                 | frontend-engineer                                                      |
 | **AI Executable**         | Yes                                                                    |
 | **Human Review Required** | Yes                                                                    |

@@ -91,7 +91,7 @@ See [index-archive.md](index-archive.md) for the 21 completed epics: E001–E008
 | [T136](tasks/T136-infrastructure-adapter-wiring.md) | Wire workspace, runtime, and packet infrastructure adapters | P0       | infrastructure | pending |
 | [T137](tasks/T137-wire-dispatch-automation.md)      | Integrate WorkerDispatchService into AutomationService      | P0       | feature        | pending |
 | [T138](tasks/T138-dispatch-integration-test.md)     | End-to-end dispatch integration test                        | P0       | feature        | pending |
-| [T139](tasks/T139-worker-runner-exports.md)         | Update worker-runner package to re-export dispatch types    | P2       | refactor       | pending |
+| [T139](tasks/T139-worker-runner-exports.md)         | Update worker-runner package to re-export dispatch types    | P1       | refactor       | pending |
 
 ### E023: Task Import Pipeline
 
@@ -119,7 +119,7 @@ See [index-archive.md](index-archive.md) for the 21 completed epics: E001–E008
 
 | ID                                             | Title                                            | Priority | Type    | Status  |
 | ---------------------------------------------- | ------------------------------------------------ | -------- | ------- | ------- |
-| [T124](tasks/T124-create-task-dialog.md)       | Add Create Task dialog to Tasks page             | P0       | feature | pending |
+| [T124](tasks/T124-create-task-dialog.md)       | Add Create Task dialog to Tasks page             | P1       | feature | pending |
 | [T125](tasks/T125-create-project-dialog.md)    | Add Create Project dialog                        | P1       | feature | pending |
 | [T126](tasks/T126-create-repository-dialog.md) | Add Create Repository dialog to Project detail   | P1       | feature | pending |
 | [T127](tasks/T127-create-pool-dialog.md)       | Add Create Worker Pool dialog to Pools page      | P1       | feature | pending |
@@ -209,7 +209,6 @@ Pending tasks whose dependencies are all satisfied (can start immediately):
 - [T119](tasks/T119-scaffold-cli-workspace.md): Scaffold apps/cli workspace (E024)
 - [T120](tasks/T120-bundle-web-ui.md): Serve web-ui static files from control-plane (E024)
 - [T121](tasks/T121-cli-entry-point.md): Build CLI entry point command (E024)
-- [T124](tasks/T124-create-task-dialog.md): Add Create Task dialog to Tasks page (E025)
 - [T132](tasks/T132-worker-dispatch-service.md): Implement WorkerDispatchService (E009)
 - [T133](tasks/T133-worker-dispatch-tests.md): Unit tests for WorkerDispatchService (E009)
 - [T134](tasks/T134-worker-dispatch-adapter.md): Wire WorkerDispatch unit-of-work adapter (E009)

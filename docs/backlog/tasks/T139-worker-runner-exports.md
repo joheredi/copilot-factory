@@ -6,7 +6,7 @@
 | **Epic**                  | [E009: Worker Runtime & Execution](../epics/E009-worker-runtime.md) |
 | **Type**                  | refactor                                                            |
 | **Status**                | pending                                                             |
-| **Priority**              | P2                                                                  |
+| **Priority**              | P1                                                                  |
 | **Owner**                 | backend-engineer                                                    |
 | **AI Executable**         | Yes                                                                 |
 | **Human Review Required** | Yes                                                                 |
