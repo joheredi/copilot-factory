@@ -5,7 +5,7 @@
 | **ID**                    | T072                                                                           |
 | **Epic**                  | [E014: Artifact Service](../epics/E014-artifact-service.md)                    |
 | **Type**                  | feature                                                                        |
-| **Status**                | pending                                                                        |
+| **Status**                | done                                                                           |
 | **Priority**              | P1                                                                             |
 | **Owner**                 | backend-engineer                                                               |
 | **AI Executable**         | Yes                                                                            |
@@ -55,9 +55,9 @@ The implementing agent should read these files before starting:
 
 ## Acceptance Criteria
 
-- [ ] Partial artifacts captured when workspace is available
-- [ ] Missing workspace handled gracefully
-- [ ] Artifacts stored and referenced correctly
+- [x] Partial artifacts captured when workspace is available
+- [x] Missing workspace handled gracefully
+- [x] Artifacts stored and referenced correctly
 
 ## Definition of Done
 

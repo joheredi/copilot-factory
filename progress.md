@@ -429,3 +429,32 @@ All actions create audit events with `actorType: "operator"`. State machine inva
 - T103 (Escalation resolution flow) is now unblocked
 - The no-op DomainEventEmitter should be replaced with a real implementation once T086 (WebSocket gateway) is done
 - The `reassign-pool` action records a pool hint via audit events — when pool assignment columns are added to the task table, this should be updated to persist the hint directly
+
+## T072 — Implement partial work snapshot on lease reclaim
+
+### Task
+
+T072 - Implement partial work snapshot on lease reclaim (Epic E014: Artifact Service)
+
+### What was done
+
+Implemented infrastructure adapters for crash recovery partial work snapshot capture in `packages/infrastructure/src/crash-recovery/`:
+
+- **WorkspaceInspector**: Reads filesystem-persisted result packets, git diffs, modified files, and output files from a workspace. Best-effort — gracefully returns empty/partial results if workspace is missing or corrupted.
+- **CrashRecoveryArtifactAdapter**: Stores crash recovery artifacts via `ArtifactStore` using the §7.11 directory layout. Writes partial work snapshots as JSON artifacts with proper path construction.
+- **ResultPacketValidator**: Validates result packet content against `DevResultPacketSchema`. Returns structured validation results (valid/invalid with error details).
+
+33 new tests covering all three adapters.
+
+Added `@factory/application` as a dependency to `@factory/infrastructure` — this is a valid inward dependency in clean architecture (infrastructure depends on application ports/interfaces).
+
+### Patterns used
+
+- Port-adapter pattern with dependency injection (adapters implement application-layer port interfaces)
+- `FakeFileSystem` and `FakeGitDiffProvider` fakes for testing without real I/O
+- Best-effort error handling throughout — workspace may be in any state after a crash, so all reads are defensive and never throw
+
+### Notes for next loop
+
+- The `CrashRecoveryLeasePort` (DB adapter for updating `partial_result_artifact_refs`) still needs an implementation in `apps/control-plane`
+- The lease reclaim service does not yet call the crash recovery service — integration wiring is needed

@@ -117,3 +117,13 @@ export {
   mergeArtifactPath,
   summaryPath,
 } from "./artifacts/index.js";
+
+// ─── Crash Recovery ──────────────────────────────────────────────────────────
+export type { GitDiffProvider, WorkspaceInspectorDependencies } from "./crash-recovery/index.js";
+
+export {
+  createWorkspaceInspector,
+  createExecGitDiffProvider,
+  createCrashRecoveryArtifactAdapter,
+  createResultPacketValidator,
+} from "./crash-recovery/index.js";

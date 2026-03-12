@@ -16,6 +16,7 @@
     "dist"
   ],
   "dependencies": {
+    "@factory/application": "workspace:*",
     "@factory/domain": "workspace:*",
     "@factory/schemas": "workspace:*",
     "zod": "^3.25.76"

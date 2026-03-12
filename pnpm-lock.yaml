@@ -151,6 +151,9 @@ importers:
 
   packages/infrastructure:
     dependencies:
+      '@factory/application':
+        specifier: workspace:*
+        version: link:../application
       '@factory/domain':
         specifier: workspace:*
         version: link:../domain

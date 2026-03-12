@@ -50,7 +50,7 @@ The `eng/` directory is excluded from ESLint (utility scripts with Node.js globa
 - **Entity factories:** `@factory/testing` exports `createTestProject()`, `createTestTask()`, `createTestTaskLease()`, and 10 more factories. All accept `Partial<T>` overrides.
 - **Test database:** `createTestDatabase({ migrationsFolder })` creates an in-memory SQLite with Drizzle migrations applied. Use `apps/control-plane/drizzle` as the migrations folder.
 - **Lifecycle helper:** `runTaskToState(targetState, { fromState?, onTransition? })` drives a task through valid transitions to the target state using BFS pathfinding.
-- **I/O test fakes:** `@factory/infrastructure` tests use `FakeCliProcess` and `FakeFileSystem` to test adapters (e.g., `CopilotCliAdapter`) without real I/O or OS processes. Prefer this pattern for new infrastructure adapters.
+- **I/O test fakes:** `@factory/infrastructure` tests use `FakeCliProcess` and `FakeFileSystem` to test adapters (e.g., `CopilotCliAdapter`) without real I/O or OS processes. Prefer this pattern for new infrastructure adapters. Crash-recovery tests additionally use `FakeGitDiffProvider` for git diff isolation.
 
 # TypeScript configuration
 
@@ -61,7 +61,7 @@ The `eng/` directory is excluded from ESLint (utility scripts with Node.js globa
 - **Cross-package imports:** Resolved via pnpm workspace symlinks + package.json `exports` field. No tsconfig `paths` aliases needed with `moduleResolution: NodeNext`.
 - **Build command:** Each workspace uses `tsc --build`. Run `pnpm build` from root to build all.
 - **Important:** `outDir`/`rootDir` are set per-workspace (not in base config) because tsconfig `extends` resolves relative paths from the originating config file.
-- **Notable dependencies:** `@factory/infrastructure` depends on `@factory/domain` (for policy evaluation) and `zod` (for schema validation in the Copilot CLI adapter). The `worker-runtime` module exports `CopilotCliAdapter` and related types.
+- **Notable dependencies:** `@factory/infrastructure` depends on `@factory/domain` (for policy evaluation), `@factory/application` (for crash recovery port interfaces), and `zod` (for schema validation in the Copilot CLI adapter). The `worker-runtime` module exports `CopilotCliAdapter` and related types.
 - **Artifact storage:** `@factory/infrastructure` provides `ArtifactStore` in `src/artifacts/` for filesystem-based artifact persistence with atomic writes. Uses the `FileSystem` abstraction (same as workspace module). Path builders (`packetPath`, `runLogPath`, etc.) produce the §7.11 directory layout. All stored paths are relative to the artifact root.
 
 # Database (SQLite + Drizzle ORM)
