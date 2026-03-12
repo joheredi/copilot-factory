@@ -427,3 +427,24 @@ T110 - Integration test: lease timeout and crash recovery (Epic E022: Integratio
 
 - T135 (heartbeat forwarder adapter), T136 (infrastructure adapter wiring), T137 (wire dispatch automation) are now unblocked by T134
 - T135 and T136 are P0 ready candidates
+
+## T135: HeartbeatForwarderPort Adapter (2026-03-12)
+
+**What was done:**
+
+- Created `apps/control-plane/src/automation/heartbeat-forwarder-adapter.ts` — factory function `createHeartbeatForwarderAdapter()` implementing `HeartbeatForwarderPort`
+- Created `apps/control-plane/src/automation/heartbeat-forwarder-adapter.test.ts` — 7 unit tests covering normal forwarding, terminal heartbeats, error swallowing, non-Error throws, actor identity, successive heartbeats, and resilience after errors
+- Adapter bridges `forwardHeartbeat(leaseId, workerId, isTerminal)` to `heartbeatService.receiveHeartbeat({ leaseId, completing: isTerminal, actor })` with system actor `{ type: "system", id: "worker-supervisor" }`
+- Errors are caught and logged via `logger.warn()` — never propagated to the worker process
+
+**Key design decisions:**
+
+- Used a plain factory function (not a class) matching the existing adapter pattern in `application-adapters.ts`
+- Logger is injectable for testing but defaults to `createLogger("heartbeat-forwarder")` for production
+- Error details include leaseId, workerId, isTerminal, and error message for diagnosability
+
+**What the next loop should know:**
+
+- T136 (infrastructure adapter wiring) is the next ready P0 task in E009 — it wires WorkspaceManager, PacketMounter, and CopilotCliAdapter
+- T137 (wire dispatch into AutomationService) depends on both T135 and T136 being done
+- The heartbeat forwarder adapter will be instantiated in T137 when wiring the AutomationService

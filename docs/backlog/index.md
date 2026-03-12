@@ -60,7 +60,7 @@ The Autonomous Software Factory is a local-first orchestration platform for soft
 
 | ID                                      | Title                                | Dependencies                 | Total Tasks | Done | Pending |
 | --------------------------------------- | ------------------------------------ | ---------------------------- | ----------- | ---- | ------- |
-| [E009](epics/E009-worker-runtime.md)    | Worker Runtime & Execution           | E004, E005, E006, E008, E010 | 13          | 5    | 8       |
+| [E009](epics/E009-worker-runtime.md)    | Worker Runtime & Execution           | E004, E005, E006, E008, E010 | 13          | 7    | 6       |
 | [E023](epics/E023-task-import.md)       | Task Import Pipeline                 | E001, E002, E017, E019, E020 | 8           | 0    | 8       |
 | [E024](epics/E024-cli-package.md)       | CLI Package & Single-Command Startup | E001, E017, E019             | 4           | 0    | 4       |
 | [E025](epics/E025-web-ui-forms.md)      | Web UI Creation & Editing Forms      | E019, E020, E021             | 8           | 0    | 8       |
@@ -84,10 +84,10 @@ See [index-archive.md](index-archive.md) for the 21 completed epics: E001–E008
 | [T045](tasks/T045-copilot-cli-adapter.md)           | Implement Copilot CLI execution adapter                     | P0       | feature        | done    |
 | [T046](tasks/T046-output-capture-validation.md)     | Implement structured output capture and validation          | P0       | feature        | done    |
 | [T047](tasks/T047-command-wrapper.md)               | Implement policy-aware command wrapper                      | P0       | security       | done    |
-| [T132](tasks/T132-worker-dispatch-service.md)       | Implement WorkerDispatchService in application layer        | P0       | feature        | pending |
+| [T132](tasks/T132-worker-dispatch-service.md)       | Implement WorkerDispatchService in application layer        | P0       | feature        | done    |
 | [T133](tasks/T133-worker-dispatch-tests.md)         | Unit tests for WorkerDispatchService                        | P0       | feature        | done    |
 | [T134](tasks/T134-worker-dispatch-adapter.md)       | Wire WorkerDispatch unit-of-work adapter in control-plane   | P0       | infrastructure | done    |
-| [T135](tasks/T135-heartbeat-forwarder-adapter.md)   | Implement HeartbeatForwarderPort adapter                    | P0       | infrastructure | pending |
+| [T135](tasks/T135-heartbeat-forwarder-adapter.md)   | Implement HeartbeatForwarderPort adapter                    | P0       | infrastructure | done    |
 | [T136](tasks/T136-infrastructure-adapter-wiring.md) | Wire workspace, runtime, and packet infrastructure adapters | P0       | infrastructure | pending |
 | [T137](tasks/T137-wire-dispatch-automation.md)      | Integrate WorkerDispatchService into AutomationService      | P0       | feature        | pending |
 | [T138](tasks/T138-dispatch-integration-test.md)     | End-to-end dispatch integration test                        | P0       | feature        | pending |
@@ -195,8 +195,7 @@ Pending tasks whose dependencies are all satisfied (can start immediately):
 - [T129](tasks/T129-edit-task-form.md): Add Edit Task form to Task detail page (E025)
 - [T130](tasks/T130-batch-task-import-ui.md): Add Batch Task Import UI to Tasks page (E025)
 - [T131](tasks/T131-reassign-pool-action.md): Add Reassign Pool operator action to Task detail (E025)
-- [T132](tasks/T132-worker-dispatch-service.md): Implement WorkerDispatchService (E009)
-- [T135](tasks/T135-heartbeat-forwarder-adapter.md): Implement HeartbeatForwarderPort adapter (E009)
+- [T136](tasks/T136-infrastructure-adapter-wiring.md): Wire workspace, runtime, and packet adapters (E009)
 - [T150](tasks/T150-dashboard-project-selector.md): Add multi-project filter to dashboard (E027)
 - [T123](tasks/T123-import-format-docs.md): Write task format reference documentation (E023)
 
@@ -208,10 +207,6 @@ Pending tasks whose dependencies are all satisfied (can start immediately):
 - [T116](tasks/T116-import-execute-endpoint.md): Create POST /import/execute endpoint (E023)
 - [T120](tasks/T120-bundle-web-ui.md): Serve web-ui static files from control-plane (E024)
 - [T121](tasks/T121-cli-entry-point.md): Build CLI entry point command (E024)
-- [T132](tasks/T132-worker-dispatch-service.md): Implement WorkerDispatchService (E009)
-- [T133](tasks/T133-worker-dispatch-tests.md): Unit tests for WorkerDispatchService (E009)
-- [T134](tasks/T134-worker-dispatch-adapter.md): Wire WorkerDispatch unit-of-work adapter (E009)
-- [T135](tasks/T135-heartbeat-forwarder-adapter.md): Implement HeartbeatForwarderPort adapter (E009)
 - [T136](tasks/T136-infrastructure-adapter-wiring.md): Wire workspace, runtime, and packet adapters (E009)
 - [T137](tasks/T137-wire-dispatch-automation.md): Integrate dispatch into AutomationService (E009)
 - [T138](tasks/T138-dispatch-integration-test.md): End-to-end dispatch integration test (E009)
