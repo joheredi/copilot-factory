@@ -49,6 +49,8 @@ import type {
 import { LeadReviewDecisionPacketSchema } from "@factory/schemas";
 import type { LeadReviewDecisionPacket } from "@factory/schemas";
 
+import { getTracer, SpanStatusCode, SpanNames, SpanAttributes } from "@factory/observability";
+
 import type { ActorInfo, DomainEvent } from "../events/domain-events.js";
 import type { DomainEventEmitter } from "../ports/event-emitter.port.js";
 import type {
@@ -664,6 +666,9 @@ function applyDecisionInTransaction(
  * // result.task.status === TaskStatus.APPROVED
  * ```
  */
+/** @internal OpenTelemetry tracer for review decision spans. */
+const reviewDecisionTracer = getTracer("review-decision");
+
 export function createReviewDecisionService(
   deps: ReviewDecisionDependencies,
 ): ReviewDecisionService {
@@ -676,47 +681,63 @@ export function createReviewDecisionService(
 
   return {
     applyDecision(params: ApplyReviewDecisionParams): ApplyReviewDecisionResult {
-      // ── Step 1: Validate the packet against the Zod schema ──────
-      const packet = validatePacket(params.packet);
+      return reviewDecisionTracer.startActiveSpan(SpanNames.REVIEW_LEAD_DECISION, (span) => {
+        try {
+          span.setAttribute(SpanAttributes.TASK_ID, params.taskId);
+          span.setAttribute(SpanAttributes.REVIEW_CYCLE_ID, params.reviewCycleId);
 
-      // ── Step 2: Execute all reads and writes atomically ─────────
-      const transactionResult = unitOfWork.runInTransaction((repos) =>
-        applyDecisionInTransaction(repos, packet, params, idGenerator),
-      );
+          // ── Step 1: Validate the packet against the Zod schema ──────
+          const packet = validatePacket(params.packet);
 
-      // ── Step 3: Emit domain events after commit ─────────────────
-      const cycleEvent: DomainEvent = {
-        type: "review-cycle.transitioned",
-        entityType: "review-cycle",
-        entityId: params.reviewCycleId,
-        actor: params.actor,
-        timestamp: clock(),
-        fromStatus: transactionResult.previousCycleStatus,
-        toStatus: transactionResult.cycleTargetStatus,
-      };
-      eventEmitter.emit(cycleEvent);
+          // ── Step 2: Execute all reads and writes atomically ─────────
+          const transactionResult = unitOfWork.runInTransaction((repos) =>
+            applyDecisionInTransaction(repos, packet, params, idGenerator),
+          );
 
-      const taskEvent: DomainEvent = {
-        type: "task.transitioned",
-        entityType: "task",
-        entityId: params.taskId,
-        actor: params.actor,
-        timestamp: clock(),
-        fromStatus: transactionResult.previousTaskStatus,
-        toStatus: transactionResult.taskTargetStatus,
-        newVersion: transactionResult.task.version,
-      };
-      eventEmitter.emit(taskEvent);
+          // ── Step 3: Emit domain events after commit ─────────────────
+          const cycleEvent: DomainEvent = {
+            type: "review-cycle.transitioned",
+            entityType: "review-cycle",
+            entityId: params.reviewCycleId,
+            actor: params.actor,
+            timestamp: clock(),
+            fromStatus: transactionResult.previousCycleStatus,
+            toStatus: transactionResult.cycleTargetStatus,
+          };
+          eventEmitter.emit(cycleEvent);
 
-      // ── Step 4: Return result ───────────────────────────────────
-      return {
-        outcome: transactionResult.outcome,
-        task: transactionResult.task,
-        reviewCycle: transactionResult.reviewCycle,
-        decisionRecord: transactionResult.decisionRecord,
-        followUpTasks: transactionResult.followUpTasks,
-        auditEvents: transactionResult.auditEvents,
-      };
+          const taskEvent: DomainEvent = {
+            type: "task.transitioned",
+            entityType: "task",
+            entityId: params.taskId,
+            actor: params.actor,
+            timestamp: clock(),
+            fromStatus: transactionResult.previousTaskStatus,
+            toStatus: transactionResult.taskTargetStatus,
+            newVersion: transactionResult.task.version,
+          };
+          eventEmitter.emit(taskEvent);
+
+          span.setAttribute(SpanAttributes.RESULT_STATUS, transactionResult.outcome);
+          span.setStatus({ code: SpanStatusCode.OK });
+          return {
+            outcome: transactionResult.outcome,
+            task: transactionResult.task,
+            reviewCycle: transactionResult.reviewCycle,
+            decisionRecord: transactionResult.decisionRecord,
+            followUpTasks: transactionResult.followUpTasks,
+            auditEvents: transactionResult.auditEvents,
+          };
+        } catch (error: unknown) {
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: error instanceof Error ? error.message : String(error),
+          });
+          throw error;
+        } finally {
+          span.end();
+        }
+      });
     },
   };
 }

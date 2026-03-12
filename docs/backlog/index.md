@@ -197,7 +197,7 @@ See [phase documents](phases/) for details.
 | [T074](tasks/T074-audit-query-service.md)           | Implement audit event query service                                                   | E015 | P1       | feature    | done    |
 | [T075](tasks/T075-structured-logging.md)            | Implement structured logging with correlation IDs                                     | E015 | P1       | feature    | done    |
 | [T076](tasks/T076-otel-init.md)                     | Initialize OpenTelemetry TracerProvider                                               | E016 | P1       | feature    | done    |
-| [T077](tasks/T077-otel-spans.md)                    | Instrument core orchestration paths with spans                                        | E016 | P1       | feature    | pending |
+| [T077](tasks/T077-otel-spans.md)                    | Instrument core orchestration paths with spans                                        | E016 | P1       | feature    | done    |
 | [T078](tasks/T078-prometheus-endpoint.md)           | Implement Prometheus metrics endpoint                                                 | E016 | P1       | feature    | pending |
 | [T079](tasks/T079-starter-metrics.md)               | Implement starter metrics inventory                                                   | E016 | P1       | feature    | pending |
 | [T080](tasks/T080-nestjs-bootstrap.md)              | Implement NestJS application bootstrap and module structure                           | E017 | P0       | foundation | done    |

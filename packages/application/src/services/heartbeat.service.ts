@@ -29,6 +29,8 @@ import {
   type WorkerLeaseTransitionContext,
 } from "@factory/domain";
 
+import { getTracer, SpanStatusCode, SpanNames, SpanAttributes } from "@factory/observability";
+
 import { EntityNotFoundError, InvalidTransitionError, LeaseNotActiveError } from "../errors.js";
 
 import type { AuditEventRecord } from "../ports/repository.ports.js";
@@ -284,6 +286,9 @@ function classifyStaleRecord(record: StaleLeaseRecord, now: Date): StaleLeaseInf
  * @param eventEmitter - Publishes domain events after transaction commit
  * @param clock - Time source for staleness computation (injectable for testing)
  */
+/** @internal OpenTelemetry tracer for heartbeat spans. */
+const heartbeatTracer = getTracer("heartbeat-service");
+
 export function createHeartbeatService(
   unitOfWork: HeartbeatUnitOfWork,
   eventEmitter: DomainEventEmitter,
@@ -291,99 +296,120 @@ export function createHeartbeatService(
 ): HeartbeatService {
   return {
     receiveHeartbeat(params: ReceiveHeartbeatParams): ReceiveHeartbeatResult {
-      const { leaseId, completing = false, gracePeriodSeconds, workerMetadata, actor } = params;
+      return heartbeatTracer.startActiveSpan(SpanNames.WORKER_HEARTBEAT, (span) => {
+        try {
+          const { leaseId, completing = false, gracePeriodSeconds, workerMetadata, actor } = params;
+          span.setAttribute("lease.id", leaseId);
 
-      const transactionResult = unitOfWork.runInTransaction((repos) => {
-        // Step 1: Fetch the lease
-        const lease = repos.lease.findById(leaseId);
-        if (!lease) {
-          throw new EntityNotFoundError("TaskLease", leaseId);
+          const transactionResult = unitOfWork.runInTransaction((repos) => {
+            // Step 1: Fetch the lease
+            const lease = repos.lease.findById(leaseId);
+            if (!lease) {
+              throw new EntityNotFoundError("TaskLease", leaseId);
+            }
+
+            // Step 2: Verify the lease is in a heartbeat-receivable state
+            if (!HEARTBEAT_RECEIVABLE_STATES.has(lease.status)) {
+              throw new LeaseNotActiveError(leaseId, lease.status);
+            }
+
+            // Step 3: Determine the target state
+            const targetStatus = computeTargetStatus(lease.status, completing);
+
+            // Step 4: Validate via the domain state machine
+            const transitionCtx = buildTransitionContext(lease.status, targetStatus);
+            const validation = validateWorkerLeaseTransition(
+              lease.status,
+              targetStatus,
+              transitionCtx,
+            );
+            if (!validation.valid) {
+              throw new InvalidTransitionError(
+                "TaskLease",
+                leaseId,
+                lease.status,
+                targetStatus,
+                validation.reason,
+              );
+            }
+
+            // Step 5: Compute grace-period-extended expiry for terminal heartbeats.
+            // When completing, extend expiresAt to give the worker time to deliver
+            // its result packet. Uses max(current, now + grace) to never shorten the TTL.
+            const now = clock();
+            let newExpiresAt: Date | undefined;
+            if (completing && gracePeriodSeconds !== undefined && gracePeriodSeconds > 0) {
+              const graceDeadline = new Date(now.getTime() + gracePeriodSeconds * 1000);
+              newExpiresAt =
+                graceDeadline.getTime() > lease.expiresAt.getTime()
+                  ? graceDeadline
+                  : lease.expiresAt;
+            }
+
+            // Step 6: Update heartbeat timestamp, status, and optionally expiresAt atomically
+            const updatedLease = repos.lease.updateHeartbeat(
+              leaseId,
+              lease.status,
+              targetStatus,
+              now,
+              newExpiresAt,
+            );
+
+            // Step 7: Record audit event
+            const auditEvent = repos.auditEvent.create({
+              entityType: "task-lease",
+              entityId: leaseId,
+              eventType: completing ? "lease.completing" : "lease.heartbeat",
+              actorType: actor.type,
+              actorId: actor.id,
+              oldState: JSON.stringify({
+                status: lease.status,
+                heartbeatAt: lease.heartbeatAt?.toISOString() ?? null,
+                expiresAt: lease.expiresAt.toISOString(),
+              }),
+              newState: JSON.stringify({
+                status: updatedLease.status,
+                heartbeatAt: updatedLease.heartbeatAt?.toISOString() ?? null,
+                expiresAt: updatedLease.expiresAt.toISOString(),
+              }),
+              metadata: workerMetadata ? JSON.stringify(workerMetadata) : null,
+            });
+
+            return {
+              lease: updatedLease,
+              previousStatus: lease.status,
+              auditEvent,
+            };
+          });
+
+          // ── Domain events emitted AFTER successful commit ─────────────────
+          eventEmitter.emit({
+            type: "task-lease.transitioned",
+            entityType: "task-lease",
+            entityId: leaseId,
+            actor,
+            timestamp: clock(),
+            fromStatus: transactionResult.previousStatus,
+            toStatus: transactionResult.lease.status,
+          });
+
+          span.setAttribute(SpanAttributes.RESULT_STATUS, transactionResult.lease.status);
+          span.setStatus({ code: SpanStatusCode.OK });
+          return {
+            lease: transactionResult.lease,
+            previousStatus: transactionResult.previousStatus,
+            auditEvent: transactionResult.auditEvent,
+          };
+        } catch (error: unknown) {
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: error instanceof Error ? error.message : String(error),
+          });
+          throw error;
+        } finally {
+          span.end();
         }
-
-        // Step 2: Verify the lease is in a heartbeat-receivable state
-        if (!HEARTBEAT_RECEIVABLE_STATES.has(lease.status)) {
-          throw new LeaseNotActiveError(leaseId, lease.status);
-        }
-
-        // Step 3: Determine the target state
-        const targetStatus = computeTargetStatus(lease.status, completing);
-
-        // Step 4: Validate via the domain state machine
-        const transitionCtx = buildTransitionContext(lease.status, targetStatus);
-        const validation = validateWorkerLeaseTransition(lease.status, targetStatus, transitionCtx);
-        if (!validation.valid) {
-          throw new InvalidTransitionError(
-            "TaskLease",
-            leaseId,
-            lease.status,
-            targetStatus,
-            validation.reason,
-          );
-        }
-
-        // Step 5: Compute grace-period-extended expiry for terminal heartbeats.
-        // When completing, extend expiresAt to give the worker time to deliver
-        // its result packet. Uses max(current, now + grace) to never shorten the TTL.
-        const now = clock();
-        let newExpiresAt: Date | undefined;
-        if (completing && gracePeriodSeconds !== undefined && gracePeriodSeconds > 0) {
-          const graceDeadline = new Date(now.getTime() + gracePeriodSeconds * 1000);
-          newExpiresAt =
-            graceDeadline.getTime() > lease.expiresAt.getTime() ? graceDeadline : lease.expiresAt;
-        }
-
-        // Step 6: Update heartbeat timestamp, status, and optionally expiresAt atomically
-        const updatedLease = repos.lease.updateHeartbeat(
-          leaseId,
-          lease.status,
-          targetStatus,
-          now,
-          newExpiresAt,
-        );
-
-        // Step 7: Record audit event
-        const auditEvent = repos.auditEvent.create({
-          entityType: "task-lease",
-          entityId: leaseId,
-          eventType: completing ? "lease.completing" : "lease.heartbeat",
-          actorType: actor.type,
-          actorId: actor.id,
-          oldState: JSON.stringify({
-            status: lease.status,
-            heartbeatAt: lease.heartbeatAt?.toISOString() ?? null,
-            expiresAt: lease.expiresAt.toISOString(),
-          }),
-          newState: JSON.stringify({
-            status: updatedLease.status,
-            heartbeatAt: updatedLease.heartbeatAt?.toISOString() ?? null,
-            expiresAt: updatedLease.expiresAt.toISOString(),
-          }),
-          metadata: workerMetadata ? JSON.stringify(workerMetadata) : null,
-        });
-
-        return {
-          lease: updatedLease,
-          previousStatus: lease.status,
-          auditEvent,
-        };
       });
-
-      // ── Domain events emitted AFTER successful commit ─────────────────
-      eventEmitter.emit({
-        type: "task-lease.transitioned",
-        entityType: "task-lease",
-        entityId: leaseId,
-        actor,
-        timestamp: clock(),
-        fromStatus: transactionResult.previousStatus,
-        toStatus: transactionResult.lease.status,
-      });
-
-      return {
-        lease: transactionResult.lease,
-        previousStatus: transactionResult.previousStatus,
-        auditEvent: transactionResult.auditEvent,
-      };
     },
 
     detectStaleLeases(policy: StalenessPolicy): DetectStaleLeasesResult {

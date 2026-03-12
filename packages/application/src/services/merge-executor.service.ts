@@ -39,6 +39,8 @@ import {
 
 import { MergePacketSchema, type MergePacket } from "@factory/schemas";
 
+import { getTracer, SpanStatusCode, SpanNames, SpanAttributes } from "@factory/observability";
+
 import { EntityNotFoundError, InvalidTransitionError } from "../errors.js";
 
 import type { AuditEventRecord } from "../ports/repository.ports.js";
@@ -322,6 +324,9 @@ function mapCheckOutcomeToSchemaResult(outcome: ValidationCheckOutcome): {
  * });
  * ```
  */
+/** @internal OpenTelemetry tracer for merge executor spans. */
+const mergeTracer = getTracer("merge-executor");
+
 export function createMergeExecutorService(deps: MergeExecutorDependencies): MergeExecutorService {
   const {
     unitOfWork,
@@ -345,27 +350,43 @@ export function createMergeExecutorService(deps: MergeExecutorDependencies): Mer
       } = params;
       const auditEvents: AuditEventRecord[] = [];
 
+      // ── merge.prepare span: load state and transition to REBASING ──
+      const prepareSpan = mergeTracer.startSpan(SpanNames.MERGE_PREPARE);
+      prepareSpan.setAttribute(SpanAttributes.MERGE_QUEUE_ITEM_ID, mergeQueueItemId);
+
       // ── Phase 1: Load and validate current state ──────────────────────
 
-      const initialState = unitOfWork.runInTransaction((repos) => {
-        const item = repos.mergeQueueItem.findById(mergeQueueItemId);
-        if (!item) {
-          throw new EntityNotFoundError("MergeQueueItem", mergeQueueItemId);
-        }
-        if (item.status !== MergeQueueItemStatus.PREPARING) {
-          throw new MergeItemNotPreparingError(mergeQueueItemId, item.status);
-        }
+      let initialState: { item: MergeExecutorItem; task: MergeExecutorTask };
+      try {
+        initialState = unitOfWork.runInTransaction((repos) => {
+          const item = repos.mergeQueueItem.findById(mergeQueueItemId);
+          if (!item) {
+            throw new EntityNotFoundError("MergeQueueItem", mergeQueueItemId);
+          }
+          if (item.status !== MergeQueueItemStatus.PREPARING) {
+            throw new MergeItemNotPreparingError(mergeQueueItemId, item.status);
+          }
 
-        const task = repos.task.findById(item.taskId);
-        if (!task) {
-          throw new EntityNotFoundError("Task", item.taskId);
-        }
-        if (task.status !== TaskStatus.QUEUED_FOR_MERGE) {
-          throw new TaskNotQueuedForMergeError(item.taskId, task.status);
-        }
+          const task = repos.task.findById(item.taskId);
+          if (!task) {
+            throw new EntityNotFoundError("Task", item.taskId);
+          }
+          if (task.status !== TaskStatus.QUEUED_FOR_MERGE) {
+            throw new TaskNotQueuedForMergeError(item.taskId, task.status);
+          }
 
-        return { item, task };
-      });
+          return { item, task };
+        });
+      } catch (error: unknown) {
+        prepareSpan.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: error instanceof Error ? error.message : String(error),
+        });
+        prepareSpan.end();
+        throw error;
+      }
+
+      prepareSpan.setAttribute(SpanAttributes.TASK_ID, initialState.task.id);
 
       let currentTask = initialState.task;
 
@@ -466,95 +487,204 @@ export function createMergeExecutorService(deps: MergeExecutorDependencies): Mer
         timestamp: clock(),
       });
 
-      // ── Phase 3: Fetch and execute strategy-specific merge operation ──
+      prepareSpan.setStatus({ code: SpanStatusCode.OK });
+      prepareSpan.end();
 
-      await gitOps.fetch(workspacePath, "origin");
+      // ── merge.execute span: perform the merge, validation, and push ──
+      const executeSpan = mergeTracer.startSpan(SpanNames.MERGE_EXECUTE);
+      executeSpan.setAttribute(SpanAttributes.MERGE_QUEUE_ITEM_ID, mergeQueueItemId);
+      executeSpan.setAttribute(SpanAttributes.TASK_ID, currentTask.id);
 
-      // Get the current branch name before any operations (it's the source/feature branch)
-      const sourceBranch = await gitOps.getCurrentBranch(workspacePath);
+      try {
+        // ── Phase 3: Fetch and execute strategy-specific merge operation ──
 
-      // Dispatch to strategy-specific merge operation
-      let mergeOpResult: { success: boolean; conflictFiles: readonly string[] };
-      if (mergeStrategy === MergeStrategy.REBASE_AND_MERGE) {
-        mergeOpResult = await gitOps.rebase(workspacePath, `origin/${targetBranch}`);
-      } else if (mergeStrategy === MergeStrategy.SQUASH) {
-        const commitMessage = `squash: merge ${sourceBranch} into ${targetBranch}`;
-        mergeOpResult = await gitOps.squashMerge(
-          workspacePath,
-          sourceBranch,
-          `origin/${targetBranch}`,
-          commitMessage,
-        );
-      } else {
-        mergeOpResult = await gitOps.mergeCommit(
-          workspacePath,
-          sourceBranch,
-          `origin/${targetBranch}`,
-        );
-      }
+        await gitOps.fetch(workspacePath, "origin");
 
-      if (!mergeOpResult.success) {
-        // Classify the conflict via the classifier port
-        const classification = await conflictClassifier.classify(mergeOpResult.conflictFiles);
+        // Get the current branch name before any operations (it's the source/feature branch)
+        const sourceBranch = await gitOps.getCurrentBranch(workspacePath);
 
-        // Determine task and item transitions based on classification
-        const failResult = unitOfWork.runInTransaction((repos) => {
-          // Transition item: REBASING → FAILED
-          const itemContext: MergeQueueItemTransitionContext = {
-            rebaseFailed: true,
-            ...(classification === "reworkable" ? { conflictReworkable: true } : {}),
+        // Dispatch to strategy-specific merge operation
+        let mergeOpResult: { success: boolean; conflictFiles: readonly string[] };
+        if (mergeStrategy === MergeStrategy.REBASE_AND_MERGE) {
+          mergeOpResult = await gitOps.rebase(workspacePath, `origin/${targetBranch}`);
+        } else if (mergeStrategy === MergeStrategy.SQUASH) {
+          const commitMessage = `squash: merge ${sourceBranch} into ${targetBranch}`;
+          mergeOpResult = await gitOps.squashMerge(
+            workspacePath,
+            sourceBranch,
+            `origin/${targetBranch}`,
+            commitMessage,
+          );
+        } else {
+          mergeOpResult = await gitOps.mergeCommit(
+            workspacePath,
+            sourceBranch,
+            `origin/${targetBranch}`,
+          );
+        }
+
+        if (!mergeOpResult.success) {
+          // Classify the conflict via the classifier port
+          const classification = await conflictClassifier.classify(mergeOpResult.conflictFiles);
+
+          // Determine task and item transitions based on classification
+          const failResult = unitOfWork.runInTransaction((repos) => {
+            // Transition item: REBASING → FAILED
+            const itemContext: MergeQueueItemTransitionContext = {
+              rebaseFailed: true,
+              ...(classification === "reworkable" ? { conflictReworkable: true } : {}),
+            };
+            const itemTarget =
+              classification === "reworkable"
+                ? MergeQueueItemStatus.REQUEUED
+                : MergeQueueItemStatus.FAILED;
+
+            const itemValidation = validateMergeQueueItemTransition(
+              MergeQueueItemStatus.REBASING,
+              itemTarget,
+              itemContext,
+            );
+            if (!itemValidation.valid) {
+              throw new InvalidTransitionError(
+                "MergeQueueItem",
+                mergeQueueItemId,
+                MergeQueueItemStatus.REBASING,
+                itemTarget,
+                itemValidation.reason,
+              );
+            }
+
+            const failedItem = repos.mergeQueueItem.updateStatus(
+              mergeQueueItemId,
+              MergeQueueItemStatus.REBASING,
+              itemTarget,
+              { completedAt: clock() },
+            );
+
+            // Transition task based on classification
+            const taskTarget =
+              classification === "reworkable" ? TaskStatus.CHANGES_REQUESTED : TaskStatus.FAILED;
+
+            const taskContext: TransitionContext = {
+              mergeConflictClassification:
+                classification === "reworkable" ? "reworkable" : "non_reworkable",
+            } as TransitionContext;
+
+            const taskValidation = validateTransition(TaskStatus.MERGING, taskTarget, taskContext);
+            if (!taskValidation.valid) {
+              throw new InvalidTransitionError(
+                "Task",
+                currentTask.id,
+                TaskStatus.MERGING,
+                taskTarget,
+                taskValidation.reason,
+              );
+            }
+
+            const failedTask = repos.task.updateStatus(
+              currentTask.id,
+              currentTask.version,
+              taskTarget,
+            );
+
+            const itemAudit = repos.auditEvent.create({
+              entityType: "merge-queue-item",
+              entityId: mergeQueueItemId,
+              eventType: "state_transition",
+              actorType: actor.type,
+              actorId: actor.id,
+              oldState: MergeQueueItemStatus.REBASING,
+              newState: itemTarget,
+              metadata: JSON.stringify({
+                ...metadata,
+                conflictFiles: mergeOpResult.conflictFiles,
+                classification,
+              }),
+            });
+
+            const taskAudit = repos.auditEvent.create({
+              entityType: "task",
+              entityId: currentTask.id,
+              eventType: "state_transition",
+              actorType: actor.type,
+              actorId: actor.id,
+              oldState: TaskStatus.MERGING,
+              newState: taskTarget,
+              metadata: JSON.stringify({
+                ...metadata,
+                reason: "merge_conflict",
+                mergeStrategy,
+                conflictFiles: mergeOpResult.conflictFiles,
+                classification,
+              }),
+            });
+
+            return {
+              item: failedItem,
+              task: failedTask,
+              itemAudit,
+              taskAudit,
+              itemTarget,
+              taskTarget,
+            };
+          });
+
+          auditEvents.push(failResult.itemAudit, failResult.taskAudit);
+
+          eventEmitter.emit({
+            type: "merge-queue-item.transitioned",
+            entityType: "merge-queue-item",
+            entityId: mergeQueueItemId,
+            fromStatus: MergeQueueItemStatus.REBASING,
+            toStatus: failResult.itemTarget,
+            actor,
+            timestamp: clock(),
+          });
+          eventEmitter.emit({
+            type: "task.transitioned",
+            entityType: "task",
+            entityId: currentTask.id,
+            fromStatus: TaskStatus.MERGING,
+            toStatus: failResult.taskTarget,
+            newVersion: failResult.task.version,
+            actor,
+            timestamp: clock(),
+          });
+
+          executeSpan.setAttribute(SpanAttributes.RESULT_STATUS, "rebase_conflict");
+          executeSpan.setStatus({ code: SpanStatusCode.OK });
+          return {
+            outcome: "rebase_conflict",
+            item: failResult.item,
+            task: failResult.task,
+            auditEvents,
+            conflictFiles: mergeOpResult.conflictFiles,
+            classification,
           };
-          const itemTarget =
-            classification === "reworkable"
-              ? MergeQueueItemStatus.REQUEUED
-              : MergeQueueItemStatus.FAILED;
+        }
 
+        // ── Phase 4: Transition to VALIDATING and run validation ──────────
+
+        const validatingResult = unitOfWork.runInTransaction((repos) => {
           const itemValidation = validateMergeQueueItemTransition(
             MergeQueueItemStatus.REBASING,
-            itemTarget,
-            itemContext,
+            MergeQueueItemStatus.VALIDATING,
+            { rebaseSuccessful: true } as MergeQueueItemTransitionContext,
           );
           if (!itemValidation.valid) {
             throw new InvalidTransitionError(
               "MergeQueueItem",
               mergeQueueItemId,
               MergeQueueItemStatus.REBASING,
-              itemTarget,
+              MergeQueueItemStatus.VALIDATING,
               itemValidation.reason,
             );
           }
 
-          const failedItem = repos.mergeQueueItem.updateStatus(
+          const updatedItem = repos.mergeQueueItem.updateStatus(
             mergeQueueItemId,
             MergeQueueItemStatus.REBASING,
-            itemTarget,
-            { completedAt: clock() },
-          );
-
-          // Transition task based on classification
-          const taskTarget =
-            classification === "reworkable" ? TaskStatus.CHANGES_REQUESTED : TaskStatus.FAILED;
-
-          const taskContext: TransitionContext = {
-            mergeConflictClassification:
-              classification === "reworkable" ? "reworkable" : "non_reworkable",
-          } as TransitionContext;
-
-          const taskValidation = validateTransition(TaskStatus.MERGING, taskTarget, taskContext);
-          if (!taskValidation.valid) {
-            throw new InvalidTransitionError(
-              "Task",
-              currentTask.id,
-              TaskStatus.MERGING,
-              taskTarget,
-              taskValidation.reason,
-            );
-          }
-
-          const failedTask = repos.task.updateStatus(
-            currentTask.id,
-            currentTask.version,
-            taskTarget,
+            MergeQueueItemStatus.VALIDATING,
           );
 
           const itemAudit = repos.auditEvent.create({
@@ -564,11 +694,289 @@ export function createMergeExecutorService(deps: MergeExecutorDependencies): Mer
             actorType: actor.type,
             actorId: actor.id,
             oldState: MergeQueueItemStatus.REBASING,
-            newState: itemTarget,
+            newState: MergeQueueItemStatus.VALIDATING,
+            metadata: metadata ? JSON.stringify(metadata) : null,
+          });
+
+          return { item: updatedItem, itemAudit };
+        });
+
+        auditEvents.push(validatingResult.itemAudit);
+
+        eventEmitter.emit({
+          type: "merge-queue-item.transitioned",
+          entityType: "merge-queue-item",
+          entityId: mergeQueueItemId,
+          fromStatus: MergeQueueItemStatus.REBASING,
+          toStatus: MergeQueueItemStatus.VALIDATING,
+          actor,
+          timestamp: clock(),
+        });
+
+        // Run merge-gate validation
+        const validationResult = await validation.runMergeGateValidation({
+          taskId: currentTask.id,
+          workspacePath,
+        });
+
+        if (validationResult.overallStatus === "failed") {
+          const valFailResult = unitOfWork.runInTransaction((repos) => {
+            const itemValidation = validateMergeQueueItemTransition(
+              MergeQueueItemStatus.VALIDATING,
+              MergeQueueItemStatus.FAILED,
+              { validationFailed: true } as MergeQueueItemTransitionContext,
+            );
+            if (!itemValidation.valid) {
+              throw new InvalidTransitionError(
+                "MergeQueueItem",
+                mergeQueueItemId,
+                MergeQueueItemStatus.VALIDATING,
+                MergeQueueItemStatus.FAILED,
+                itemValidation.reason,
+              );
+            }
+
+            const failedItem = repos.mergeQueueItem.updateStatus(
+              mergeQueueItemId,
+              MergeQueueItemStatus.VALIDATING,
+              MergeQueueItemStatus.FAILED,
+              { completedAt: clock() },
+            );
+
+            const itemAudit = repos.auditEvent.create({
+              entityType: "merge-queue-item",
+              entityId: mergeQueueItemId,
+              eventType: "state_transition",
+              actorType: actor.type,
+              actorId: actor.id,
+              oldState: MergeQueueItemStatus.VALIDATING,
+              newState: MergeQueueItemStatus.FAILED,
+              metadata: JSON.stringify({
+                ...metadata,
+                reason: "validation_failed",
+                summary: validationResult.summary,
+              }),
+            });
+
+            return { item: failedItem, itemAudit };
+          });
+
+          auditEvents.push(valFailResult.itemAudit);
+
+          eventEmitter.emit({
+            type: "merge-queue-item.transitioned",
+            entityType: "merge-queue-item",
+            entityId: mergeQueueItemId,
+            fromStatus: MergeQueueItemStatus.VALIDATING,
+            toStatus: MergeQueueItemStatus.FAILED,
+            actor,
+            timestamp: clock(),
+          });
+
+          executeSpan.setAttribute(SpanAttributes.RESULT_STATUS, "validation_failed");
+          executeSpan.setStatus({ code: SpanStatusCode.OK });
+          return {
+            outcome: "validation_failed",
+            item: valFailResult.item,
+            task: currentTask,
+            auditEvents,
+            validationResult,
+          };
+        }
+
+        // ── Phase 5: Transition to MERGING and push ───────────────────────
+
+        const mergingResult = unitOfWork.runInTransaction((repos) => {
+          const itemValidation = validateMergeQueueItemTransition(
+            MergeQueueItemStatus.VALIDATING,
+            MergeQueueItemStatus.MERGING,
+            { validationPassed: true } as MergeQueueItemTransitionContext,
+          );
+          if (!itemValidation.valid) {
+            throw new InvalidTransitionError(
+              "MergeQueueItem",
+              mergeQueueItemId,
+              MergeQueueItemStatus.VALIDATING,
+              MergeQueueItemStatus.MERGING,
+              itemValidation.reason,
+            );
+          }
+
+          const updatedItem = repos.mergeQueueItem.updateStatus(
+            mergeQueueItemId,
+            MergeQueueItemStatus.VALIDATING,
+            MergeQueueItemStatus.MERGING,
+          );
+
+          const itemAudit = repos.auditEvent.create({
+            entityType: "merge-queue-item",
+            entityId: mergeQueueItemId,
+            eventType: "state_transition",
+            actorType: actor.type,
+            actorId: actor.id,
+            oldState: MergeQueueItemStatus.VALIDATING,
+            newState: MergeQueueItemStatus.MERGING,
+            metadata: metadata ? JSON.stringify(metadata) : null,
+          });
+
+          return { item: updatedItem, itemAudit };
+        });
+
+        auditEvents.push(mergingResult.itemAudit);
+
+        eventEmitter.emit({
+          type: "merge-queue-item.transitioned",
+          entityType: "merge-queue-item",
+          entityId: mergeQueueItemId,
+          fromStatus: MergeQueueItemStatus.VALIDATING,
+          toStatus: MergeQueueItemStatus.MERGING,
+          actor,
+          timestamp: clock(),
+        });
+
+        // Determine which branch to push based on strategy:
+        // - rebase-and-merge: push the source (feature) branch
+        // - squash / merge-commit: push the target branch (we merged into it)
+        const pushBranch =
+          mergeStrategy === MergeStrategy.REBASE_AND_MERGE ? sourceBranch : targetBranch;
+
+        // Push the branch
+        try {
+          await gitOps.push(workspacePath, "origin", pushBranch);
+        } catch (error: unknown) {
+          const pushError = error instanceof Error ? error.message : String(error);
+
+          const pushFailResult = unitOfWork.runInTransaction((repos) => {
+            const itemValidation = validateMergeQueueItemTransition(
+              MergeQueueItemStatus.MERGING,
+              MergeQueueItemStatus.FAILED,
+              { mergeFailed: true } as MergeQueueItemTransitionContext,
+            );
+            if (!itemValidation.valid) {
+              throw new InvalidTransitionError(
+                "MergeQueueItem",
+                mergeQueueItemId,
+                MergeQueueItemStatus.MERGING,
+                MergeQueueItemStatus.FAILED,
+                itemValidation.reason,
+              );
+            }
+
+            const failedItem = repos.mergeQueueItem.updateStatus(
+              mergeQueueItemId,
+              MergeQueueItemStatus.MERGING,
+              MergeQueueItemStatus.FAILED,
+              { completedAt: clock() },
+            );
+
+            const itemAudit = repos.auditEvent.create({
+              entityType: "merge-queue-item",
+              entityId: mergeQueueItemId,
+              eventType: "state_transition",
+              actorType: actor.type,
+              actorId: actor.id,
+              oldState: MergeQueueItemStatus.MERGING,
+              newState: MergeQueueItemStatus.FAILED,
+              metadata: JSON.stringify({
+                ...metadata,
+                reason: "push_failed",
+                error: pushError,
+              }),
+            });
+
+            return { item: failedItem, itemAudit };
+          });
+
+          auditEvents.push(pushFailResult.itemAudit);
+
+          eventEmitter.emit({
+            type: "merge-queue-item.transitioned",
+            entityType: "merge-queue-item",
+            entityId: mergeQueueItemId,
+            fromStatus: MergeQueueItemStatus.MERGING,
+            toStatus: MergeQueueItemStatus.FAILED,
+            actor,
+            timestamp: clock(),
+          });
+
+          executeSpan.setAttribute(SpanAttributes.RESULT_STATUS, "push_failed");
+          executeSpan.setStatus({ code: SpanStatusCode.OK });
+          return {
+            outcome: "push_failed",
+            item: pushFailResult.item,
+            task: currentTask,
+            auditEvents,
+            pushError,
+          };
+        }
+
+        // ── Phase 6: Finalize — MERGED + POST_MERGE_VALIDATION ────────────
+
+        const mergedCommitSha = await gitOps.getHeadSha(workspacePath);
+
+        const finalResult = unitOfWork.runInTransaction((repos) => {
+          // Transition item: MERGING → MERGED
+          const itemValidation = validateMergeQueueItemTransition(
+            MergeQueueItemStatus.MERGING,
+            MergeQueueItemStatus.MERGED,
+            { mergeSuccessful: true } as MergeQueueItemTransitionContext,
+          );
+          if (!itemValidation.valid) {
+            throw new InvalidTransitionError(
+              "MergeQueueItem",
+              mergeQueueItemId,
+              MergeQueueItemStatus.MERGING,
+              MergeQueueItemStatus.MERGED,
+              itemValidation.reason,
+            );
+          }
+
+          const mergedItem = repos.mergeQueueItem.updateStatus(
+            mergeQueueItemId,
+            MergeQueueItemStatus.MERGING,
+            MergeQueueItemStatus.MERGED,
+            { completedAt: clock() },
+          );
+
+          // Transition task: MERGING → POST_MERGE_VALIDATION
+          // Re-read task to get current version after earlier transition
+          const freshTask = repos.task.findById(currentTask.id);
+          if (!freshTask) {
+            throw new EntityNotFoundError("Task", currentTask.id);
+          }
+
+          const taskValidation = validateTransition(
+            TaskStatus.MERGING,
+            TaskStatus.POST_MERGE_VALIDATION,
+            { mergeSuccessful: true } as TransitionContext,
+          );
+          if (!taskValidation.valid) {
+            throw new InvalidTransitionError(
+              "Task",
+              currentTask.id,
+              TaskStatus.MERGING,
+              TaskStatus.POST_MERGE_VALIDATION,
+              taskValidation.reason,
+            );
+          }
+
+          const mergedTask = repos.task.updateStatus(
+            currentTask.id,
+            freshTask.version,
+            TaskStatus.POST_MERGE_VALIDATION,
+          );
+
+          const itemAudit = repos.auditEvent.create({
+            entityType: "merge-queue-item",
+            entityId: mergeQueueItemId,
+            eventType: "state_transition",
+            actorType: actor.type,
+            actorId: actor.id,
+            oldState: MergeQueueItemStatus.MERGING,
+            newState: MergeQueueItemStatus.MERGED,
             metadata: JSON.stringify({
               ...metadata,
-              conflictFiles: mergeOpResult.conflictFiles,
-              classification,
+              mergedCommitSha,
             }),
           });
 
@@ -579,34 +987,27 @@ export function createMergeExecutorService(deps: MergeExecutorDependencies): Mer
             actorType: actor.type,
             actorId: actor.id,
             oldState: TaskStatus.MERGING,
-            newState: taskTarget,
+            newState: TaskStatus.POST_MERGE_VALIDATION,
             metadata: JSON.stringify({
               ...metadata,
-              reason: "merge_conflict",
-              mergeStrategy,
-              conflictFiles: mergeOpResult.conflictFiles,
-              classification,
+              mergedCommitSha,
             }),
           });
 
-          return {
-            item: failedItem,
-            task: failedTask,
-            itemAudit,
-            taskAudit,
-            itemTarget,
-            taskTarget,
-          };
+          return { item: mergedItem, task: mergedTask, itemAudit, taskAudit };
         });
 
-        auditEvents.push(failResult.itemAudit, failResult.taskAudit);
+        const currentItem = finalResult.item;
+        currentTask = finalResult.task;
+        auditEvents.push(finalResult.itemAudit, finalResult.taskAudit);
 
+        // Emit domain events
         eventEmitter.emit({
           type: "merge-queue-item.transitioned",
           entityType: "merge-queue-item",
           entityId: mergeQueueItemId,
-          fromStatus: MergeQueueItemStatus.REBASING,
-          toStatus: failResult.itemTarget,
+          fromStatus: MergeQueueItemStatus.MERGING,
+          toStatus: MergeQueueItemStatus.MERGED,
           actor,
           timestamp: clock(),
         });
@@ -615,445 +1016,94 @@ export function createMergeExecutorService(deps: MergeExecutorDependencies): Mer
           entityType: "task",
           entityId: currentTask.id,
           fromStatus: TaskStatus.MERGING,
-          toStatus: failResult.taskTarget,
-          newVersion: failResult.task.version,
+          toStatus: TaskStatus.POST_MERGE_VALIDATION,
+          newVersion: currentTask.version,
           actor,
           timestamp: clock(),
         });
 
-        return {
-          outcome: "rebase_conflict",
-          item: failResult.item,
-          task: failResult.task,
-          auditEvents,
-          conflictFiles: mergeOpResult.conflictFiles,
-          classification,
+        // ── Phase 7: Build and persist MergePacket ────────────────────────
+
+        /** Strategy-specific labels for human-readable MergePacket summaries. */
+        const STRATEGY_LABELS: Record<MergeStrategy, string> = {
+          [MergeStrategy.REBASE_AND_MERGE]: "Rebase-and-merge",
+          [MergeStrategy.SQUASH]: "Squash merge",
+          [MergeStrategy.MERGE_COMMIT]: "Merge commit",
         };
-      }
 
-      // ── Phase 4: Transition to VALIDATING and run validation ──────────
-
-      const validatingResult = unitOfWork.runInTransaction((repos) => {
-        const itemValidation = validateMergeQueueItemTransition(
-          MergeQueueItemStatus.REBASING,
-          MergeQueueItemStatus.VALIDATING,
-          { rebaseSuccessful: true } as MergeQueueItemTransitionContext,
-        );
-        if (!itemValidation.valid) {
-          throw new InvalidTransitionError(
-            "MergeQueueItem",
-            mergeQueueItemId,
-            MergeQueueItemStatus.REBASING,
-            MergeQueueItemStatus.VALIDATING,
-            itemValidation.reason,
-          );
-        }
-
-        const updatedItem = repos.mergeQueueItem.updateStatus(
-          mergeQueueItemId,
-          MergeQueueItemStatus.REBASING,
-          MergeQueueItemStatus.VALIDATING,
-        );
-
-        const itemAudit = repos.auditEvent.create({
-          entityType: "merge-queue-item",
-          entityId: mergeQueueItemId,
-          eventType: "state_transition",
-          actorType: actor.type,
-          actorId: actor.id,
-          oldState: MergeQueueItemStatus.REBASING,
-          newState: MergeQueueItemStatus.VALIDATING,
-          metadata: metadata ? JSON.stringify(metadata) : null,
-        });
-
-        return { item: updatedItem, itemAudit };
-      });
-
-      auditEvents.push(validatingResult.itemAudit);
-
-      eventEmitter.emit({
-        type: "merge-queue-item.transitioned",
-        entityType: "merge-queue-item",
-        entityId: mergeQueueItemId,
-        fromStatus: MergeQueueItemStatus.REBASING,
-        toStatus: MergeQueueItemStatus.VALIDATING,
-        actor,
-        timestamp: clock(),
-      });
-
-      // Run merge-gate validation
-      const validationResult = await validation.runMergeGateValidation({
-        taskId: currentTask.id,
-        workspacePath,
-      });
-
-      if (validationResult.overallStatus === "failed") {
-        const valFailResult = unitOfWork.runInTransaction((repos) => {
-          const itemValidation = validateMergeQueueItemTransition(
-            MergeQueueItemStatus.VALIDATING,
-            MergeQueueItemStatus.FAILED,
-            { validationFailed: true } as MergeQueueItemTransitionContext,
-          );
-          if (!itemValidation.valid) {
-            throw new InvalidTransitionError(
-              "MergeQueueItem",
-              mergeQueueItemId,
-              MergeQueueItemStatus.VALIDATING,
-              MergeQueueItemStatus.FAILED,
-              itemValidation.reason,
-            );
-          }
-
-          const failedItem = repos.mergeQueueItem.updateStatus(
-            mergeQueueItemId,
-            MergeQueueItemStatus.VALIDATING,
-            MergeQueueItemStatus.FAILED,
-            { completedAt: clock() },
-          );
-
-          const itemAudit = repos.auditEvent.create({
-            entityType: "merge-queue-item",
-            entityId: mergeQueueItemId,
-            eventType: "state_transition",
-            actorType: actor.type,
-            actorId: actor.id,
-            oldState: MergeQueueItemStatus.VALIDATING,
-            newState: MergeQueueItemStatus.FAILED,
-            metadata: JSON.stringify({
-              ...metadata,
-              reason: "validation_failed",
-              summary: validationResult.summary,
-            }),
-          });
-
-          return { item: failedItem, itemAudit };
-        });
-
-        auditEvents.push(valFailResult.itemAudit);
-
-        eventEmitter.emit({
-          type: "merge-queue-item.transitioned",
-          entityType: "merge-queue-item",
-          entityId: mergeQueueItemId,
-          fromStatus: MergeQueueItemStatus.VALIDATING,
-          toStatus: MergeQueueItemStatus.FAILED,
-          actor,
-          timestamp: clock(),
-        });
-
-        return {
-          outcome: "validation_failed",
-          item: valFailResult.item,
-          task: currentTask,
-          auditEvents,
-          validationResult,
+        const mergePacketData: MergePacket = {
+          packet_type: "merge_packet",
+          schema_version: "1.0",
+          created_at: clock().toISOString(),
+          task_id: currentTask.id,
+          repository_id: currentTask.repositoryId,
+          merge_queue_item_id: mergeQueueItemId,
+          status: PacketStatus.SUCCESS,
+          summary: `${STRATEGY_LABELS[mergeStrategy]} completed successfully. Merged commit: ${mergedCommitSha}`,
+          details: {
+            source_branch: sourceBranch,
+            target_branch: targetBranch,
+            approved_commit_sha: initialState.item.approvedCommitSha ?? "",
+            merged_commit_sha: mergedCommitSha,
+            merge_strategy: mergeStrategy,
+            rebase_performed: mergeStrategy === MergeStrategy.REBASE_AND_MERGE,
+            validation_results: validationResult.checkOutcomes.map(mapCheckOutcomeToSchemaResult),
+          },
+          artifact_refs: [],
         };
-      }
 
-      // ── Phase 5: Transition to MERGING and push ───────────────────────
-
-      const mergingResult = unitOfWork.runInTransaction((repos) => {
-        const itemValidation = validateMergeQueueItemTransition(
-          MergeQueueItemStatus.VALIDATING,
-          MergeQueueItemStatus.MERGING,
-          { validationPassed: true } as MergeQueueItemTransitionContext,
-        );
-        if (!itemValidation.valid) {
-          throw new InvalidTransitionError(
-            "MergeQueueItem",
-            mergeQueueItemId,
-            MergeQueueItemStatus.VALIDATING,
-            MergeQueueItemStatus.MERGING,
-            itemValidation.reason,
-          );
-        }
-
-        const updatedItem = repos.mergeQueueItem.updateStatus(
-          mergeQueueItemId,
-          MergeQueueItemStatus.VALIDATING,
-          MergeQueueItemStatus.MERGING,
-        );
-
-        const itemAudit = repos.auditEvent.create({
-          entityType: "merge-queue-item",
-          entityId: mergeQueueItemId,
-          eventType: "state_transition",
-          actorType: actor.type,
-          actorId: actor.id,
-          oldState: MergeQueueItemStatus.VALIDATING,
-          newState: MergeQueueItemStatus.MERGING,
-          metadata: metadata ? JSON.stringify(metadata) : null,
-        });
-
-        return { item: updatedItem, itemAudit };
-      });
-
-      auditEvents.push(mergingResult.itemAudit);
-
-      eventEmitter.emit({
-        type: "merge-queue-item.transitioned",
-        entityType: "merge-queue-item",
-        entityId: mergeQueueItemId,
-        fromStatus: MergeQueueItemStatus.VALIDATING,
-        toStatus: MergeQueueItemStatus.MERGING,
-        actor,
-        timestamp: clock(),
-      });
-
-      // Determine which branch to push based on strategy:
-      // - rebase-and-merge: push the source (feature) branch
-      // - squash / merge-commit: push the target branch (we merged into it)
-      const pushBranch =
-        mergeStrategy === MergeStrategy.REBASE_AND_MERGE ? sourceBranch : targetBranch;
-
-      // Push the branch
-      try {
-        await gitOps.push(workspacePath, "origin", pushBranch);
-      } catch (error: unknown) {
-        const pushError = error instanceof Error ? error.message : String(error);
-
-        const pushFailResult = unitOfWork.runInTransaction((repos) => {
-          const itemValidation = validateMergeQueueItemTransition(
-            MergeQueueItemStatus.MERGING,
-            MergeQueueItemStatus.FAILED,
-            { mergeFailed: true } as MergeQueueItemTransitionContext,
-          );
-          if (!itemValidation.valid) {
-            throw new InvalidTransitionError(
-              "MergeQueueItem",
-              mergeQueueItemId,
-              MergeQueueItemStatus.MERGING,
-              MergeQueueItemStatus.FAILED,
-              itemValidation.reason,
-            );
-          }
-
-          const failedItem = repos.mergeQueueItem.updateStatus(
-            mergeQueueItemId,
-            MergeQueueItemStatus.MERGING,
-            MergeQueueItemStatus.FAILED,
-            { completedAt: clock() },
-          );
-
-          const itemAudit = repos.auditEvent.create({
-            entityType: "merge-queue-item",
-            entityId: mergeQueueItemId,
-            eventType: "state_transition",
-            actorType: actor.type,
-            actorId: actor.id,
-            oldState: MergeQueueItemStatus.MERGING,
-            newState: MergeQueueItemStatus.FAILED,
-            metadata: JSON.stringify({
-              ...metadata,
-              reason: "push_failed",
-              error: pushError,
-            }),
-          });
-
-          return { item: failedItem, itemAudit };
-        });
-
-        auditEvents.push(pushFailResult.itemAudit);
-
-        eventEmitter.emit({
-          type: "merge-queue-item.transitioned",
-          entityType: "merge-queue-item",
-          entityId: mergeQueueItemId,
-          fromStatus: MergeQueueItemStatus.MERGING,
-          toStatus: MergeQueueItemStatus.FAILED,
-          actor,
-          timestamp: clock(),
-        });
-
-        return {
-          outcome: "push_failed",
-          item: pushFailResult.item,
-          task: currentTask,
-          auditEvents,
-          pushError,
-        };
-      }
-
-      // ── Phase 6: Finalize — MERGED + POST_MERGE_VALIDATION ────────────
-
-      const mergedCommitSha = await gitOps.getHeadSha(workspacePath);
-
-      const finalResult = unitOfWork.runInTransaction((repos) => {
-        // Transition item: MERGING → MERGED
-        const itemValidation = validateMergeQueueItemTransition(
-          MergeQueueItemStatus.MERGING,
-          MergeQueueItemStatus.MERGED,
-          { mergeSuccessful: true } as MergeQueueItemTransitionContext,
-        );
-        if (!itemValidation.valid) {
-          throw new InvalidTransitionError(
-            "MergeQueueItem",
-            mergeQueueItemId,
-            MergeQueueItemStatus.MERGING,
-            MergeQueueItemStatus.MERGED,
-            itemValidation.reason,
-          );
-        }
-
-        const mergedItem = repos.mergeQueueItem.updateStatus(
-          mergeQueueItemId,
-          MergeQueueItemStatus.MERGING,
-          MergeQueueItemStatus.MERGED,
-          { completedAt: clock() },
-        );
-
-        // Transition task: MERGING → POST_MERGE_VALIDATION
-        // Re-read task to get current version after earlier transition
-        const freshTask = repos.task.findById(currentTask.id);
-        if (!freshTask) {
-          throw new EntityNotFoundError("Task", currentTask.id);
-        }
-
-        const taskValidation = validateTransition(
-          TaskStatus.MERGING,
-          TaskStatus.POST_MERGE_VALIDATION,
-          { mergeSuccessful: true } as TransitionContext,
-        );
-        if (!taskValidation.valid) {
-          throw new InvalidTransitionError(
-            "Task",
-            currentTask.id,
-            TaskStatus.MERGING,
-            TaskStatus.POST_MERGE_VALIDATION,
-            taskValidation.reason,
-          );
-        }
-
-        const mergedTask = repos.task.updateStatus(
-          currentTask.id,
-          freshTask.version,
-          TaskStatus.POST_MERGE_VALIDATION,
-        );
-
-        const itemAudit = repos.auditEvent.create({
-          entityType: "merge-queue-item",
-          entityId: mergeQueueItemId,
-          eventType: "state_transition",
-          actorType: actor.type,
-          actorId: actor.id,
-          oldState: MergeQueueItemStatus.MERGING,
-          newState: MergeQueueItemStatus.MERGED,
-          metadata: JSON.stringify({
-            ...metadata,
+        // Validate against schema before persisting
+        const parseResult = MergePacketSchema.safeParse(mergePacketData);
+        if (!parseResult.success) {
+          // Schema validation should not fail for well-formed packets;
+          // if it does, still return success but without artifact
+          const artifactPath = "";
+          executeSpan.setAttribute(SpanAttributes.RESULT_STATUS, "merged");
+          executeSpan.setStatus({ code: SpanStatusCode.OK });
+          return {
+            outcome: "merged",
+            item: currentItem,
+            task: currentTask,
+            auditEvents,
+            mergePacket: mergePacketData,
+            artifactPath,
             mergedCommitSha,
-          }),
-        });
+          };
+        }
 
-        const taskAudit = repos.auditEvent.create({
-          entityType: "task",
-          entityId: currentTask.id,
-          eventType: "state_transition",
-          actorType: actor.type,
-          actorId: actor.id,
-          oldState: TaskStatus.MERGING,
-          newState: TaskStatus.POST_MERGE_VALIDATION,
-          metadata: JSON.stringify({
-            ...metadata,
-            mergedCommitSha,
-          }),
-        });
+        const validatedPacket = parseResult.data;
+        const artifactPath = await artifactStore.persistMergePacket(
+          mergeQueueItemId,
+          validatedPacket,
+        );
 
-        return { item: mergedItem, task: mergedTask, itemAudit, taskAudit };
-      });
+        // Update artifact_refs in the packet with the persisted path
+        const finalPacket: MergePacket = {
+          ...validatedPacket,
+          artifact_refs: [artifactPath],
+        };
 
-      const currentItem = finalResult.item;
-      currentTask = finalResult.task;
-      auditEvents.push(finalResult.itemAudit, finalResult.taskAudit);
+        executeSpan.setAttribute(SpanAttributes.RESULT_STATUS, "merged");
+        executeSpan.setStatus({ code: SpanStatusCode.OK });
 
-      // Emit domain events
-      eventEmitter.emit({
-        type: "merge-queue-item.transitioned",
-        entityType: "merge-queue-item",
-        entityId: mergeQueueItemId,
-        fromStatus: MergeQueueItemStatus.MERGING,
-        toStatus: MergeQueueItemStatus.MERGED,
-        actor,
-        timestamp: clock(),
-      });
-      eventEmitter.emit({
-        type: "task.transitioned",
-        entityType: "task",
-        entityId: currentTask.id,
-        fromStatus: TaskStatus.MERGING,
-        toStatus: TaskStatus.POST_MERGE_VALIDATION,
-        newVersion: currentTask.version,
-        actor,
-        timestamp: clock(),
-      });
-
-      // ── Phase 7: Build and persist MergePacket ────────────────────────
-
-      /** Strategy-specific labels for human-readable MergePacket summaries. */
-      const STRATEGY_LABELS: Record<MergeStrategy, string> = {
-        [MergeStrategy.REBASE_AND_MERGE]: "Rebase-and-merge",
-        [MergeStrategy.SQUASH]: "Squash merge",
-        [MergeStrategy.MERGE_COMMIT]: "Merge commit",
-      };
-
-      const mergePacketData: MergePacket = {
-        packet_type: "merge_packet",
-        schema_version: "1.0",
-        created_at: clock().toISOString(),
-        task_id: currentTask.id,
-        repository_id: currentTask.repositoryId,
-        merge_queue_item_id: mergeQueueItemId,
-        status: PacketStatus.SUCCESS,
-        summary: `${STRATEGY_LABELS[mergeStrategy]} completed successfully. Merged commit: ${mergedCommitSha}`,
-        details: {
-          source_branch: sourceBranch,
-          target_branch: targetBranch,
-          approved_commit_sha: initialState.item.approvedCommitSha ?? "",
-          merged_commit_sha: mergedCommitSha,
-          merge_strategy: mergeStrategy,
-          rebase_performed: mergeStrategy === MergeStrategy.REBASE_AND_MERGE,
-          validation_results: validationResult.checkOutcomes.map(mapCheckOutcomeToSchemaResult),
-        },
-        artifact_refs: [],
-      };
-
-      // Validate against schema before persisting
-      const parseResult = MergePacketSchema.safeParse(mergePacketData);
-      if (!parseResult.success) {
-        // Schema validation should not fail for well-formed packets;
-        // if it does, still return success but without artifact
-        const artifactPath = "";
         return {
           outcome: "merged",
           item: currentItem,
           task: currentTask,
           auditEvents,
-          mergePacket: mergePacketData,
+          mergePacket: finalPacket,
           artifactPath,
           mergedCommitSha,
         };
+      } catch (error: unknown) {
+        executeSpan.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      } finally {
+        executeSpan.end();
       }
-
-      const validatedPacket = parseResult.data;
-      const artifactPath = await artifactStore.persistMergePacket(
-        mergeQueueItemId,
-        validatedPacket,
-      );
-
-      // Update artifact_refs in the packet with the persisted path
-      const finalPacket: MergePacket = {
-        ...validatedPacket,
-        artifact_refs: [artifactPath],
-      };
-
-      return {
-        outcome: "merged",
-        item: currentItem,
-        task: currentTask,
-        auditEvents,
-        mergePacket: finalPacket,
-        artifactPath,
-        mergedCommitSha,
-      };
     },
   };
 }

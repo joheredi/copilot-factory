@@ -248,4 +248,6 @@ export function getTracer(moduleName: string, version?: string): Tracer {
 // Re-export commonly used OTel API types so consumers don't need
 // a direct dependency on @opentelemetry/api for basic span operations.
 export { trace, context, propagation, DiagLogLevel, InMemorySpanExporter };
-export type { SpanExporter, Tracer };
+export { SpanStatusCode } from "@opentelemetry/api";
+export type { Tracer, Span } from "@opentelemetry/api";
+export type { SpanExporter } from "@opentelemetry/sdk-trace-base";

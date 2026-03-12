@@ -11,5 +11,16 @@ export type { CorrelationContext } from "./context.js";
 export { NestLoggerAdapter } from "./nest-logger.js";
 export type { NestLoggerService } from "./nest-logger.js";
 
-export { initTracing, getTracer, trace, context, propagation, DiagLogLevel } from "./tracing.js";
-export type { TracingConfig, TracingHandle } from "./tracing.js";
+export {
+  initTracing,
+  getTracer,
+  trace,
+  context,
+  propagation,
+  DiagLogLevel,
+  SpanStatusCode,
+  InMemorySpanExporter,
+} from "./tracing.js";
+export type { TracingConfig, TracingHandle, Span } from "./tracing.js";
+
+export { SpanNames, SpanAttributes } from "./spans.js";

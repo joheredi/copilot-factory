@@ -25,6 +25,8 @@
 import type { ValidationPolicy } from "@factory/domain";
 import { MissingValidationProfileError, ProfileSelectionSource } from "@factory/domain";
 
+import { getTracer, SpanStatusCode, SpanNames, SpanAttributes } from "@factory/observability";
+
 import type {
   CheckExecutorPort,
   ValidationCheckOutcome,
@@ -101,118 +103,147 @@ export interface ValidationRunnerService {
  *   The runner calls this once per check in sequential order.
  * @returns A {@link ValidationRunnerService} instance.
  */
+/** @internal OpenTelemetry tracer for validation spans. */
+const validationTracer = getTracer("validation-runner");
+
 export function createValidationRunnerService(
   checkExecutor: CheckExecutorPort,
 ): ValidationRunnerService {
   return {
     runValidation: async (params: RunValidationParams): Promise<ValidationRunResult> => {
-      const { taskId, profileName, validationPolicy, workspacePath } = params;
+      return validationTracer.startActiveSpan(SpanNames.VALIDATION_RUN, async (span) => {
+        try {
+          const { taskId, profileName, validationPolicy, workspacePath } = params;
+          span.setAttribute(SpanAttributes.TASK_ID, taskId);
+          span.setAttribute(SpanAttributes.VALIDATION_PROFILE, profileName);
 
-      // ── 1. Load profile from policy ────────────────────────────────────
+          // ── 1. Load profile from policy ────────────────────────────────────
 
-      const profile = validationPolicy.profiles[profileName];
-      if (!profile) {
-        throw new MissingValidationProfileError(
-          profileName,
-          ProfileSelectionSource.TASK_OVERRIDE,
-          Object.keys(validationPolicy.profiles),
-        );
-      }
+          const profile = validationPolicy.profiles[profileName];
+          if (!profile) {
+            throw new MissingValidationProfileError(
+              profileName,
+              ProfileSelectionSource.TASK_OVERRIDE,
+              Object.keys(validationPolicy.profiles),
+            );
+          }
 
-      // ── 2. Build check execution plan ──────────────────────────────────
+          // ── 2. Build check execution plan ──────────────────────────────────
 
-      const requiredChecks = resolveChecks(profile.required_checks, profile.commands, "required");
-      const optionalChecks = resolveChecks(profile.optional_checks, profile.commands, "optional");
+          const requiredChecks = resolveChecks(
+            profile.required_checks,
+            profile.commands,
+            "required",
+          );
+          const optionalChecks = resolveChecks(
+            profile.optional_checks,
+            profile.commands,
+            "optional",
+          );
 
-      // ── 3. Execute checks sequentially ─────────────────────────────────
+          // ── 3. Execute checks sequentially ─────────────────────────────────
 
-      const checkOutcomes: ValidationCheckOutcome[] = [];
-      const startTime = Date.now();
+          const checkOutcomes: ValidationCheckOutcome[] = [];
+          const startTime = Date.now();
 
-      for (const check of [...requiredChecks, ...optionalChecks]) {
-        if (check.command === undefined) {
-          // Check has no command mapping — mark as skipped
-          checkOutcomes.push({
-            checkName: check.checkName,
-            command: "",
-            category: check.category,
-            status: "skipped",
-            durationMs: 0,
-            errorMessage: `No command mapping found for check "${check.checkName}" in profile "${profileName}"`,
+          for (const check of [...requiredChecks, ...optionalChecks]) {
+            if (check.command === undefined) {
+              // Check has no command mapping — mark as skipped
+              checkOutcomes.push({
+                checkName: check.checkName,
+                command: "",
+                category: check.category,
+                status: "skipped",
+                durationMs: 0,
+                errorMessage: `No command mapping found for check "${check.checkName}" in profile "${profileName}"`,
+              });
+              continue;
+            }
+
+            const executionResult = await checkExecutor.executeCheck({
+              checkName: check.checkName,
+              command: check.command,
+              workspacePath,
+            });
+
+            checkOutcomes.push({
+              checkName: executionResult.checkName,
+              command: executionResult.command,
+              category: check.category,
+              status: executionResult.status,
+              durationMs: executionResult.durationMs,
+              output: executionResult.output,
+              errorMessage: executionResult.errorMessage,
+            });
+          }
+
+          const totalDurationMs = Date.now() - startTime;
+
+          // ── 4. Aggregate results ───────────────────────────────────────────
+
+          const requiredOutcomes = checkOutcomes.filter((c) => c.category === "required");
+          const optionalOutcomes = checkOutcomes.filter((c) => c.category === "optional");
+
+          const requiredPassedCount = requiredOutcomes.filter((c) => c.status === "passed").length;
+          const requiredFailedCount = requiredOutcomes.filter((c) =>
+            FAILING_STATUSES.has(c.status),
+          ).length;
+          const optionalPassedCount = optionalOutcomes.filter((c) => c.status === "passed").length;
+          const optionalFailedCount = optionalOutcomes.filter((c) =>
+            FAILING_STATUSES.has(c.status),
+          ).length;
+          const skippedCount = checkOutcomes.filter((c) => c.status === "skipped").length;
+
+          const skippedRequiredCount = requiredOutcomes.filter(
+            (c) => c.status === "skipped",
+          ).length;
+
+          // ── 5. Determine overall status ────────────────────────────────────
+
+          const overallStatus = computeOverallStatus(
+            requiredFailedCount,
+            skippedRequiredCount,
+            profile.fail_on_skipped_required_check,
+          );
+
+          // ── 6. Build summary ───────────────────────────────────────────────
+
+          const summary = buildSummary({
+            profileName,
+            taskId,
+            overallStatus,
+            requiredPassedCount,
+            requiredFailedCount,
+            skippedRequiredCount,
+            optionalPassedCount,
+            optionalFailedCount,
+            skippedCount,
           });
-          continue;
+
+          span.setAttribute(SpanAttributes.RESULT_STATUS, overallStatus);
+          span.setStatus({ code: SpanStatusCode.OK });
+          return {
+            profileName,
+            overallStatus,
+            checkOutcomes,
+            summary,
+            totalDurationMs,
+            requiredPassedCount,
+            requiredFailedCount,
+            optionalPassedCount,
+            optionalFailedCount,
+            skippedCount,
+          };
+        } catch (error: unknown) {
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: error instanceof Error ? error.message : String(error),
+          });
+          throw error;
+        } finally {
+          span.end();
         }
-
-        const executionResult = await checkExecutor.executeCheck({
-          checkName: check.checkName,
-          command: check.command,
-          workspacePath,
-        });
-
-        checkOutcomes.push({
-          checkName: executionResult.checkName,
-          command: executionResult.command,
-          category: check.category,
-          status: executionResult.status,
-          durationMs: executionResult.durationMs,
-          output: executionResult.output,
-          errorMessage: executionResult.errorMessage,
-        });
-      }
-
-      const totalDurationMs = Date.now() - startTime;
-
-      // ── 4. Aggregate results ───────────────────────────────────────────
-
-      const requiredOutcomes = checkOutcomes.filter((c) => c.category === "required");
-      const optionalOutcomes = checkOutcomes.filter((c) => c.category === "optional");
-
-      const requiredPassedCount = requiredOutcomes.filter((c) => c.status === "passed").length;
-      const requiredFailedCount = requiredOutcomes.filter((c) =>
-        FAILING_STATUSES.has(c.status),
-      ).length;
-      const optionalPassedCount = optionalOutcomes.filter((c) => c.status === "passed").length;
-      const optionalFailedCount = optionalOutcomes.filter((c) =>
-        FAILING_STATUSES.has(c.status),
-      ).length;
-      const skippedCount = checkOutcomes.filter((c) => c.status === "skipped").length;
-
-      const skippedRequiredCount = requiredOutcomes.filter((c) => c.status === "skipped").length;
-
-      // ── 5. Determine overall status ────────────────────────────────────
-
-      const overallStatus = computeOverallStatus(
-        requiredFailedCount,
-        skippedRequiredCount,
-        profile.fail_on_skipped_required_check,
-      );
-
-      // ── 6. Build summary ───────────────────────────────────────────────
-
-      const summary = buildSummary({
-        profileName,
-        taskId,
-        overallStatus,
-        requiredPassedCount,
-        requiredFailedCount,
-        skippedRequiredCount,
-        optionalPassedCount,
-        optionalFailedCount,
-        skippedCount,
       });
-
-      return {
-        profileName,
-        overallStatus,
-        checkOutcomes,
-        summary,
-        totalDurationMs,
-        requiredPassedCount,
-        requiredFailedCount,
-        optionalPassedCount,
-        optionalFailedCount,
-        skippedCount,
-      };
     },
   };
 }

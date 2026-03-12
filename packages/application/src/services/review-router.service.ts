@@ -21,6 +21,8 @@
 
 import type { RiskLevel } from "@factory/domain";
 
+import { getTracer, SpanStatusCode, SpanNames, SpanAttributes } from "@factory/observability";
+
 import picomatch from "picomatch";
 
 // ─── Rule Configuration Types ───────────────────────────────────────────────
@@ -328,92 +330,111 @@ export function categorizeRules(rules: readonly ReviewRoutingRule[]): {
  * // decision.requiredReviewers === ["general", "security"]
  * ```
  */
+/** @internal OpenTelemetry tracer for review routing spans. */
+const reviewRouterTracer = getTracer("review-router");
+
 export function createReviewRouterService(): ReviewRouterService {
   return {
     routeReview(input: ReviewRoutingInput): RoutingDecision {
-      const requiredSet = new Set<string>();
-      const optionalSet = new Set<string>();
-      const rationale: RoutingRationaleEntry[] = [];
+      return reviewRouterTracer.startActiveSpan(SpanNames.REVIEW_ROUTE, (span) => {
+        try {
+          span.setAttribute("risk.level", input.riskLevel);
 
-      // ── Step 0: General reviewer is always required (V1 invariant §9.9) ──
-      requiredSet.add(GENERAL_REVIEWER_TYPE);
-      rationale.push({
-        reviewerType: GENERAL_REVIEWER_TYPE,
-        requirement: "required",
-        reason: "General reviewer is always required per V1 review policy (§9.9)",
-      });
+          const requiredSet = new Set<string>();
+          const optionalSet = new Set<string>();
+          const rationale: RoutingRationaleEntry[] = [];
 
-      // ── Step 1: Explicit repository-required reviewers ──────────────────
-      for (const reviewerType of input.repositoryRequiredReviewers) {
-        if (!requiredSet.has(reviewerType)) {
-          requiredSet.add(reviewerType);
+          // ── Step 0: General reviewer is always required (V1 invariant §9.9) ──
+          requiredSet.add(GENERAL_REVIEWER_TYPE);
           rationale.push({
-            reviewerType,
+            reviewerType: GENERAL_REVIEWER_TYPE,
             requirement: "required",
-            reason: "Explicitly required by repository configuration",
+            reason: "General reviewer is always required per V1 review policy (§9.9)",
           });
-        }
-      }
 
-      // ── Steps 2–4: Rule-based evaluation in deterministic order ─────────
-      const { pathBased, tagDomain, riskBased } = categorizeRules(input.routingConfig.rules);
-
-      const evaluateRuleTier = (
-        tierRules: readonly ReviewRoutingRule[],
-        tierName: string,
-      ): void => {
-        for (const rule of tierRules) {
-          if (!evaluateCondition(rule.when, input)) {
-            continue;
-          }
-
-          // Add required reviewers from the matched rule
-          if (rule.require_reviewers !== undefined) {
-            for (const reviewerType of rule.require_reviewers) {
-              if (!requiredSet.has(reviewerType)) {
-                requiredSet.add(reviewerType);
-                // If it was previously optional, remove from optional
-                optionalSet.delete(reviewerType);
-                rationale.push({
-                  reviewerType,
-                  requirement: "required",
-                  reason: `Rule "${rule.name}" matched (${tierName})`,
-                });
-              }
+          // ── Step 1: Explicit repository-required reviewers ──────────────────
+          for (const reviewerType of input.repositoryRequiredReviewers) {
+            if (!requiredSet.has(reviewerType)) {
+              requiredSet.add(reviewerType);
+              rationale.push({
+                reviewerType,
+                requirement: "required",
+                reason: "Explicitly required by repository configuration",
+              });
             }
           }
 
-          // Add optional reviewers from the matched rule
-          if (rule.optional_reviewers !== undefined) {
-            for (const reviewerType of rule.optional_reviewers) {
-              // Only add as optional if not already required
-              if (!requiredSet.has(reviewerType) && !optionalSet.has(reviewerType)) {
-                optionalSet.add(reviewerType);
-                rationale.push({
-                  reviewerType,
-                  requirement: "optional",
-                  reason: `Rule "${rule.name}" matched (${tierName})`,
-                });
+          // ── Steps 2–4: Rule-based evaluation in deterministic order ─────────
+          const { pathBased, tagDomain, riskBased } = categorizeRules(input.routingConfig.rules);
+
+          const evaluateRuleTier = (
+            tierRules: readonly ReviewRoutingRule[],
+            tierName: string,
+          ): void => {
+            for (const rule of tierRules) {
+              if (!evaluateCondition(rule.when, input)) {
+                continue;
+              }
+
+              // Add required reviewers from the matched rule
+              if (rule.require_reviewers !== undefined) {
+                for (const reviewerType of rule.require_reviewers) {
+                  if (!requiredSet.has(reviewerType)) {
+                    requiredSet.add(reviewerType);
+                    // If it was previously optional, remove from optional
+                    optionalSet.delete(reviewerType);
+                    rationale.push({
+                      reviewerType,
+                      requirement: "required",
+                      reason: `Rule "${rule.name}" matched (${tierName})`,
+                    });
+                  }
+                }
+              }
+
+              // Add optional reviewers from the matched rule
+              if (rule.optional_reviewers !== undefined) {
+                for (const reviewerType of rule.optional_reviewers) {
+                  // Only add as optional if not already required
+                  if (!requiredSet.has(reviewerType) && !optionalSet.has(reviewerType)) {
+                    optionalSet.add(reviewerType);
+                    rationale.push({
+                      reviewerType,
+                      requirement: "optional",
+                      reason: `Rule "${rule.name}" matched (${tierName})`,
+                    });
+                  }
+                }
               }
             }
-          }
+          };
+
+          // Step 2: Path-based rules
+          evaluateRuleTier(pathBased, "path-based");
+
+          // Step 3: Tag/domain rules
+          evaluateRuleTier(tagDomain, "tag/domain");
+
+          // Step 4: Risk-based rules
+          evaluateRuleTier(riskBased, "risk-based");
+
+          span.setAttribute(SpanAttributes.RESULT_STATUS, "routed");
+          span.setStatus({ code: SpanStatusCode.OK });
+          return {
+            requiredReviewers: [...requiredSet],
+            optionalReviewers: [...optionalSet],
+            routingRationale: rationale,
+          };
+        } catch (error: unknown) {
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: error instanceof Error ? error.message : String(error),
+          });
+          throw error;
+        } finally {
+          span.end();
         }
-      };
-
-      // Step 2: Path-based rules
-      evaluateRuleTier(pathBased, "path-based");
-
-      // Step 3: Tag/domain rules
-      evaluateRuleTier(tagDomain, "tag/domain");
-
-      // Step 4: Risk-based rules
-      evaluateRuleTier(riskBased, "risk-based");
-
-      return {
-        requiredReviewers: [...requiredSet],
-        optionalReviewers: [...optionalSet],
-        routingRationale: rationale,
-      };
+      });
     },
   };
 }

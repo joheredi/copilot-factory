@@ -47,6 +47,8 @@ import {
   validateMergeQueueItemTransition,
 } from "@factory/domain";
 
+import { getTracer, SpanStatusCode, SpanNames, SpanAttributes } from "@factory/observability";
+
 import type { UnitOfWork } from "../ports/unit-of-work.port.js";
 import type { DomainEventEmitter } from "../ports/event-emitter.port.js";
 import type {
@@ -167,6 +169,11 @@ export interface TransitionService {
 
 /**
  * Create a new TransitionService instance.
+/** @internal OpenTelemetry tracer for state transition spans. */
+const tracer = getTracer("transition-service");
+
+/**
+ * Creates a centralized State Transition Service.
  *
  * Dependencies are injected via ports so the service remains decoupled
  * from infrastructure concerns (database driver, event transport, etc.).
@@ -186,70 +193,88 @@ export function createTransitionService(
       actor: ActorInfo,
       metadata?: Record<string, unknown>,
     ): TransitionResult<TransitionableTask> {
-      const transactionResult = unitOfWork.runInTransaction((repos) => {
-        // 1. Fetch
-        const task = repos.task.findById(taskId);
-        if (!task) {
-          throw new EntityNotFoundError("Task", taskId);
+      return tracer.startActiveSpan(SpanNames.TASK_TRANSITION, (span) => {
+        try {
+          span.setAttribute(SpanAttributes.TASK_ID, taskId);
+          span.setAttribute(SpanAttributes.TASK_STATE_TO, targetStatus);
+
+          const transactionResult = unitOfWork.runInTransaction((repos) => {
+            // 1. Fetch
+            const task = repos.task.findById(taskId);
+            if (!task) {
+              throw new EntityNotFoundError("Task", taskId);
+            }
+
+            // 2. Validate via domain state machine
+            const validation = validateTransition(task.status, targetStatus, context);
+            if (!validation.valid) {
+              throw new InvalidTransitionError(
+                "Task",
+                taskId,
+                task.status,
+                targetStatus,
+                validation.reason,
+              );
+            }
+
+            // 3. Update with optimistic concurrency (version-based)
+            const updated = repos.task.updateStatus(taskId, task.version, targetStatus);
+
+            // 4. Create audit event atomically
+            const auditEvent = repos.auditEvent.create({
+              entityType: "task",
+              entityId: taskId,
+              eventType: `task.transition.${task.status}.to.${targetStatus}`,
+              actorType: actor.type,
+              actorId: actor.id,
+              oldState: JSON.stringify({
+                status: task.status,
+                version: task.version,
+              }),
+              newState: JSON.stringify({
+                status: targetStatus,
+                version: task.version + 1,
+              }),
+              metadata: metadata ? JSON.stringify(metadata) : null,
+            });
+
+            return {
+              entity: updated,
+              auditEvent,
+              previousStatus: task.status,
+              previousVersion: task.version,
+            };
+          });
+
+          span.setAttribute(SpanAttributes.TASK_STATE_FROM, transactionResult.previousStatus);
+
+          // 5. Emit domain event AFTER commit
+          eventEmitter.emit({
+            type: "task.transitioned",
+            entityType: "task",
+            entityId: taskId,
+            fromStatus: transactionResult.previousStatus,
+            toStatus: targetStatus,
+            newVersion: transactionResult.previousVersion + 1,
+            actor,
+            timestamp: new Date(),
+          });
+
+          span.setStatus({ code: SpanStatusCode.OK });
+          return {
+            entity: transactionResult.entity,
+            auditEvent: transactionResult.auditEvent,
+          };
+        } catch (error: unknown) {
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: error instanceof Error ? error.message : String(error),
+          });
+          throw error;
+        } finally {
+          span.end();
         }
-
-        // 2. Validate via domain state machine
-        const validation = validateTransition(task.status, targetStatus, context);
-        if (!validation.valid) {
-          throw new InvalidTransitionError(
-            "Task",
-            taskId,
-            task.status,
-            targetStatus,
-            validation.reason,
-          );
-        }
-
-        // 3. Update with optimistic concurrency (version-based)
-        const updated = repos.task.updateStatus(taskId, task.version, targetStatus);
-
-        // 4. Create audit event atomically
-        const auditEvent = repos.auditEvent.create({
-          entityType: "task",
-          entityId: taskId,
-          eventType: `task.transition.${task.status}.to.${targetStatus}`,
-          actorType: actor.type,
-          actorId: actor.id,
-          oldState: JSON.stringify({
-            status: task.status,
-            version: task.version,
-          }),
-          newState: JSON.stringify({
-            status: targetStatus,
-            version: task.version + 1,
-          }),
-          metadata: metadata ? JSON.stringify(metadata) : null,
-        });
-
-        return {
-          entity: updated,
-          auditEvent,
-          previousStatus: task.status,
-          previousVersion: task.version,
-        };
       });
-
-      // 5. Emit domain event AFTER commit
-      eventEmitter.emit({
-        type: "task.transitioned",
-        entityType: "task",
-        entityId: taskId,
-        fromStatus: transactionResult.previousStatus,
-        toStatus: targetStatus,
-        newVersion: transactionResult.previousVersion + 1,
-        actor,
-        timestamp: new Date(),
-      });
-
-      return {
-        entity: transactionResult.entity,
-        auditEvent: transactionResult.auditEvent,
-      };
     },
 
     transitionLease(

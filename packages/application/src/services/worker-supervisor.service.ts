@@ -29,6 +29,8 @@
 
 import type { DomainEventEmitter } from "../ports/event-emitter.port.js";
 import type { ActorInfo } from "../events/domain-events.js";
+
+import { getTracer, SpanStatusCode, SpanNames, SpanAttributes } from "@factory/observability";
 import type {
   WorkerEntityStatus,
   SupervisedWorker,
@@ -206,6 +208,9 @@ function mapRunStatusToWorkerStatus(
  * @param deps - All required dependencies.
  * @returns A WorkerSupervisorService instance.
  */
+/** @internal OpenTelemetry tracer for worker supervisor spans. */
+const supervisorTracer = getTracer("worker-supervisor");
+
 export function createWorkerSupervisorService(
   deps: WorkerSupervisorDependencies,
 ): WorkerSupervisorService {
@@ -232,6 +237,12 @@ export function createWorkerSupervisorService(
         runContext,
         actor,
       } = params;
+
+      // ── worker.prepare span: workspace provisioning and runtime setup ──
+      const prepareSpan = supervisorTracer.startSpan(SpanNames.WORKER_PREPARE);
+      prepareSpan.setAttribute(SpanAttributes.TASK_ID, taskId);
+      prepareSpan.setAttribute(SpanAttributes.WORKER_ID, workerId);
+      prepareSpan.setAttribute(SpanAttributes.POOL_ID, poolId);
 
       // Step 1: Create Worker entity in "starting" state
       const worker = unitOfWork.runInTransaction((repos) => {
@@ -279,6 +290,16 @@ export function createWorkerSupervisorService(
         // Step 4: Prepare the runtime adapter
         const prepared = await runtimeAdapter.prepareRun(runContext);
         preparedRunId = prepared.runId;
+
+        prepareSpan.setAttribute(SpanAttributes.RUN_ID, prepared.runId);
+        prepareSpan.setStatus({ code: SpanStatusCode.OK });
+        prepareSpan.end();
+
+        // ── worker.run span: execution, heartbeats, and finalization ──
+        const runSpan = supervisorTracer.startSpan(SpanNames.WORKER_RUN);
+        runSpan.setAttribute(SpanAttributes.TASK_ID, taskId);
+        runSpan.setAttribute(SpanAttributes.WORKER_ID, workerId);
+        runSpan.setAttribute(SpanAttributes.RUN_ID, prepared.runId);
 
         // Step 5: Start the worker process
         await runtimeAdapter.startRun(prepared.runId);
@@ -362,12 +383,31 @@ export function createWorkerSupervisorService(
           toStatus: terminalStatus,
         });
 
+        runSpan.setAttribute(SpanAttributes.RESULT_STATUS, terminalStatus);
+        runSpan.setStatus({ code: SpanStatusCode.OK });
+        runSpan.end();
+
         return {
           worker: terminalWorker,
           finalizeResult,
           outputEvents,
         };
       } catch (error: unknown) {
+        // End any open spans on failure
+        const errMsg = error instanceof Error ? error.message : String(error);
+        if (!preparedRunId) {
+          // Failure happened during prepare phase
+          prepareSpan.setStatus({ code: SpanStatusCode.ERROR, message: errMsg });
+          prepareSpan.end();
+        } else {
+          // Failure happened during run phase
+          const failRunSpan = supervisorTracer.startSpan(SpanNames.WORKER_RUN);
+          failRunSpan.setAttribute(SpanAttributes.TASK_ID, taskId);
+          failRunSpan.setAttribute(SpanAttributes.WORKER_ID, workerId);
+          failRunSpan.setStatus({ code: SpanStatusCode.ERROR, message: errMsg });
+          failRunSpan.end();
+        }
+
         // On any failure: attempt to finalize the runtime if it was prepared
         if (preparedRunId) {
           try {

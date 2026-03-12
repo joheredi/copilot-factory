@@ -27,6 +27,7 @@
   "dependencies": {
     "@factory/config": "workspace:*",
     "@factory/domain": "workspace:*",
+    "@factory/observability": "workspace:*",
     "@factory/schemas": "workspace:*",
     "picomatch": "^4.0.3",
     "zod": "^3.24.4"

@@ -121,6 +121,9 @@ importers:
       '@factory/domain':
         specifier: workspace:*
         version: link:../domain
+      '@factory/observability':
+        specifier: workspace:*
+        version: link:../observability
       '@factory/schemas':
         specifier: workspace:*
         version: link:../schemas

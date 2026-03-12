@@ -26,6 +26,8 @@
 
 import { JobType, TaskPriority, WorkerPoolType } from "@factory/domain";
 
+import { getTracer, SpanStatusCode, SpanNames, SpanAttributes } from "@factory/observability";
+
 import type { ActorInfo } from "../events/domain-events.js";
 import { ExclusivityViolationError, TaskNotReadyForLeaseError } from "../errors.js";
 import type { LeaseService, LeaseAcquisitionResult } from "./lease.service.js";
@@ -234,6 +236,12 @@ export function comparePriority(a: TaskPriority, b: TaskPriority): number {
  * @param leaseService - Handles atomic lease acquisition
  * @param jobQueueService - Handles job creation for worker dispatch
  * @param idGenerator - Function to generate unique worker IDs for lease acquisition
+/** @internal OpenTelemetry tracer for scheduler spans. */
+const schedulerTracer = getTracer("scheduler");
+
+/**
+ * Creates a Scheduler service for task-to-worker assignment.
+ *
  * @returns A SchedulerService instance
  */
 export function createSchedulerService(
@@ -250,129 +258,154 @@ export function createSchedulerService(
 
   return {
     scheduleNext(candidateLimit: number = DEFAULT_CANDIDATE_LIMIT): ScheduleResult {
-      // Step 1: Query ready tasks ordered by priority
-      const candidates = unitOfWork.runInTransaction((repos) => {
-        return repos.task.findReadyByPriority(candidateLimit);
-      });
-
-      if (candidates.length === 0) {
-        return {
-          assigned: false,
-          reason: "no_ready_tasks",
-          candidatesEvaluated: 0,
-        };
-      }
-
-      // Step 2: Fetch all enabled developer pools once (shared across candidates)
-      const developerPools = unitOfWork.runInTransaction((repos) => {
-        return repos.pool.findEnabledByType(ASSIGNMENT_POOL_TYPE);
-      });
-
-      if (developerPools.length === 0) {
-        return {
-          assigned: false,
-          reason: "no_compatible_pools",
-          candidatesEvaluated: 0,
-        };
-      }
-
-      // Step 3: Try each candidate in priority order
-      let candidatesEvaluated = 0;
-      let anyPoolHadCapacity = false;
-
-      for (const task of candidates) {
-        candidatesEvaluated++;
-
-        // Filter pools compatible with this task's required capabilities
-        const compatiblePools = developerPools.filter((pool) => isPoolCompatible(task, pool));
-
-        if (compatiblePools.length === 0) {
-          continue;
-        }
-
-        // Select the best pool with available capacity
-        const selectedPool = selectBestPool(compatiblePools);
-
-        if (!selectedPool) {
-          // All compatible pools are at capacity — note this but try next task
-          // (different tasks may have different capability requirements)
-          continue;
-        }
-
-        anyPoolHadCapacity = true;
-
-        // Step 4: Attempt lease acquisition
-        const workerId = idGenerator();
-        const ttlSeconds = selectedPool.defaultTimeoutSec || DEFAULT_LEASE_TTL_SECONDS;
-
-        let leaseResult: LeaseAcquisitionResult;
+      return schedulerTracer.startActiveSpan(SpanNames.TASK_ASSIGN, (span): ScheduleResult => {
         try {
-          leaseResult = leaseService.acquireLease({
-            taskId: task.taskId,
-            workerId,
-            poolId: selectedPool.poolId,
-            ttlSeconds,
-            actor: SCHEDULER_ACTOR,
-            metadata: {
-              scheduledPriority: task.priority,
-              poolType: selectedPool.poolType,
-            },
+          // Step 1: Query ready tasks ordered by priority
+          const candidates = unitOfWork.runInTransaction((repos) => {
+            return repos.task.findReadyByPriority(candidateLimit);
           });
-        } catch (error: unknown) {
-          // Another scheduler tick may have assigned this task concurrently.
-          // ExclusivityViolationError and TaskNotReadyForLeaseError are expected
-          // race conditions — skip this task and try the next candidate.
-          if (
-            error instanceof ExclusivityViolationError ||
-            error instanceof TaskNotReadyForLeaseError
-          ) {
-            continue;
+
+          if (candidates.length === 0) {
+            span.setAttribute(SpanAttributes.RESULT_STATUS, "no_ready_tasks");
+            span.setStatus({ code: SpanStatusCode.OK });
+            return {
+              assigned: false,
+              reason: "no_ready_tasks",
+              candidatesEvaluated: 0,
+            };
           }
-          // Unexpected errors should propagate
+
+          // Step 2: Fetch all enabled developer pools once (shared across candidates)
+          const developerPools = unitOfWork.runInTransaction((repos) => {
+            return repos.pool.findEnabledByType(ASSIGNMENT_POOL_TYPE);
+          });
+
+          if (developerPools.length === 0) {
+            span.setAttribute(SpanAttributes.RESULT_STATUS, "no_compatible_pools");
+            span.setStatus({ code: SpanStatusCode.OK });
+            return {
+              assigned: false,
+              reason: "no_compatible_pools",
+              candidatesEvaluated: 0,
+            };
+          }
+
+          // Step 3: Try each candidate in priority order
+          let candidatesEvaluated = 0;
+          let anyPoolHadCapacity = false;
+
+          for (const task of candidates) {
+            candidatesEvaluated++;
+
+            // Filter pools compatible with this task's required capabilities
+            const compatiblePools = developerPools.filter((pool) => isPoolCompatible(task, pool));
+
+            if (compatiblePools.length === 0) {
+              continue;
+            }
+
+            // Select the best pool with available capacity
+            const selectedPool = selectBestPool(compatiblePools);
+
+            if (!selectedPool) {
+              // All compatible pools are at capacity — note this but try next task
+              // (different tasks may have different capability requirements)
+              continue;
+            }
+
+            anyPoolHadCapacity = true;
+
+            // Step 4: Attempt lease acquisition
+            const workerId = idGenerator();
+            const ttlSeconds = selectedPool.defaultTimeoutSec || DEFAULT_LEASE_TTL_SECONDS;
+
+            let leaseResult: LeaseAcquisitionResult;
+            try {
+              leaseResult = leaseService.acquireLease({
+                taskId: task.taskId,
+                workerId,
+                poolId: selectedPool.poolId,
+                ttlSeconds,
+                actor: SCHEDULER_ACTOR,
+                metadata: {
+                  scheduledPriority: task.priority,
+                  poolType: selectedPool.poolType,
+                },
+              });
+            } catch (error: unknown) {
+              // Another scheduler tick may have assigned this task concurrently.
+              // ExclusivityViolationError and TaskNotReadyForLeaseError are expected
+              // race conditions — skip this task and try the next candidate.
+              if (
+                error instanceof ExclusivityViolationError ||
+                error instanceof TaskNotReadyForLeaseError
+              ) {
+                continue;
+              }
+              // Unexpected errors should propagate
+              throw error;
+            }
+
+            // Step 5: Create a worker dispatch job for the worker supervisor
+            const dispatchJob = jobQueueService.createJob({
+              jobType: JobType.WORKER_DISPATCH,
+              entityType: "task",
+              entityId: task.taskId,
+              payloadJson: {
+                taskId: task.taskId,
+                leaseId: leaseResult.lease.leaseId,
+                poolId: selectedPool.poolId,
+                workerId,
+                priority: task.priority,
+                requiredCapabilities: task.requiredCapabilities,
+              },
+            });
+
+            // Step 6: Return successful assignment
+            span.setAttribute(SpanAttributes.TASK_ID, task.taskId);
+            span.setAttribute(SpanAttributes.POOL_ID, selectedPool.poolId);
+            span.setAttribute(SpanAttributes.WORKER_ID, workerId);
+            span.setAttribute(SpanAttributes.RESULT_STATUS, "assigned");
+            span.setStatus({ code: SpanStatusCode.OK });
+            return {
+              assigned: true,
+              assignment: {
+                task,
+                pool: selectedPool,
+                leaseResult,
+                dispatchJob,
+              },
+            };
+          }
+
+          // All candidates evaluated, none could be assigned
+          if (!anyPoolHadCapacity) {
+            span.setAttribute(SpanAttributes.RESULT_STATUS, "all_pools_at_capacity");
+            span.setStatus({ code: SpanStatusCode.OK });
+            return {
+              assigned: false,
+              reason: "all_pools_at_capacity",
+              candidatesEvaluated,
+            };
+          }
+
+          span.setAttribute(SpanAttributes.RESULT_STATUS, "all_candidates_contended");
+          span.setStatus({ code: SpanStatusCode.OK });
+          return {
+            assigned: false,
+            reason: "all_candidates_contended",
+            candidatesEvaluated,
+          };
+        } catch (error: unknown) {
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: error instanceof Error ? error.message : String(error),
+          });
           throw error;
+        } finally {
+          span.end();
         }
-
-        // Step 5: Create a worker dispatch job for the worker supervisor
-        const dispatchJob = jobQueueService.createJob({
-          jobType: JobType.WORKER_DISPATCH,
-          entityType: "task",
-          entityId: task.taskId,
-          payloadJson: {
-            taskId: task.taskId,
-            leaseId: leaseResult.lease.leaseId,
-            poolId: selectedPool.poolId,
-            workerId,
-            priority: task.priority,
-            requiredCapabilities: task.requiredCapabilities,
-          },
-        });
-
-        // Step 6: Return successful assignment
-        return {
-          assigned: true,
-          assignment: {
-            task,
-            pool: selectedPool,
-            leaseResult,
-            dispatchJob,
-          },
-        };
-      }
-
-      // All candidates evaluated, none could be assigned
-      if (!anyPoolHadCapacity) {
-        return {
-          assigned: false,
-          reason: "all_pools_at_capacity",
-          candidatesEvaluated,
-        };
-      }
-
-      return {
-        assigned: false,
-        reason: "all_candidates_contended",
-        candidatesEvaluated,
-      };
+      });
     },
   };
 }

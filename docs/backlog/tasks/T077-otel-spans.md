@@ -5,7 +5,7 @@
 | **ID**                    | T077                                                  |
 | **Epic**                  | [E016: Observability](../epics/E016-observability.md) |
 | **Type**                  | feature                                               |
-| **Status**                | pending                                               |
+| **Status**                | done                                                  |
 | **Priority**              | P1                                                    |
 | **Owner**                 | backend-engineer                                      |
 | **AI Executable**         | Yes                                                   |
