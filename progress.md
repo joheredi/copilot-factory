@@ -1,5 +1,38 @@
 # Progress Log
 
+## T104 — Integrate operator controls into task detail UI
+
+### Task
+
+T104 - Integrate operator controls into task detail UI (Epic E021: Operator Actions & Overrides)
+
+### What was done
+
+Added a complete operator action bar to the task detail page with state-dependent controls:
+
+- **action-definitions.ts**: Maps each of 16 task statuses to valid operator actions with metadata (label, variant, confirmation requirement, description). Mirrors backend guards.
+- **TaskActionBar.tsx**: Main orchestration component that renders state-dependent buttons, priority selector, escalation resolution panel, and feedback banners. Wires up all 11 TanStack Query mutation hooks.
+- **ConfirmActionDialog.tsx**: Reusable confirmation modal with reason textarea (required for audit trail), optional in-progress work acknowledgment checkbox (for cancel on IN_DEVELOPMENT).
+- **EscalationResolutionPanel.tsx**: Three-button panel (Retry, Cancel, Mark Done) for ESCALATED tasks, each with a tailored dialog. Mark Done requires evidence field.
+- **PriorityChangeSelect.tsx**: Inline native select for priority changes (no confirmation needed, fires immediately).
+- **ActionFeedbackBanner.tsx**: Dismissible success/error banner with auto-dismiss after 5s. No toast library needed.
+- **use-action-feedback.ts**: Hook managing feedback state with timer cleanup.
+- **35 new tests** across 2 test files covering action definitions per status, component rendering, dialog interactions, and full integration with API mocking.
+
+### Patterns used
+
+- Existing TanStack Query mutation hooks from `use-tasks.ts` (already had all 11 operator action hooks)
+- Radix Dialog from existing `components/ui/dialog.tsx`
+- Native HTML select for priority (avoids adding @radix-ui/react-select dependency)
+- Inline feedback banners instead of toast library (keeps dependencies minimal)
+- `data-testid` attributes on all interactive elements for testability
+
+### Notes for next loop
+
+- T105 (operator controls for pool/merge queue UI) is the only remaining pending task
+- The `OPERATOR_ACTOR_ID` in TaskActionBar is hardcoded as "operator" — should be replaced with real auth identity when authentication is integrated
+- Override merge order currently defaults to position 1 — could be enhanced with a position input field in the confirmation dialog
+
 ## T100 — Build audit explorer view
 
 ### Task

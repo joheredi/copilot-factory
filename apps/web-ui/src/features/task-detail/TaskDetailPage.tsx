@@ -8,11 +8,15 @@
  * - **Artifacts**: Hierarchical tree of task artifacts matching filesystem layout
  * - **Dependencies**: Forward and reverse dependency relationships with navigation
  *
+ * Includes an operator action bar that shows state-dependent controls
+ * for pausing, cancelling, requeueing, and other operator actions.
+ *
  * Uses React Router's `useParams` to extract the task ID from the URL,
  * then fetches the enriched task detail via the `useTask` hook.
  *
  * @see docs/prd/007-technical-architecture.md §7.16 — Task Detail screen
  * @see T095 — Build task detail timeline view
+ * @see T104 — Integrate operator controls into task detail UI
  */
 
 import { ArrowLeft } from "lucide-react";
@@ -27,6 +31,7 @@ import { TaskTimelineTab } from "./components/TaskTimelineTab.js";
 import { TaskPacketsTab } from "./components/TaskPacketsTab.js";
 import { TaskArtifactsTab } from "./components/TaskArtifactsTab.js";
 import { TaskDependenciesTab } from "./components/TaskDependenciesTab.js";
+import { TaskActionBar } from "./components/operator-actions/TaskActionBar.js";
 import type { TaskPriority } from "../../api/types.js";
 
 /**
@@ -99,6 +104,9 @@ export default function TaskDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* Operator action controls — shows only valid actions for current state */}
+        <TaskActionBar task={task} />
       </div>
 
       {/* Tabbed content */}
