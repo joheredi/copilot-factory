@@ -1,5 +1,36 @@
 # Progress Log
 
+## T096 — Build worker pool monitoring panel
+
+### Task
+
+T096 - Build worker pool monitoring panel (Epic E020: Web UI Feature Views)
+
+### What was done
+
+- Replaced the placeholder `WorkersPage` with a full pool monitoring feature at `apps/web-ui/src/features/pools/`
+- **PoolsPage** (list view): Displays all pools as clickable cards in a responsive grid with pool name, type badge, enabled/disabled status badge, max concurrency, provider/model info, and runtime. Includes filter bar for pool type and enabled status.
+- **PoolDetailPage** (detail view): Shows pool header with type/status badges, 3 stat cards (workers online, active tasks, max concurrency), full configuration section (provider, model, runtime, cost profile, timeout, token budget, capabilities), worker table with status/task assignment/heartbeat, and agent profiles list with policy badges.
+- **Components**: `PoolCard` (clickable summary card), `PoolStatusBadge` (green enabled / gray disabled), `PoolTypeBadge` (color-coded by pool type), `WorkerTable` (workers with status badges and heartbeat times)
+- Added `/workers/:id` route for pool detail with lazy loading in `routes.tsx`
+- Leveraged existing hooks (`usePools`, `usePool`, `usePoolWorkers`, `useAgentProfiles`) and query keys — no API changes needed
+- 25 tests across PoolsPage and PoolDetailPage covering: pool card rendering, count display, type/status badges, provider info, loading skeletons, error states, empty states, navigation links, filter toggle, worker stats, configuration display, capabilities, worker table with status badges, task assignment display, agent profiles with policy badges, back navigation, loading/error/empty states for workers and profiles
+
+### Patterns used
+
+- Card-based grid layout for pool list (responsive: 1/2/3 columns)
+- List → detail drill-down via React Router (same pattern as tasks)
+- TanStack Query hooks with conditional `enabled` flag for detail queries
+- React Router `useParams` for pool ID extraction
+- `data-testid` attributes for all testable elements
+- Mock fetch with URL pattern matching in tests (same pattern as dashboard tests)
+
+### Notes for next iteration
+
+- T105 (operator controls in pool/merge queue UI) builds on this page — will add enable/disable toggle and concurrency editing
+- Pool cards link to `/workers/:id` to stay consistent with existing nav item
+- The workers page is now at `features/pools/` but the route remains `/workers` for backward compatibility with existing nav links
+
 ## T095 — Build task detail timeline view
 
 ### Task

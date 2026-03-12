@@ -13,7 +13,8 @@ import { AppLayout } from "./layout";
 const DashboardPage = lazy(() => import("../features/dashboard/page.js"));
 const TasksPage = lazy(() => import("../features/tasks/page.js"));
 const TaskDetailPage = lazy(() => import("../features/task-detail/TaskDetailPage.js"));
-const WorkersPage = lazy(() => import("../features/workers/page.js"));
+const PoolsPage = lazy(() => import("../features/pools/PoolsPage.js"));
+const PoolDetailPage = lazy(() => import("../features/pools/PoolDetailPage.js"));
 const ReviewsPage = lazy(() => import("../features/reviews/page.js"));
 const MergeQueuePage = lazy(() => import("../features/merge-queue/page.js"));
 const ConfigPage = lazy(() => import("../features/config/page.js"));
@@ -63,7 +64,15 @@ const routes: RouteObject[] = [
         path: "workers",
         element: (
           <Suspense fallback={<PageSkeleton />}>
-            <WorkersPage />
+            <PoolsPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "workers/:id",
+        element: (
+          <Suspense fallback={<PageSkeleton />}>
+            <PoolDetailPage />
           </Suspense>
         ),
       },
