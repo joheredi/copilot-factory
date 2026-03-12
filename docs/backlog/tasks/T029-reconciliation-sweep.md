@@ -5,7 +5,7 @@
 | **ID**                    | T029                                                                  |
 | **Epic**                  | [E005: Job Queue & Scheduling](../epics/E005-job-queue-scheduling.md) |
 | **Type**                  | feature                                                               |
-| **Status**                | pending                                                               |
+| **Status**                | done                                                                  |
 | **Priority**              | P1                                                                    |
 | **Owner**                 | backend-engineer                                                      |
 | **AI Executable**         | Yes                                                                   |
@@ -55,10 +55,10 @@ The implementing agent should read these files before starting:
 
 ## Acceptance Criteria
 
-- [ ] Stale leases are detected and reclaimed
-- [ ] Stuck tasks are recovered
-- [ ] Reconciliation is idempotent
-- [ ] Actions are logged
+- [x] Stale leases are detected and reclaimed
+- [x] Stuck tasks are recovered
+- [x] Reconciliation is idempotent
+- [x] Actions are logged
 
 ## Definition of Done
 

@@ -674,3 +674,39 @@ export type {
   PostMergeValidationService,
   PostMergeValidationDependencies,
 } from "./services/post-merge-validation.service.js";
+
+// Ports — reconciliation sweep interfaces (PRD 007 §7.8)
+export type {
+  OrphanedJobRecord,
+  StuckTaskRecord,
+  BlockedTaskRecord,
+  OrphanedJobQueryPort,
+  StuckTaskQueryPort,
+  BlockedTaskQueryPort,
+  ReconciliationSweepTransactionRepositories,
+  ReconciliationSweepUnitOfWork,
+} from "./ports/reconciliation-sweep.ports.js";
+
+// Services — reconciliation sweep for self-healing (PRD 007 §7.8, T029)
+export {
+  createReconciliationSweepService,
+  DEFAULT_SWEEP_INTERVAL_MS,
+  DEFAULT_ORPHANED_JOB_TIMEOUT_MS,
+  DEFAULT_STUCK_TASK_TIMEOUT_MS,
+  DEFAULT_SWEEP_LEASE_OWNER,
+  DEFAULT_STALENESS_POLICY,
+} from "./services/reconciliation-sweep.service.js";
+export type {
+  ReconciliationSweepConfig,
+  InitializeSweepResult,
+  StaleLeaseSweepAction,
+  OrphanedJobSweepAction,
+  StuckTaskSweepAction,
+  ReadinessRecalcAction,
+  SweepSummary,
+  SweepProcessedResult,
+  SweepSkippedResult,
+  ProcessSweepResult,
+  ReconciliationSweepService,
+  ReconciliationSweepDependencies,
+} from "./services/reconciliation-sweep.service.js";

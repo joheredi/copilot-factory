@@ -1,5 +1,29 @@
 # Progress Log
 
+## T029: Implement reconciliation sweep job — DONE (2026-03-11)
+
+**Status:** Done
+
+**What was done:**
+
+- Created `ReconciliationSweepUnitOfWork` and query ports in `packages/application/src/ports/reconciliation-sweep.ports.ts` — narrow read ports for orphaned jobs, stuck tasks, and blocked tasks
+- Created `ReconciliationSweepService` in `packages/application/src/services/reconciliation-sweep.service.ts` — self-rescheduling job (same pattern as scheduler tick) with four sweep sub-operations:
+  1. Stale lease detection via HeartbeatService + reclaim via LeaseReclaimService
+  2. Orphaned job detection (CLAIMED/RUNNING past timeout) + failJob
+  3. Stuck task recovery (ASSIGNED past timeout → READY)
+  4. BLOCKED task readiness recalculation via ReadinessService + TransitionService
+- 22 unit tests covering initialization, self-rescheduling, all four sweep categories, error isolation, actor attribution, and default constants
+- Exported all types and factory from `packages/application/src/index.ts`
+
+**Patterns & notes for next loops:**
+
+- Self-rescheduling pattern: claim → process → complete → create next job with runAfter delay (same as SCHEDULER_TICK in scheduler-tick.service.ts)
+- Error isolation: each sweep sub-operation is wrapped in try/catch — failure in one doesn't prevent others
+- Composition over reimplementation: sweeps compose HeartbeatService, LeaseReclaimService, ReadinessService, TransitionService, and JobQueueService rather than duplicating their logic
+- All reconciliation actions attributed to `{ type: "system", id: "reconciliation-sweep" }` actor for audit trail
+- Configurable thresholds: sweepIntervalMs (60s), orphanedJobTimeoutMs (10min), stuckTaskTimeoutMs (5min), stalenessPolicy
+- T029 completion unblocks T038 (dependency reconciliation loop) which depends on T029 + T037 (both now done)
+
 ## T074: Implement audit event query service — DONE (2026-03-11)
 
 **Status:** Done
