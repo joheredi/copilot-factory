@@ -402,3 +402,9 @@ T110 - Integration test: lease timeout and crash recovery (Epic E022: Integratio
 
 - T113 (Markdown task parser) and T114 (YAML task parser) are now unblocked by T112
 - T119 (Crash recovery) and T135 (Queue worker events) are also P0 ready candidates
+
+## T133: Unit tests for WorkerDispatchService — DONE
+
+- **Status**: Already implemented by a prior session. 11 tests, all passing.
+- **Coverage**: No-op (no jobs), happy path (claim→spawn→complete), context resolution failure, spawn failure (Error + non-Error), configuration (default/custom lease owner), job type validation, payload extraction with realistic data.
+- **Action taken**: Verified all acceptance criteria are met, updated task status to `done` in task file and backlog index.

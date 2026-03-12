@@ -85,7 +85,7 @@ See [index-archive.md](index-archive.md) for the 21 completed epics: E001–E008
 | [T046](tasks/T046-output-capture-validation.md)     | Implement structured output capture and validation          | P0       | feature        | done    |
 | [T047](tasks/T047-command-wrapper.md)               | Implement policy-aware command wrapper                      | P0       | security       | done    |
 | [T132](tasks/T132-worker-dispatch-service.md)       | Implement WorkerDispatchService in application layer        | P0       | feature        | pending |
-| [T133](tasks/T133-worker-dispatch-tests.md)         | Unit tests for WorkerDispatchService                        | P0       | feature        | pending |
+| [T133](tasks/T133-worker-dispatch-tests.md)         | Unit tests for WorkerDispatchService                        | P0       | feature        | done    |
 | [T134](tasks/T134-worker-dispatch-adapter.md)       | Wire WorkerDispatch unit-of-work adapter in control-plane   | P0       | infrastructure | pending |
 | [T135](tasks/T135-heartbeat-forwarder-adapter.md)   | Implement HeartbeatForwarderPort adapter                    | P0       | infrastructure | pending |
 | [T136](tasks/T136-infrastructure-adapter-wiring.md) | Wire workspace, runtime, and packet infrastructure adapters | P0       | infrastructure | pending |
