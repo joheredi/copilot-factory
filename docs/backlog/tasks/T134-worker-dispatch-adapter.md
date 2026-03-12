@@ -5,7 +5,7 @@
 | **ID**                    | T134                                                                                                                                       |
 | **Epic**                  | [E009: Worker Runtime & Execution](../epics/E009-worker-runtime.md)                                                                        |
 | **Type**                  | infrastructure                                                                                                                             |
-| **Status**                | pending                                                                                                                                    |
+| **Status**                | done                                                                                                                                       |
 | **Priority**              | P0                                                                                                                                         |
 | **Owner**                 | backend-engineer                                                                                                                           |
 | **AI Executable**         | Yes                                                                                                                                        |
@@ -58,10 +58,10 @@ The implementing agent should read these files before starting:
 
 ## Acceptance Criteria
 
-- [ ] `createWorkerDispatchUnitOfWork()` factory implemented
-- [ ] Follows existing adapter pattern (transaction boundary, repo mapping)
-- [ ] Provides read access to task and project/repository context
-- [ ] Exported and usable by AutomationService
+- [x] `createWorkerDispatchUnitOfWork()` factory implemented
+- [x] Follows existing adapter pattern (transaction boundary, repo mapping)
+- [x] Provides read access to task and project/repository context
+- [x] Exported and usable by AutomationService
 
 ## Definition of Done
 

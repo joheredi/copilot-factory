@@ -20,12 +20,19 @@ import type {
   SchedulerTransactionRepositories,
   SchedulerUnitOfWork,
   QueuedJob,
+  WorkerDispatchUnitOfWork,
+  WorkerDispatchTransactionRepositories,
+  WorkerSpawnContext,
+  SupervisorWorkspacePaths,
+  SupervisorTimeoutSettings,
+  SupervisorOutputSchemaExpectation,
 } from "@factory/application";
 import {
   JobStatus,
   TaskPriority,
   TaskStatus,
   WorkerLeaseStatus,
+  isTerminalState,
   type DependencyType,
   type JobType,
   type TaskStatus as DomainTaskStatus,
@@ -35,6 +42,7 @@ import {
 import type { DatabaseConnection } from "../infrastructure/database/connection.js";
 import { createAuditEventPortAdapter } from "../infrastructure/unit-of-work/repository-adapters.js";
 import { createJobRepository, type Job } from "../infrastructure/repositories/job.repository.js";
+import { createRepositoryRepository } from "../infrastructure/repositories/repository.repository.js";
 import { createTaskDependencyRepository } from "../infrastructure/repositories/task-dependency.repository.js";
 import { createTaskLeaseRepository } from "../infrastructure/repositories/task-lease.repository.js";
 import { createTaskRepository } from "../infrastructure/repositories/task.repository.js";
@@ -377,6 +385,187 @@ export function createSchedulerTickUnitOfWork(conn: DatabaseConnection): Schedul
               .findAll()
               .filter((job) => job.jobType === jobType && JOB_NON_TERMINAL_STATUSES.has(job.status))
               .length;
+          },
+        },
+      });
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Worker Dispatch constants and helpers
+// ---------------------------------------------------------------------------
+
+/** Default time budget in seconds for a worker run when no pool timeout is configured. */
+const DEFAULT_TIME_BUDGET_SECONDS = 3600;
+
+/** Default interval between worker heartbeats in seconds. */
+const DEFAULT_HEARTBEAT_INTERVAL_SECONDS = 30;
+
+/** Number of consecutive missed heartbeats before a worker is considered dead. */
+const DEFAULT_MISSED_HEARTBEAT_THRESHOLD = 3;
+
+/** Grace period in seconds after timeout before forceful termination. */
+const DEFAULT_GRACE_PERIOD_SECONDS = 60;
+
+/** Schema version for output packet expectations. */
+const OUTPUT_SCHEMA_VERSION = "1.0.0";
+
+/**
+ * Map a task type to the expected output packet type.
+ *
+ * The packet type determines what schema the worker's output must conform to.
+ * Each task type produces a specific kind of result packet.
+ *
+ * @param taskType - The task's classification type from the DB.
+ * @returns The expected output packet type string.
+ */
+function mapTaskTypeToPacketType(taskType: string): string {
+  switch (taskType) {
+    case "feature":
+    case "bug_fix":
+    case "refactor":
+    case "chore":
+      return "development_result";
+    case "documentation":
+      return "documentation_result";
+    case "test":
+      return "test_result";
+    case "spike":
+      return "spike_result";
+    default:
+      return "development_result";
+  }
+}
+
+/**
+ * Build a task packet from the raw task database record.
+ *
+ * The task packet is a flat record containing all task metadata that the
+ * worker needs to understand its assignment. It is mounted into the
+ * workspace as part of the run context.
+ *
+ * @param task - The task row from the database.
+ * @returns A serializable record of task metadata.
+ */
+function buildTaskPacket(task: {
+  taskId: string;
+  repositoryId: string;
+  externalRef: string | null;
+  title: string;
+  description: string | null;
+  taskType: string;
+  priority: string;
+  severity: string | null;
+  status: string;
+  source: string;
+  acceptanceCriteria: unknown;
+  definitionOfDone: unknown;
+  requiredCapabilities: unknown;
+  suggestedFileScope: unknown;
+  branchName: string | null;
+}): Record<string, unknown> {
+  return {
+    taskId: task.taskId,
+    repositoryId: task.repositoryId,
+    externalRef: task.externalRef,
+    title: task.title,
+    description: task.description,
+    taskType: task.taskType,
+    priority: task.priority,
+    severity: task.severity,
+    status: task.status,
+    source: task.source,
+    acceptanceCriteria: toStringArray(task.acceptanceCriteria),
+    definitionOfDone: toStringArray(task.definitionOfDone),
+    requiredCapabilities: toStringArray(task.requiredCapabilities),
+    suggestedFileScope: toStringArray(task.suggestedFileScope),
+    branchName: task.branchName,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Worker Dispatch Unit of Work
+// ---------------------------------------------------------------------------
+
+/**
+ * Create a {@link WorkerDispatchUnitOfWork} bound to the given database
+ * connection.
+ *
+ * This is a read-only adapter that resolves the full {@link WorkerSpawnContext}
+ * from a task identifier. It loads the task and its associated repository to
+ * build the task packet, workspace paths, timeout settings, and output schema
+ * expectation needed by the worker supervisor.
+ *
+ * Uses `conn.db` directly (no write transaction) because all operations are
+ * reads — following the same pattern as {@link createReadinessUnitOfWork} and
+ * {@link createSchedulerUnitOfWork}.
+ *
+ * @param conn - The database connection to bind to.
+ * @returns A WorkerDispatchUnitOfWork that resolves spawn context from DB data.
+ *
+ * @see {@link file://docs/backlog/tasks/T134-worker-dispatch-adapter.md}
+ */
+export function createWorkerDispatchUnitOfWork(conn: DatabaseConnection): WorkerDispatchUnitOfWork {
+  return {
+    runInTransaction<T>(fn: (repos: WorkerDispatchTransactionRepositories) => T): T {
+      const taskRepo = createTaskRepository(conn.db);
+      const repoRepo = createRepositoryRepository(conn.db);
+
+      return fn({
+        dispatch: {
+          resolveSpawnContext(taskId: string): WorkerSpawnContext | null {
+            const task = taskRepo.findById(taskId);
+            if (!task) {
+              return null;
+            }
+
+            // Reject dispatch for tasks in terminal states
+            if (isTerminalState(task.status as DomainTaskStatus)) {
+              return null;
+            }
+
+            const repository = repoRepo.findById(task.repositoryId);
+            if (!repository) {
+              return null;
+            }
+
+            const workerName = `worker-${task.taskId}`;
+
+            const taskPacket = buildTaskPacket(task);
+
+            const workspacePaths: SupervisorWorkspacePaths = {
+              worktreePath: `worktrees/${task.taskId}`,
+              artifactRoot: `artifacts/${task.taskId}`,
+              packetInputPath: `artifacts/${task.taskId}/packets/input`,
+              policySnapshotPath: `artifacts/${task.taskId}/policy-snapshot.json`,
+            };
+
+            const timeBudgetSeconds = DEFAULT_TIME_BUDGET_SECONDS;
+            const timeoutSettings: SupervisorTimeoutSettings = {
+              timeBudgetSeconds,
+              expiresAt: new Date(Date.now() + timeBudgetSeconds * 1000).toISOString(),
+              heartbeatIntervalSeconds: DEFAULT_HEARTBEAT_INTERVAL_SECONDS,
+              missedHeartbeatThreshold: DEFAULT_MISSED_HEARTBEAT_THRESHOLD,
+              gracePeriodSeconds: DEFAULT_GRACE_PERIOD_SECONDS,
+            };
+
+            const outputSchemaExpectation: SupervisorOutputSchemaExpectation = {
+              packetType: mapTaskTypeToPacketType(task.taskType),
+              schemaVersion: OUTPUT_SCHEMA_VERSION,
+            };
+
+            return {
+              repoPath: repository.remoteUrl,
+              workerName,
+              runContext: {
+                taskPacket,
+                effectivePolicySnapshot: {},
+                workspacePaths,
+                outputSchemaExpectation,
+                timeoutSettings,
+              },
+            };
           },
         },
       });

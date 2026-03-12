@@ -408,3 +408,22 @@ T110 - Integration test: lease timeout and crash recovery (Epic E022: Integratio
 - **Status**: Already implemented by a prior session. 11 tests, all passing.
 - **Coverage**: No-op (no jobs), happy path (claim→spawn→complete), context resolution failure, spawn failure (Error + non-Error), configuration (default/custom lease owner), job type validation, payload extraction with realistic data.
 - **Action taken**: Verified all acceptance criteria are met, updated task status to `done` in task file and backlog index.
+
+## T134: Wire WorkerDispatch unit-of-work adapter — DONE
+
+- **What was done**: Added `createWorkerDispatchUnitOfWork()` factory to `apps/control-plane/src/automation/application-adapters.ts`. This bridges infrastructure database repositories to the `WorkerDispatchUnitOfWork` port from `@factory/application`, enabling the `WorkerDispatchService` to resolve spawn context for tasks.
+- **Key implementation details**:
+  - Read-only pattern (uses `conn.db` directly, no `writeTransaction`), matching `createReadinessUnitOfWork`/`createSchedulerUnitOfWork`
+  - `resolveSpawnContext(taskId)` loads task + repository, builds full `WorkerSpawnContext` with task packet, timeout settings, workspace paths, and policy snapshot
+  - Returns `null` for missing tasks, missing repos, or tasks in terminal states (DONE, FAILED, CANCELLED)
+  - Task type → packet type mapping: feature/bug_fix/refactor/chore → development_result, documentation → documentation_result, test → test_result, spike → spike_result
+  - Repository `remoteUrl` used as `repoPath` (supervisor/workspace manager handles local provisioning)
+  - Default timeout constants: 3600s budget, 30s heartbeat, 3 missed threshold, 60s grace period
+  - Empty policy snapshot `{}` — policy infrastructure not yet wired
+- **Tests**: 17 unit tests in `application-adapters.test.ts` covering success path, missing task/repo, terminal states, all task type mappings, worker name derivation, remoteUrl usage, and JSON array deserialization
+- **Build/test**: 4,096 tests pass, zero failures
+
+### For next loop
+
+- T135 (heartbeat forwarder adapter), T136 (infrastructure adapter wiring), T137 (wire dispatch automation) are now unblocked by T134
+- T135 and T136 are P0 ready candidates
