@@ -39,7 +39,13 @@ import {
 
 import { MergePacketSchema, type MergePacket } from "@factory/schemas";
 
-import { getTracer, SpanStatusCode, SpanNames, SpanAttributes } from "@factory/observability";
+import {
+  getTracer,
+  SpanStatusCode,
+  SpanNames,
+  SpanAttributes,
+  getStarterMetrics,
+} from "@factory/observability";
 
 import { EntityNotFoundError, InvalidTransitionError } from "../errors.js";
 
@@ -495,6 +501,9 @@ export function createMergeExecutorService(deps: MergeExecutorDependencies): Mer
       executeSpan.setAttribute(SpanAttributes.MERGE_QUEUE_ITEM_ID, mergeQueueItemId);
       executeSpan.setAttribute(SpanAttributes.TASK_ID, currentTask.id);
 
+      // Track outcome for metrics instrumentation (§10.13.3)
+      let mergeOutcome: MergeOutcome | undefined;
+
       try {
         // ── Phase 3: Fetch and execute strategy-specific merge operation ──
 
@@ -653,6 +662,7 @@ export function createMergeExecutorService(deps: MergeExecutorDependencies): Mer
 
           executeSpan.setAttribute(SpanAttributes.RESULT_STATUS, "rebase_conflict");
           executeSpan.setStatus({ code: SpanStatusCode.OK });
+          mergeOutcome = "rebase_conflict";
           return {
             outcome: "rebase_conflict",
             item: failResult.item,
@@ -775,6 +785,7 @@ export function createMergeExecutorService(deps: MergeExecutorDependencies): Mer
 
           executeSpan.setAttribute(SpanAttributes.RESULT_STATUS, "validation_failed");
           executeSpan.setStatus({ code: SpanStatusCode.OK });
+          mergeOutcome = "validation_failed";
           return {
             outcome: "validation_failed",
             item: valFailResult.item,
@@ -901,6 +912,7 @@ export function createMergeExecutorService(deps: MergeExecutorDependencies): Mer
 
           executeSpan.setAttribute(SpanAttributes.RESULT_STATUS, "push_failed");
           executeSpan.setStatus({ code: SpanStatusCode.OK });
+          mergeOutcome = "push_failed";
           return {
             outcome: "push_failed",
             item: pushFailResult.item,
@@ -1060,6 +1072,7 @@ export function createMergeExecutorService(deps: MergeExecutorDependencies): Mer
           const artifactPath = "";
           executeSpan.setAttribute(SpanAttributes.RESULT_STATUS, "merged");
           executeSpan.setStatus({ code: SpanStatusCode.OK });
+          mergeOutcome = "merged";
           return {
             outcome: "merged",
             item: currentItem,
@@ -1085,6 +1098,7 @@ export function createMergeExecutorService(deps: MergeExecutorDependencies): Mer
 
         executeSpan.setAttribute(SpanAttributes.RESULT_STATUS, "merged");
         executeSpan.setStatus({ code: SpanStatusCode.OK });
+        mergeOutcome = "merged";
 
         return {
           outcome: "merged",
@@ -1102,6 +1116,14 @@ export function createMergeExecutorService(deps: MergeExecutorDependencies): Mer
         });
         throw error;
       } finally {
+        // ── Metrics instrumentation (§10.13.3) ──────────────────────────
+        if (mergeOutcome) {
+          const starterMetrics = getStarterMetrics();
+          starterMetrics.mergeAttempts.inc({ result: mergeOutcome });
+          if (mergeOutcome !== "merged") {
+            starterMetrics.mergeFailures.inc();
+          }
+        }
         executeSpan.end();
       }
     },

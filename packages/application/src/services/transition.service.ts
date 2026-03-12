@@ -47,7 +47,14 @@ import {
   validateMergeQueueItemTransition,
 } from "@factory/domain";
 
-import { getTracer, SpanStatusCode, SpanNames, SpanAttributes } from "@factory/observability";
+import {
+  getTracer,
+  SpanStatusCode,
+  SpanNames,
+  SpanAttributes,
+  getStarterMetrics,
+  TERMINAL_TASK_STATES,
+} from "@factory/observability";
 
 import type { UnitOfWork } from "../ports/unit-of-work.port.js";
 import type { DomainEventEmitter } from "../ports/event-emitter.port.js";
@@ -261,6 +268,17 @@ export function createTransitionService(
           });
 
           span.setStatus({ code: SpanStatusCode.OK });
+
+          // ── Metrics instrumentation (§10.13.3) ──────────────────────────
+          const starterMetrics = getStarterMetrics();
+          starterMetrics.taskTransitions.inc({
+            task_state: targetStatus,
+            result: "success",
+          });
+          if (TERMINAL_TASK_STATES.has(targetStatus)) {
+            starterMetrics.taskTerminal.inc({ task_state: targetStatus });
+          }
+
           return {
             entity: transactionResult.entity,
             auditEvent: transactionResult.auditEvent,
@@ -269,6 +287,11 @@ export function createTransitionService(
           span.setStatus({
             code: SpanStatusCode.ERROR,
             message: error instanceof Error ? error.message : String(error),
+          });
+          // Record failed transition attempt in metrics
+          getStarterMetrics().taskTransitions.inc({
+            task_state: targetStatus,
+            result: "error",
           });
           throw error;
         } finally {

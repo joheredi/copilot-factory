@@ -1,5 +1,37 @@
 # Progress Log
 
+## T079: Implement starter metrics inventory (2026-03-12)
+
+**What was done:**
+
+- Created `packages/observability/src/starter-metrics.ts` with all 12 starter metrics from §10.13.3
+- Metric types: 8 counters, 2 histograms, 1 gauge — matching the spec exactly
+- Labels follow §10.13.4 cardinality rules (no task_id, run_id, branch_name)
+- Lazy singleton pattern via `getStarterMetrics()` with `resetStarterMetrics()` for test isolation
+- 21 new tests validating metric definitions, label compliance, and Prometheus output format
+- Instrumented 7 application services at their natural operation boundaries:
+  - `TransitionService.transitionTask()` → task_transitions_total, task_terminal_total
+  - `WorkerSupervisorService.spawnWorker()` → worker_runs_total, worker_run_duration_seconds
+  - `HeartbeatService.detectStaleLeases()` → worker_heartbeat_timeouts_total
+  - `ReviewerDispatchService.dispatchReviewers()` → review_cycles_total
+  - `LeadReviewConsolidationService.consolidate()` → review_rounds_total
+  - `MergeExecutorService.executeMerge()` → merge_attempts_total, merge_failures_total
+  - `ValidationRunnerService.runValidation()` → validation_runs_total, validation_duration_seconds
+  - `JobQueueService.createJob/completeJob/failJob()` → queue_depth gauge
+
+**Patterns used:**
+
+- Lazy singleton for metric instances (avoids duplicate registration errors)
+- Metrics recorded after successful operations, not inside transactions
+- Duration measured via `Date.now()` delta (seconds for Prometheus)
+- Queue depth tracked via inc on create, dec on complete/fail
+- Histogram buckets tuned for expected execution profiles (worker: 5s–30min, validation: 1s–10min)
+
+**For next loop:**
+
+- repository_id label was omitted from task transition metrics because `TransitionableTask` only has `id`, `status`, `version`. If needed later, extend the type.
+- The queue_depth gauge tracks relative changes (inc/dec) rather than absolute counts. A periodic reconciliation could set absolute values from a DB count query for accuracy after restarts.
+
 ## T103: Implement escalation resolution flow (2026-03-12)
 
 **What was done:**

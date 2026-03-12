@@ -29,7 +29,13 @@ import {
   type WorkerLeaseTransitionContext,
 } from "@factory/domain";
 
-import { getTracer, SpanStatusCode, SpanNames, SpanAttributes } from "@factory/observability";
+import {
+  getTracer,
+  SpanStatusCode,
+  SpanNames,
+  SpanAttributes,
+  getStarterMetrics,
+} from "@factory/observability";
 
 import { EntityNotFoundError, InvalidTransitionError, LeaseNotActiveError } from "../errors.js";
 
@@ -431,6 +437,14 @@ export function createHeartbeatService(
       });
 
       const staleLeases = staleRecords.map((record) => classifyStaleRecord(record, now));
+
+      // ── Metrics instrumentation (§10.13.3) ──────────────────────────
+      if (staleLeases.length > 0) {
+        const starterMetrics = getStarterMetrics();
+        for (const staleLease of staleLeases) {
+          starterMetrics.workerHeartbeatTimeouts.inc({ pool_id: staleLease.poolId });
+        }
+      }
 
       return { staleLeases };
     },

@@ -34,3 +34,6 @@ export {
   resetMetrics,
 } from "./metrics.js";
 export type { MetricsConfig, MetricsHandle } from "./metrics.js";
+
+export { getStarterMetrics, resetStarterMetrics, TERMINAL_TASK_STATES } from "./starter-metrics.js";
+export type { StarterMetrics } from "./starter-metrics.js";

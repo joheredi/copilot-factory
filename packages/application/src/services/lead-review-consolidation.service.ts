@@ -33,6 +33,8 @@ import {
 } from "@factory/domain";
 import type { ReviewCycleTransitionContext } from "@factory/domain";
 
+import { getStarterMetrics } from "@factory/observability";
+
 import type { ActorInfo, DomainEvent } from "../events/domain-events.js";
 import type { DomainEventEmitter } from "../ports/event-emitter.port.js";
 import type {
@@ -404,6 +406,9 @@ export function createLeadReviewConsolidationService(
       eventEmitter.emit(reviewCycleEvent);
 
       // ── Return result ───────────────────────────────────────────────
+      // ── Metrics instrumentation (§10.13.3) ──────────────────────────
+      getStarterMetrics().reviewRounds.inc();
+
       return {
         reviewCycle: transactionResult.reviewCycle,
         specialistPackets: transactionResult.specialistPackets,

@@ -47,7 +47,7 @@ Instrumentation adds overhead. Must keep cardinality low per label rules.
 | [T076](../tasks/T076-otel-init.md)           | Initialize OpenTelemetry TracerProvider        | P1       | pending |
 | [T077](../tasks/T077-otel-spans.md)          | Instrument core orchestration paths with spans | P1       | pending |
 | [T078](../tasks/T078-prometheus-endpoint.md) | Implement Prometheus metrics endpoint          | P1       | pending |
-| [T079](../tasks/T079-starter-metrics.md)     | Implement starter metrics inventory            | P1       | pending |
+| [T079](../tasks/T079-starter-metrics.md)     | Implement starter metrics inventory            | P1       | done    |
 
 ## Sequencing Notes
 

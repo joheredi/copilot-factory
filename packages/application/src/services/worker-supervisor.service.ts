@@ -30,7 +30,13 @@
 import type { DomainEventEmitter } from "../ports/event-emitter.port.js";
 import type { ActorInfo } from "../events/domain-events.js";
 
-import { getTracer, SpanStatusCode, SpanNames, SpanAttributes } from "@factory/observability";
+import {
+  getTracer,
+  SpanStatusCode,
+  SpanNames,
+  SpanAttributes,
+  getStarterMetrics,
+} from "@factory/observability";
 import type {
   WorkerEntityStatus,
   SupervisedWorker,
@@ -238,6 +244,8 @@ export function createWorkerSupervisorService(
         actor,
       } = params;
 
+      const runStartTime = Date.now();
+
       // ── worker.prepare span: workspace provisioning and runtime setup ──
       const prepareSpan = supervisorTracer.startSpan(SpanNames.WORKER_PREPARE);
       prepareSpan.setAttribute(SpanAttributes.TASK_ID, taskId);
@@ -387,6 +395,18 @@ export function createWorkerSupervisorService(
         runSpan.setStatus({ code: SpanStatusCode.OK });
         runSpan.end();
 
+        // ── Metrics instrumentation (§10.13.3) ──────────────────────────
+        const starterMetrics = getStarterMetrics();
+        const runDurationSeconds = (Date.now() - runStartTime) / 1000;
+        const resultLabel =
+          terminalStatus === "completed"
+            ? "success"
+            : terminalStatus === "cancelled"
+              ? "cancelled"
+              : "failed";
+        starterMetrics.workerRuns.inc({ pool_id: poolId, result: resultLabel });
+        starterMetrics.workerRunDuration.observe({ pool_id: poolId }, runDurationSeconds);
+
         return {
           worker: terminalWorker,
           finalizeResult,
@@ -439,6 +459,12 @@ export function createWorkerSupervisorService(
         });
 
         // Re-throw so the caller can handle the failure
+        // ── Metrics instrumentation (§10.13.3) ──────────────────────────
+        const failMetrics = getStarterMetrics();
+        const failDurationSeconds = (Date.now() - runStartTime) / 1000;
+        failMetrics.workerRuns.inc({ pool_id: poolId, result: "failed" });
+        failMetrics.workerRunDuration.observe({ pool_id: poolId }, failDurationSeconds);
+
         throw error;
       }
     },

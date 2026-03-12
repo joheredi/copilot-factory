@@ -34,6 +34,8 @@ import {
 } from "@factory/domain";
 import type { TransitionContext, ReviewCycleTransitionContext } from "@factory/domain";
 
+import { getStarterMetrics } from "@factory/observability";
+
 import type { ActorInfo, DomainEvent } from "../events/domain-events.js";
 import type { DomainEventEmitter } from "../ports/event-emitter.port.js";
 import type { ReviewerDispatchUnitOfWork } from "../ports/reviewer-dispatch.ports.js";
@@ -432,6 +434,9 @@ export function createReviewerDispatchService(
       eventEmitter.emit(reviewCycleEvent);
 
       // ── Step 5: Return result ───────────────────────────────────────
+      // ── Metrics instrumentation (§10.13.3) ──────────────────────────
+      getStarterMetrics().reviewCycles.inc({ result: "dispatched" });
+
       return {
         reviewCycle: transactionResult.reviewCycle,
         routingDecision,

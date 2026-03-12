@@ -46,6 +46,8 @@
 
 import { JobStatus, type JobType } from "@factory/domain";
 
+import { getStarterMetrics } from "@factory/observability";
+
 import { EntityNotFoundError, InvalidTransitionError } from "../errors.js";
 
 import type { QueuedJob, CreateJobData, JobQueueUnitOfWork } from "../ports/job-queue.ports.js";
@@ -289,6 +291,9 @@ export function createJobQueueService(
         });
       });
 
+      // ── Metrics instrumentation (§10.13.3) ──────────────────────────
+      getStarterMetrics().queueDepth.inc({ job_type: data.jobType });
+
       return { job };
     },
 
@@ -374,10 +379,13 @@ export function createJobQueueService(
           );
         }
 
-        return updated;
+        return { updated, jobType: existing.jobType };
       });
 
-      return { job };
+      // ── Metrics instrumentation (§10.13.3) ──────────────────────────
+      getStarterMetrics().queueDepth.dec({ job_type: job.jobType });
+
+      return { job: job.updated };
     },
 
     failJob(jobId: string, _error?: string): FailJobResult {
@@ -412,10 +420,13 @@ export function createJobQueueService(
           );
         }
 
-        return updated;
+        return { updated, jobType: existing.jobType };
       });
 
-      return { job };
+      // ── Metrics instrumentation (§10.13.3) ──────────────────────────
+      getStarterMetrics().queueDepth.dec({ job_type: job.jobType });
+
+      return { job: job.updated };
     },
 
     areJobDependenciesMet(jobId: string): AreJobDependenciesMetResult {

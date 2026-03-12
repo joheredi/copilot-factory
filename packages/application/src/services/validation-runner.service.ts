@@ -25,7 +25,13 @@
 import type { ValidationPolicy } from "@factory/domain";
 import { MissingValidationProfileError, ProfileSelectionSource } from "@factory/domain";
 
-import { getTracer, SpanStatusCode, SpanNames, SpanAttributes } from "@factory/observability";
+import {
+  getTracer,
+  SpanStatusCode,
+  SpanNames,
+  SpanAttributes,
+  getStarterMetrics,
+} from "@factory/observability";
 
 import type {
   CheckExecutorPort,
@@ -222,6 +228,18 @@ export function createValidationRunnerService(
 
           span.setAttribute(SpanAttributes.RESULT_STATUS, overallStatus);
           span.setStatus({ code: SpanStatusCode.OK });
+
+          // ── Metrics instrumentation (§10.13.3) ──────────────────────────
+          const starterMetrics = getStarterMetrics();
+          starterMetrics.validationRuns.inc({
+            validation_profile: profileName,
+            result: overallStatus,
+          });
+          starterMetrics.validationDuration.observe(
+            { validation_profile: profileName },
+            totalDurationMs / 1000,
+          );
+
           return {
             profileName,
             overallStatus,

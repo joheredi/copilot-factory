@@ -199,7 +199,7 @@ See [phase documents](phases/) for details.
 | [T076](tasks/T076-otel-init.md)                     | Initialize OpenTelemetry TracerProvider                                               | E016 | P1       | feature    | done    |
 | [T077](tasks/T077-otel-spans.md)                    | Instrument core orchestration paths with spans                                        | E016 | P1       | feature    | done    |
 | [T078](tasks/T078-prometheus-endpoint.md)           | Implement Prometheus metrics endpoint                                                 | E016 | P1       | feature    | done    |
-| [T079](tasks/T079-starter-metrics.md)               | Implement starter metrics inventory                                                   | E016 | P1       | feature    | pending |
+| [T079](tasks/T079-starter-metrics.md)               | Implement starter metrics inventory                                                   | E016 | P1       | feature    | done    |
 | [T080](tasks/T080-nestjs-bootstrap.md)              | Implement NestJS application bootstrap and module structure                           | E017 | P0       | foundation | done    |
 | [T081](tasks/T081-api-project-repo.md)              | Implement Project and Repository CRUD endpoints                                       | E017 | P0       | feature    | done    |
 | [T082](tasks/T082-api-task-management.md)           | Implement Task management endpoints                                                   | E017 | P0       | feature    | done    |

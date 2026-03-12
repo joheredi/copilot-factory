@@ -5,7 +5,7 @@
 | **ID**                    | T079                                                  |
 | **Epic**                  | [E016: Observability](../epics/E016-observability.md) |
 | **Type**                  | feature                                               |
-| **Status**                | pending                                               |
+| **Status**                | done                                                  |
 | **Priority**              | P1                                                    |
 | **Owner**                 | backend-engineer                                      |
 | **AI Executable**         | Yes                                                   |
@@ -58,10 +58,10 @@ The implementing agent should read these files before starting:
 
 ## Acceptance Criteria
 
-- [ ] All starter metrics from §10.13.3 implemented
-- [ ] Correct metric types used
-- [ ] Labels follow cardinality rules from §10.13.4
-- [ ] Metrics update correctly during operations
+- [x] All starter metrics from §10.13.3 implemented
+- [x] Correct metric types used
+- [x] Labels follow cardinality rules from §10.13.4
+- [x] Metrics update correctly during operations
 
 ## Definition of Done
 
