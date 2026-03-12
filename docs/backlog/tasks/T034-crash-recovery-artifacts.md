@@ -5,7 +5,7 @@
 | **ID**                    | T034                                                                     |
 | **Epic**                  | [E006: Lease Management & Heartbeats](../epics/E006-lease-management.md) |
 | **Type**                  | feature                                                                  |
-| **Status**                | pending                                                                  |
+| **Status**                | done                                                                     |
 | **Priority**              | P1                                                                       |
 | **Owner**                 | backend-engineer                                                         |
 | **AI Executable**         | Yes                                                                      |

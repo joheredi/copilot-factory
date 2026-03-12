@@ -1,5 +1,32 @@
 # Progress Log
 
+## T034: Implement crash recovery with partial artifact capture — DONE (2026-03-12)
+
+**Status:** Done
+
+**What was done:**
+
+- Created `crash-recovery.ports.ts` in `packages/application/src/ports/` — defines port interfaces for workspace inspection (`WorkspaceInspectorPort`), artifact capture (`CrashRecoveryArtifactPort`), lease update (`CrashRecoveryLeasePort`), and result packet validation (`ResultPacketValidatorPort`)
+- Created `crash-recovery.service.ts` in `packages/application/src/services/` — implements the crash recovery protocol from PRD §2.8 and §9.8.2:
+  1. Checks workspace for filesystem-persisted result packet (network partition fallback)
+  2. If valid result found → returns `result_found` so reclaim can be skipped
+  3. If invalid result found → stores for debugging, continues with partial capture
+  4. Captures modified files list, git diff, and output files from workspace
+  5. Stores all artifacts and builds a `PartialWorkSnapshot` for `context.prior_partial_work`
+  6. Updates lease record with `partialResultArtifactRefs`
+  7. All operations are best-effort — errors caught and skipped, never propagated
+- Created 20 unit tests covering: valid result detection, invalid result storage, partial work capture (diff, files, outputs), lease update, error resilience (filesystem errors, storage failures, all-fail scenario), parameter passing, combined scenarios
+- Exported all types and factory from `packages/application/src/index.ts`
+
+**Patterns & notes for next loops:**
+
+- Best-effort pattern: `safeAsync(fn, fallback)` wraps every filesystem/storage call — crash recovery must never fail
+- Three-outcome discriminated union: `result_found | partial_captured | nothing_captured`
+- Port-based decoupling: service depends only on interfaces, not infrastructure implementations
+- `PartialWorkSnapshot` captures: `capturedAt`, `leaseId`, `taskId`, `modifiedFiles`, `gitDiffRef`, `partialOutputRefs`, `invalidResultPacketRef`
+- Workspace path vs worktree path distinction: workspace root for result packets and outputs, worktree for git operations
+- T034 completion unblocks T071 (retry summarization), T072 (partial work snapshot on lease reclaim), and T110 (e2e lease recovery test)
+
 ## T029: Implement reconciliation sweep job — DONE (2026-03-11)
 
 **Status:** Done

@@ -321,6 +321,26 @@ export type {
   LeaseReclaimService,
 } from "./services/lease-reclaim.service.js";
 
+// Ports — crash recovery interfaces
+export type {
+  PartialWorkSnapshot,
+  WorkspaceOutputFile,
+  WorkspaceInspectorPort,
+  CrashRecoveryArtifactPort,
+  CrashRecoveryLeasePort,
+  ResultPacketValidatorPort,
+  ResultPacketValidation,
+} from "./ports/crash-recovery.ports.js";
+
+// Services — crash recovery with partial artifact capture (PRD §2.8, §9.8.2)
+export { createCrashRecoveryService } from "./services/crash-recovery.service.js";
+export type {
+  CrashRecoveryParams,
+  CrashRecoveryResult,
+  CrashRecoveryService,
+  CrashRecoveryDependencies,
+} from "./services/crash-recovery.service.js";
+
 // Ports — output validation interfaces
 export type {
   WorkerOutputSource,
