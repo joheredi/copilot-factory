@@ -5,7 +5,7 @@
 | **ID**                    | T111                                                                    |
 | **Epic**                  | [E022: Integration Testing & E2E](../epics/E022-integration-testing.md) |
 | **Type**                  | test                                                                    |
-| **Status**                | pending                                                                 |
+| **Status**                | done                                                                    |
 | **Priority**              | P1                                                                      |
 | **Owner**                 | backend-engineer                                                        |
 | **AI Executable**         | Yes                                                                     |

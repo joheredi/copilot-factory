@@ -368,3 +368,41 @@ Also fixed T072 backlog index status (was `pending` but task file was `done`).
 - T096-T100 (other UI views) are also ready in parallel
 - T104 (operator controls in task detail) is now unblocked by T094+T095
 - Consider adding a Select/Combobox shadcn component for more compact filter UIs in future views
+
+## T111 — Integration test: escalation triggers and resolution
+
+### Task
+
+T111 - Integration test: escalation triggers and resolution (Epic E022: Integration Testing & E2E)
+
+### What was done
+
+- Created `apps/control-plane/src/integration/escalation-triggers-resolution.integration.test.ts` with 11 integration tests
+- **Escalation trigger tests:**
+  - Max retry exceeded → ESCALATED (verifies `shouldEscalate` policy evaluation + state machine transition)
+  - Max review rounds exceeded → ESCALATED (drives task to IN_REVIEW, then escalates)
+  - Policy violation → ESCALATED (immediate escalation for security violations)
+- **Operator resolution tests:**
+  - Retry → ASSIGNED (with audit metadata verification)
+  - Retry with pool reassignment (verifies separate pool audit event)
+  - Cancel → CANCELLED (with resolution reason in audit)
+  - Mark done → DONE (with evidence and elevated audit severity)
+- **State machine invariant tests:**
+  - Full trigger → resolution cycle with complete audit trail
+  - Terminal state escalation prevention (DONE, FAILED, CANCELLED)
+  - Non-operator resolution rejection (human-in-the-loop enforcement)
+  - Domain event emission for escalation transitions
+
+### Patterns used
+
+- Follows T107/T108 integration test pattern: real SQLite, real TransitionService, real OperatorActionsService
+- `asDatabaseConnection()` adapter wraps `TestDatabaseConnection` to add `healthCheck()` for `OperatorActionsService` compatibility
+- `extractStatus()` helper parses JSON-encoded audit event states (e.g., `{"status":"ESCALATED","version":5}` → `"ESCALATED"`)
+- Helper functions `driveTaskToInDevelopment()` and `driveTaskToInReview()` reuse the T107/T108 lifecycle transition patterns
+- Domain policy verification (`shouldEscalate`) combined with state machine transitions for trigger tests
+
+### For next loop
+
+- T109 (merge conflict/failure paths) and T110 (lease timeout/crash recovery) are P1 and ready
+- T096-T100 (UI views) are P2 and ready
+- T104 (operator controls in task detail UI) depends on T096/T098 which are still pending
