@@ -406,3 +406,35 @@ T111 - Integration test: escalation triggers and resolution (Epic E022: Integrat
 - T109 (merge conflict/failure paths) and T110 (lease timeout/crash recovery) are P1 and ready
 - T096-T100 (UI views) are P2 and ready
 - T104 (operator controls in task detail UI) depends on T096/T098 which are still pending
+
+## T109: Integration test — merge conflict and failure paths (done)
+
+### What was done
+
+Added 12 integration tests in `apps/control-plane/src/integration/merge-conflict-failure.integration.test.ts` covering four merge failure scenarios:
+
+1. **Conflict classification policy** (3 tests): Verified `classifyConflict()` correctly classifies reworkable vs non-reworkable conflicts based on file count threshold (default: 5) and protected paths (.github/, package.json, pnpm-lock.yaml).
+
+2. **Reworkable conflict → CHANGES_REQUESTED** (1 test): Full merge executor flow with fake git ops simulating 2-file rebase conflict. Verified task transitions to CHANGES_REQUESTED, merge queue item to REQUEUED, and audit events recorded.
+
+3. **Non-reworkable conflict → FAILED** (2 tests): Full merge executor flow with 6+ files or protected paths in conflict. Verified task and merge queue item both transition to FAILED.
+
+4. **Post-merge validation severity classification** (4 tests): Verified `classifyFailureSeverity()` for high (1 required failure), critical (security or ≥3 failures), and low (optional only) severity levels.
+
+5. **High severity post-merge failure** (1 test): Full post-merge validation service with fake runner returning 1 required failure. Verified task → FAILED, operator notified, queue NOT paused.
+
+6. **Critical post-merge failure** (1 test): Full post-merge validation service with security + multiple required failures. Verified task → FAILED, revert task created with correct origin/project/repo IDs, merge queue paused, operator notified with requiresAction=true.
+
+### Patterns used
+
+- Custom `MergeExecutorUnitOfWork` adapter with raw SQL for full `MergeExecutorItem` fields (the general `createSqliteUnitOfWork` strips merge queue item fields to only id/status)
+- Custom `PostMergeUnitOfWork` adapter with raw SQL task repo (joins task+repository for projectId) and injected fake follow-up task port
+- Shared `createRawAuditEventRepo()` for consistent audit event persistence
+- `extractStatus()` handles both JSON state objects (`{ status: "..." }`) and plain status strings
+- Tracking fakes for queue pause, notifications, and follow-up task creation
+- Configurable fake git ops and validation runner for deterministic failure scenarios
+
+### For next loop
+
+- T110 (lease timeout/crash recovery) is P1 and ready
+- T096-T100 (UI views) and T104-T105 (operator controls UI) are P2 and ready
