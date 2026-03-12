@@ -1,14 +1,20 @@
 /**
- * NestJS module for merge queue management.
+ * NestJS module for merge queue management and merge detail retrieval.
  *
- * Will own controllers and services for merge queue operations,
- * position tracking, and merge execution once the merge pipeline
- * tasks are implemented.
+ * Owns controllers and services for merge queue status and
+ * validation run retrieval per task.
  *
  * @module @factory/control-plane
+ * @see {@link file://docs/backlog/tasks/T084-api-artifacts-reviews.md}
  */
 import { Module } from "@nestjs/common";
 
-/** Feature module for merge queue endpoints. */
-@Module({})
+import { MergeDetailsController } from "./merge-details.controller.js";
+import { MergeDetailsService } from "./merge-details.service.js";
+
+/** Feature module for merge queue and merge detail endpoints. */
+@Module({
+  controllers: [MergeDetailsController],
+  providers: [MergeDetailsService],
+})
 export class MergeModule {}

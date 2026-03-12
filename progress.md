@@ -429,3 +429,28 @@ Implemented the conflict classifier service that determines whether merge confli
 - The `MergeGitOperationsPort.squashMerge()` and `mergeCommit()` need infrastructure implementations when wiring up the merge executor
 - Strategy selection from policy (task override → repo workflow → system default) is the caller's responsibility — the merge executor receives the resolved strategy
 - All three strategies reuse the same conflict classification pipeline
+
+## T084: Implement Artifact and Review packet retrieval endpoints — Done
+
+**What was implemented:**
+
+- `review/artifacts.controller.ts` + `review/artifacts.service.ts`: Artifact tree endpoint (`GET /tasks/:taskId/artifacts`) that aggregates review packets, lead review decisions, validation runs, and merge queue items from the DB. Packet content endpoint (`GET /tasks/:taskId/packets/:packetId`) that searches review_packet and lead_review_decision tables and returns parsed JSON.
+- `review/reviews.controller.ts` + `review/reviews.service.ts`: Review history endpoint (`GET /tasks/:taskId/reviews`) returning all review cycles enriched with lead decisions and specialist packet counts. Review cycle packets endpoint (`GET /tasks/:taskId/reviews/:cycleId/packets`) returning specialist packets + lead decision for a specific cycle.
+- `merge/merge-details.controller.ts` + `merge/merge-details.service.ts`: Merge details endpoint (`GET /tasks/:taskId/merge`) returning merge queue item and validation runs for a task.
+- Updated `review.module.ts` and `merge.module.ts` to register new controllers and services.
+- 31 new tests: 6 controller tests (mock-based) + 25 service tests (in-memory SQLite with Drizzle migrations).
+
+**Patterns used:**
+
+- Same NestJS patterns as existing controllers: `@ApiTags`, `@Controller`, `@Get`, `@Param`, `NotFoundException`, Swagger decorators
+- Services injected via `@Inject(DATABASE_CONNECTION)` with functional repository factories
+- Controller tests mock the service; service tests use real in-memory SQLite (same as tasks.service.test.ts pattern)
+- Data seeding in tests uses repository factory functions (not raw SQL or `require()`)
+- Artifact tree assembled from DB records, not filesystem — DB is source of truth for artifact metadata
+- Task-scoped access control: packet retrieval verifies `taskId` ownership before returning
+
+**What the next loop should know:**
+
+- T085 (audit/policy/config endpoints) is the remaining E017 task — once done, E017 is complete and unblocks E018
+- The artifact tree currently covers DB-tracked artifacts only (review packets, lead decisions, validation runs, merge items). Filesystem artifacts via ArtifactStore could be added later if needed.
+- The `PacketContent.content` field returns the raw `packetJson` from the DB — it's the full Zod-validated packet JSON
