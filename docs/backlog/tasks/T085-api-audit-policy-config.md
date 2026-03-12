@@ -5,7 +5,7 @@
 | **ID**                    | T085                                                                                                             |
 | **Epic**                  | [E017: REST API Layer](../epics/E017-rest-api.md)                                                                |
 | **Type**                  | feature                                                                                                          |
-| **Status**                | pending                                                                                                          |
+| **Status**                | done                                                                                                             |
 | **Priority**              | P1                                                                                                               |
 | **Owner**                 | backend-engineer                                                                                                 |
 | **AI Executable**         | Yes                                                                                                              |

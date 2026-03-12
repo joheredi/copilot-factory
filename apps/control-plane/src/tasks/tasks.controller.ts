@@ -30,6 +30,9 @@ import { CreateTaskDto } from "./dtos/create-task.dto.js";
 import { TaskFilterQueryDto } from "./dtos/task-filter-query.dto.js";
 import { UpdateTaskDto } from "./dtos/update-task.dto.js";
 import { TasksService } from "./tasks.service.js";
+import { AuditService } from "../audit/audit.service.js";
+import { TimelineQueryDto } from "../audit/dtos/audit-query.dto.js";
+import type { PaginatedAuditResponse } from "../audit/audit.service.js";
 import type { PaginatedResponse, TaskDetail } from "./tasks.service.js";
 import type { Task } from "../infrastructure/repositories/task.repository.js";
 
@@ -44,8 +47,14 @@ import type { Task } from "../infrastructure/repositories/task.repository.js";
 @ApiTags("tasks")
 @Controller("tasks")
 export class TasksController {
-  /** @param tasksService Injected tasks service. */
-  constructor(private readonly tasksService: TasksService) {}
+  /**
+   * @param tasksService Injected tasks service.
+   * @param auditService Injected audit service for timeline queries.
+   */
+  constructor(
+    private readonly tasksService: TasksService,
+    private readonly auditService: AuditService,
+  ) {}
 
   /**
    * Create a new task.
@@ -129,6 +138,38 @@ export class TasksController {
       throw new NotFoundException(`Task with ID "${id}" not found`);
     }
     return detail;
+  }
+
+  /**
+   * Get the audit timeline for a task.
+   *
+   * Returns all audit events for the given task ordered by time
+   * descending (most recent first). This is a specialized audit
+   * query that shows the complete history of what happened to a task:
+   * state transitions, lease operations, reviews, merges, etc.
+   *
+   * @param id Task UUID.
+   * @param query Pagination parameters.
+   * @returns Paginated audit event timeline.
+   * @throws NotFoundException if the task does not exist.
+   */
+  @Get(":id/timeline")
+  @ApiOperation({ summary: "Get audit timeline for a task" })
+  @ApiParam({ name: "id", description: "Task UUID" })
+  @ApiQuery({ name: "page", required: false, description: "Page number (1-based, default: 1)" })
+  @ApiQuery({
+    name: "limit",
+    required: false,
+    description: "Items per page (1-100, default: 50)",
+  })
+  @ApiResponse({ status: 200, description: "Paginated audit event timeline." })
+  @ApiResponse({ status: 404, description: "Task not found." })
+  getTimeline(@Param("id") id: string, @Query() query: TimelineQueryDto): PaginatedAuditResponse {
+    const task = this.tasksService.findById(id);
+    if (!task) {
+      throw new NotFoundException(`Task with ID "${id}" not found`);
+    }
+    return this.auditService.getEntityTimeline("task", id, query.page, query.limit);
   }
 
   /**

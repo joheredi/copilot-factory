@@ -31,6 +31,7 @@
   },
   "dependencies": {
     "@factory/application": "workspace:*",
+    "@factory/config": "workspace:*",
     "@factory/domain": "workspace:*",
     "@fastify/static": "^9.0.0",
     "@nestjs/common": "^11.1.16",

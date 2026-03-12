@@ -1,14 +1,21 @@
 /**
  * NestJS module for audit event management.
  *
- * Will own controllers and services for querying the append-only
- * audit log, filtering by entity/actor/event type, and timeline
- * views once T085 is implemented.
+ * Owns controllers and services for querying the append-only
+ * audit log with flexible multi-criteria filters, entity-scoped
+ * timelines, and paginated results.
  *
  * @module @factory/control-plane
+ * @see {@link file://docs/backlog/tasks/T085-api-audit-policy-config.md}
  */
 import { Module } from "@nestjs/common";
 
+import { AuditController } from "./audit.controller.js";
+import { AuditService } from "./audit.service.js";
+
 /** Feature module for audit trail endpoints. */
-@Module({})
+@Module({
+  controllers: [AuditController],
+  providers: [AuditService],
+})
 export class AuditModule {}

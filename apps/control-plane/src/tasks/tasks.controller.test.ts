@@ -13,6 +13,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TasksController } from "./tasks.controller.js";
 import type { TasksService } from "./tasks.service.js";
+import type { AuditService } from "../audit/audit.service.js";
 
 /** Factory for a fake task object with sensible defaults. */
 function fakeTask(overrides: Record<string, unknown> = {}) {
@@ -69,6 +70,9 @@ describe("TasksController", () => {
     findDetailById: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
   };
+  let auditService: {
+    getEntityTimeline: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     service = {
@@ -79,8 +83,14 @@ describe("TasksController", () => {
       findDetailById: vi.fn(),
       update: vi.fn(),
     };
+    auditService = {
+      getEntityTimeline: vi.fn(),
+    };
 
-    controller = new TasksController(service as unknown as TasksService);
+    controller = new TasksController(
+      service as unknown as TasksService,
+      auditService as unknown as AuditService,
+    );
   });
 
   /**
@@ -210,6 +220,38 @@ describe("TasksController", () => {
     service.update.mockReturnValue(undefined);
 
     expect(() => controller.update("missing", { title: "Updated", version: 1 })).toThrow(
+      NotFoundException,
+    );
+  });
+
+  /**
+   * Validates that getTimeline delegates to the audit service when
+   * the task exists. The timeline is a specialized audit query scoped
+   * to a specific task entity.
+   */
+  it("should return timeline for an existing task", () => {
+    service.findById.mockReturnValue(fakeTask());
+    const timeline = {
+      data: [],
+      meta: { page: 1, limit: 50, total: 0, totalPages: 0 },
+    };
+    auditService.getEntityTimeline.mockReturnValue(timeline);
+
+    const result = controller.getTimeline("task-1", { page: 1, limit: 50 });
+
+    expect(service.findById).toHaveBeenCalledWith("task-1");
+    expect(auditService.getEntityTimeline).toHaveBeenCalledWith("task", "task-1", 1, 50);
+    expect(result).toEqual(timeline);
+  });
+
+  /**
+   * Validates that getTimeline throws NotFoundException when the task
+   * does not exist. Prevents querying audit events for phantom tasks.
+   */
+  it("should throw NotFoundException for timeline of non-existent task", () => {
+    service.findById.mockReturnValue(undefined);
+
+    expect(() => controller.getTimeline("missing", { page: 1, limit: 50 })).toThrow(
       NotFoundException,
     );
   });

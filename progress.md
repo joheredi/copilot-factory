@@ -1,5 +1,36 @@
 # Progress Log
 
+## T085: Implement Audit, Policy, and Config endpoints — Done
+
+**What was implemented:**
+
+- `apps/control-plane/src/audit/audit.controller.ts` + test: GET /audit search with multi-criteria filters and pagination
+- `apps/control-plane/src/audit/audit.service.ts` + test: Audit event search and entity timeline queries
+- `apps/control-plane/src/audit/dtos/audit-query.dto.ts`: AuditQueryDto and TimelineQueryDto with Zod schemas
+- `apps/control-plane/src/policy/policies.controller.ts` + test: GET /policies, GET /policies/:id, PUT /policies/:id
+- `apps/control-plane/src/policy/policies.service.ts` + test: Policy set CRUD with pagination
+- `apps/control-plane/src/policy/config.controller.ts` + test: GET /config/effective
+- `apps/control-plane/src/policy/config.service.ts` + test: Hierarchical config resolution via @factory/config
+- `apps/control-plane/src/policy/dtos/`: PolicyQueryDto, UpdatePolicySetDto
+- Added GET /tasks/:id/timeline endpoint to existing TasksController (delegates to AuditService)
+- Updated audit.module.ts and policy.module.ts to register controllers/services
+- Added @factory/config as dependency of control-plane
+
+**Patterns used:**
+
+- Same Controller → Service → Repository pattern as all other endpoints
+- DTOs with static Zod `schema` property for ZodValidationPipe
+- PaginatedResponse with meta object (page, limit, total, totalPages)
+- NotFoundException for 404 responses handled by GlobalExceptionFilter
+- Service tests use in-memory SQLite with Drizzle migrations
+- Controller tests mock services and verify delegation
+
+**Notes for next loops:**
+
+- T085 completes E017 (REST API Layer), unblocking E018 (Real-time Events)
+- Config effective endpoint currently resolves system defaults only; additional layers will be added as persistence grows
+- 32 new tests added (3,300 total, all passing)
+
 ## T068: Implement follow-up task generation — Done
 
 **What was implemented:**

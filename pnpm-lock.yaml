@@ -50,6 +50,9 @@ importers:
       '@factory/application':
         specifier: workspace:*
         version: link:../../packages/application
+      '@factory/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       '@factory/domain':
         specifier: workspace:*
         version: link:../../packages/domain
