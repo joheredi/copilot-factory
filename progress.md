@@ -1,169 +1,5 @@
 # Progress Log
 
-## T079: Implement starter metrics inventory (2026-03-12)
-
-**What was done:**
-
-- Created `packages/observability/src/starter-metrics.ts` with all 12 starter metrics from §10.13.3
-- Metric types: 8 counters, 2 histograms, 1 gauge — matching the spec exactly
-- Labels follow §10.13.4 cardinality rules (no task_id, run_id, branch_name)
-- Lazy singleton pattern via `getStarterMetrics()` with `resetStarterMetrics()` for test isolation
-- 21 new tests validating metric definitions, label compliance, and Prometheus output format
-- Instrumented 7 application services at their natural operation boundaries:
-  - `TransitionService.transitionTask()` → task_transitions_total, task_terminal_total
-  - `WorkerSupervisorService.spawnWorker()` → worker_runs_total, worker_run_duration_seconds
-  - `HeartbeatService.detectStaleLeases()` → worker_heartbeat_timeouts_total
-  - `ReviewerDispatchService.dispatchReviewers()` → review_cycles_total
-  - `LeadReviewConsolidationService.consolidate()` → review_rounds_total
-  - `MergeExecutorService.executeMerge()` → merge_attempts_total, merge_failures_total
-  - `ValidationRunnerService.runValidation()` → validation_runs_total, validation_duration_seconds
-  - `JobQueueService.createJob/completeJob/failJob()` → queue_depth gauge
-
-**Patterns used:**
-
-- Lazy singleton for metric instances (avoids duplicate registration errors)
-- Metrics recorded after successful operations, not inside transactions
-- Duration measured via `Date.now()` delta (seconds for Prometheus)
-- Queue depth tracked via inc on create, dec on complete/fail
-- Histogram buckets tuned for expected execution profiles (worker: 5s–30min, validation: 1s–10min)
-
-**For next loop:**
-
-- repository_id label was omitted from task transition metrics because `TransitionableTask` only has `id`, `status`, `version`. If needed later, extend the type.
-- The queue_depth gauge tracks relative changes (inc/dec) rather than absolute counts. A periodic reconciliation could set absolute values from a DB count query for accuracy after restarts.
-
-## T103: Implement escalation resolution flow (2026-03-12)
-
-**What was done:**
-
-- Added `POST /api/tasks/:id/actions/resolve-escalation` endpoint with three resolution types:
-  - **retry**: ESCALATED → ASSIGNED (optionally reassign pool, clear escalation context)
-  - **cancel**: ESCALATED → CANCELLED (preserve escalation context in audit trail)
-  - **mark_done**: ESCALATED → DONE (requires evidence, logged with elevated audit severity)
-- Created `ResolveEscalationDto` with Zod schema including cross-field validation (evidence required for mark_done)
-- Added `guardResolveEscalation()` guard in `OperatorActionGuards` — validates ESCALATED state and mark_done evidence
-- Added `resolve_escalation_mark_done` to `SENSITIVE_ACTIONS` set for elevated audit logging
-- 19 new tests: 10 guard tests + 9 service tests covering all resolution paths, audit metadata, and error cases
-
-**Patterns used:**
-
-- Follows existing operator action patterns: DTO → guard → service → controller
-- Uses `executeTransitionAction()` for all three resolutions (all transitions exist in state machine)
-- Pool reassignment on retry recorded as separate audit event (matches reassign_pool pattern)
-- Metadata parsing in tests handles both object and string forms of `metadataJson`
-
-**Next loop should know:**
-
-- T103 unblocks T104 (UI operator task integration)
-- The `resolve_escalation` endpoint is distinct from existing `resume` and `cancel` — it adds resolution-type metadata, evidence tracking, and pool reassignment on retry
-
-## T102: Implement state transition guards for manual actions (2026-03-12)
-
-**What was done:**
-
-- Created `apps/control-plane/src/operator-actions/operator-action-guards.ts` — `OperatorActionGuards` class with guard methods for force_unblock, reopen, cancel, and override_merge_order actions
-- Created `apps/control-plane/src/operator-actions/operator-action-guards.test.ts` — 36 tests covering all guard validation scenarios including active lease checks, MERGING state protection, in-progress work acknowledgment, and audit severity classification
-- Updated `OperatorActionsService` to integrate guards before executing actions
-- Updated `CancelActionDto` to support `acknowledgeInProgressWork` boolean for confirming cancellation of in-progress tasks
-- Updated controller to pass `acknowledgeInProgressWork` flag to service
-- Added elevated audit severity metadata to sensitive actions (force_unblock, override_merge_order, reopen)
-
-**Key guards implemented:**
-
-- **force_unblock**: Validates non-empty reason and BLOCKED state (defense-in-depth)
-- **reopen**: Validates no active (non-terminal) lease exists — prevents one-active-lease invariant violation
-- **cancel**: Blocks cancellation during MERGING (repository corruption risk); requires `acknowledgeInProgressWork: true` for IN_DEVELOPMENT tasks
-- **override_merge_order**: Validates QUEUED_FOR_MERGE state with hook for future validation extensions
-
-**Patterns used:**
-
-- Separate guard class for independent testability
-- `SENSITIVE_ACTIONS` ReadonlySet and `getAuditSeverity()` for audit severity classification
-- Guards throw `BadRequestException` with descriptive messages before the state machine is consulted
-- Guards defer not-found checks to service layer (NotFoundException has correct HTTP status)
-
-**Next loop should know:**
-
-- T103 (Escalation resolution flow) is now unblocked by T102's completion
-- The cancel action now has a breaking API change: IN_DEVELOPMENT tasks need `acknowledgeInProgressWork: true`
-- Guard pattern can be extended for future authorization checks (RBAC is out of scope per T102)
-
-## T087: Implement task state change event broadcasting (2026-03-12)
-
-**What was done:**
-
-- Created `apps/control-plane/src/events/domain-event-broadcaster.adapter.ts` — adapter implementing `DomainEventEmitter` port that maps domain events to WebSocket `FactoryEvent` payloads and broadcasts via `EventBroadcasterService`
-- Created `apps/control-plane/src/events/domain-event-broadcaster.adapter.test.ts` — 14 tests covering: all entity types (task, lease, review-cycle, merge-queue-item, worker), event type mapping, payload structure, error handling (no-throw contract), unknown entity types, server-not-ready graceful handling
-- Updated `EventsModule` to register and export `DomainEventBroadcasterAdapter`
-- Updated `OperatorActionsModule` to import `EventsModule` for DI access
-- Updated `OperatorActionsService` to inject `DomainEventBroadcasterAdapter` instead of the no-op emitter
-- Updated `OperatorActionsService` tests to provide the real adapter (with no-server gateway for safe unit testing)
-
-**Patterns used:**
-
-- Adapter pattern: `DomainEventBroadcasterAdapter` bridges application-layer `DomainEventEmitter` port to infrastructure-layer `EventBroadcasterService`
-- Entity-type-to-channel mapping table for clean routing (task→Tasks, lease→Workers, review→Tasks, merge→Queue)
-- Domain event type to WS event type mapping (past-tense "transitioned" → present-tense "state_changed")
-- Error swallowing with logging per the port contract (state is already committed, can't roll back)
-
-**What the next loop should know:**
-
-- All domain events from TransitionService now broadcast to WebSocket clients via the adapter
-- The `DomainEventBroadcasterAdapter` is exported from `EventsModule` — any module creating a `TransitionService` should import `EventsModule` and inject the adapter
-- T088 (queue and worker status broadcasting) can reuse the same adapter — it already handles all entity types including workers and merge-queue-items
-
-## T086: Implement WebSocket gateway for live events (2026-03-12)
-
-**What was done:**
-
-- Installed `@nestjs/websockets`, `@nestjs/platform-socket.io`, `socket.io` in control-plane
-- Created `apps/control-plane/src/events/types.ts` — EventChannel enum, FactoryEvent interface, SubscriptionRequest/Response types, buildEntityRoom helper
-- Created `apps/control-plane/src/events/events.gateway.ts` — WebSocket gateway with connection tracking, subscribe/unsubscribe handlers, channel+entity room subscriptions
-- Created `apps/control-plane/src/events/event-broadcaster.service.ts` — public API for emitting events to channels and entity rooms
-- Created `apps/control-plane/src/events/events.module.ts` — NestJS module exporting EventBroadcasterService
-- Registered EventsModule in AppModule
-- 24 tests covering: connection lifecycle, subscribe/unsubscribe, channel validation, entity rooms, broadcast routing, graceful handling when server not ready
-
-**Patterns used:**
-
-- Single gateway + socket.io rooms (not separate gateways per namespace) — simpler for V1
-- `Record<string, unknown>` in decorated method params to avoid `emitDecoratorMetadata` issues with interfaces
-- `import type` for interfaces used in decorated signatures (TS1272 requirement)
-- EventBroadcasterService is the public API; other modules inject it, never the gateway directly
-- Events use "factory_event" socket.io event name with structured FactoryEvent payloads
-
-**Next loop should know:**
-
-- T087 (task events), T088 (queue/worker events), T091 (WebSocket client) are now unblocked
-- EventBroadcasterService is exported from EventsModule — import EventsModule in feature modules that need to broadcast
-- Use `broadcastToChannel()` for broad events, `broadcastToEntity()` for entity-specific events
-
-## T108: Integration test — review rejection and rework loop (2026-03-11)
-
-**What was done:**
-
-- Created `apps/control-plane/src/integration/review-rework.integration.test.ts` (5 tests)
-- Tests validate the full CHANGES_REQUESTED → rework → approval flow
-- Tests verify schema-valid rejection packets, RejectionContext, rework TaskPacket
-- Tests verify review_round_count tracking and atomic audit events
-- All 2,962 tests pass (including the 5 new ones)
-
-**Patterns used:**
-
-- Same integration test pattern as T107 (real SQLite, real UnitOfWork, real TransitionService)
-- Direct SQL seeding for prerequisite entities
-- Schema validation using Zod packet schemas from @factory/schemas
-- IssueSchema uses: severity, code, title, description, file_path, line, blocking
-- WorkerLeaseStatus.COMPLETING is terminal (no COMPLETED state)
-
-**Notes for next loops:**
-
-- T109 (merge conflict tests) and T110 (lease timeout tests) follow same pattern
-- The integration test directory is at apps/control-plane/src/integration/
-- FakeRunnerAdapter from @factory/testing not needed for state-transition-level tests
-
----
-
 ## T075: Structured logging with correlation IDs — DONE
 
 **What was done:**
@@ -510,3 +346,36 @@ Also fixed T072 backlog index status (was `pending` but task file was `done`).
 - shadcn/ui components.json is configured for future `npx shadcn add` usage
 - PostCSS + Tailwind config follows standard shadcn/ui setup
 - React Router v7 is installed (package name is still `react-router-dom`)
+
+## T090: Implement API client layer with TanStack Query
+
+**Date:** 2026-03-12
+**Status:** Done
+
+### What was done
+
+- Installed `@tanstack/react-query` in `apps/web-ui`
+- Created `src/api/client.ts` — typed fetch wrapper with JSON handling, error extraction, 204 support
+- Created `src/api/types.ts` — comprehensive API response types matching all control-plane DTOs
+- Created `src/api/query-keys.ts` — centralized query key factory for predictable cache invalidation
+- Created `src/api/provider.tsx` — `ApiProvider` with `QueryClientProvider` (30s staleTime, 1 retry)
+- Created query + mutation hooks for all entities:
+  - Projects, Repositories, Tasks (with 11 operator actions), Pools, Agent Profiles, Reviews, Audit, Policies, Health
+- Created 11 test files with 67 new tests covering client, provider, query keys, and all hooks
+- Updated `App.tsx` to wrap router with `ApiProvider`
+
+### Patterns used
+
+- TanStack Query key factory pattern (all → lists → detail hierarchy)
+- `mockImplementation` for fetch mocks (Response body can only be read once)
+- `createWrapper()` helper for hook tests with isolated QueryClient per test
+- Conditional queries via `enabled: !!id` for optional parameters
+- Cache invalidation on mutation success via `queryClient.invalidateQueries`
+
+### Notes for next loops
+
+- Base URL defaults to `/api` — Vite proxy forwards to backend at localhost:3000
+- Hook tests use jsdom environment — add `// @vitest-environment jsdom` docblock
+- All hooks re-exported from `src/api/hooks/index.ts` and `src/api/index.ts`
+- Types are manually maintained — consider OpenAPI codegen if backend DTOs drift
+- T091 (WebSocket) and T092 (App Shell) are now unblocked

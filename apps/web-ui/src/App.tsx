@@ -1,13 +1,18 @@
 import { RouterProvider } from "react-router-dom";
 import { router } from "./app/routes";
+import { ApiProvider } from "./api/provider";
 
 /**
  * Root application component.
  *
- * Sets up the React Router provider with the application's route
- * configuration. Global providers (theme, query client, etc.)
- * will be added here in subsequent tasks (T090, T091).
+ * Wraps the router with the TanStack Query {@link ApiProvider} so that
+ * all route-level components can use data-fetching hooks. Additional
+ * global providers (WebSocket, theme) will be added in subsequent tasks.
  */
 export function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <ApiProvider>
+      <RouterProvider router={router} />
+    </ApiProvider>
+  );
 }
