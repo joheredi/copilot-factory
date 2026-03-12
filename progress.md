@@ -390,3 +390,42 @@ Implemented the `SummarizationService` in `packages/application/src/services/sum
 - The `RetrySummary` type is designed to be used as `TaskPacket.context.prior_partial_work` value
 - The `SummarizationArtifactReaderPort` needs infrastructure adapter implementation that reads from ArtifactStore — can be done when wiring the control plane
 - `prior_partial_work` field in TaskPacket schema is `z.unknown().nullable()` — no schema change needed to carry `RetrySummary`
+
+## T101 — Implement operator action API endpoints
+
+### Task
+
+T101 - Implement operator action API endpoints (Epic E021: Operator Actions & Overrides)
+
+### What was done
+
+Implemented all 10 operator actions from §6.2 of the additional refinements PRD as REST API endpoints under `POST /tasks/:id/actions/{action}`:
+
+- **State transition actions** (via TransitionService): `pause` (→ESCALATED), `resume` (ESCALATED→ASSIGNED), `requeue` (ASSIGNED/IN_DEV→READY), `force-unblock` (BLOCKED→READY), `cancel` (→CANCELLED)
+- **Metadata actions** (direct DB + audit): `change-priority`, `reassign-pool`
+- **Operator override actions** (bypass state machine): `rerun-review` (APPROVED/IN_REVIEW→DEV_COMPLETE), `reopen` (DONE/FAILED/CANCELLED→BACKLOG)
+- **Merge queue action**: `override-merge-order`
+
+All actions create audit events with `actorType: "operator"`. State machine invariants are respected — only valid transitions are allowed.
+
+### Files created
+
+- `apps/control-plane/src/operator-actions/operator-actions.module.ts`
+- `apps/control-plane/src/operator-actions/operator-actions.controller.ts`
+- `apps/control-plane/src/operator-actions/operator-actions.service.ts`
+- `apps/control-plane/src/operator-actions/dtos/operator-action.dto.ts`
+- `apps/control-plane/src/operator-actions/operator-actions.service.test.ts` (34 tests)
+
+### Architecture patterns used
+
+- **Hybrid approach**: TransitionService for state transitions (atomic state change + audit), direct DB for metadata and operator overrides
+- **No-op DomainEventEmitter**: Ready for WebSocket gateway (T086/T087) integration later
+- **Explicit state pre-validation**: For actions like `resume` where the state machine allows the transition from multiple source states, but the operator action should only be valid from one (ESCALATED)
+- **Override pattern**: For transitions not in the state machine (reopen, rerun-review), uses direct DB writes with manual audit events
+
+### Notes for next loop
+
+- T102 (State transition guards for manual actions) is now unblocked
+- T103 (Escalation resolution flow) is now unblocked
+- The no-op DomainEventEmitter should be replaced with a real implementation once T086 (WebSocket gateway) is done
+- The `reassign-pool` action records a pool hint via audit events — when pool assignment columns are added to the task table, this should be updated to persist the hint directly

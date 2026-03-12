@@ -14,6 +14,7 @@ import { AuditModule } from "./audit/audit.module.js";
 import { HealthModule } from "./health/health.module.js";
 import { DatabaseModule } from "./infrastructure/database/database.module.js";
 import { MergeModule } from "./merge/merge.module.js";
+import { OperatorActionsModule } from "./operator-actions/operator-actions.module.js";
 import { PolicyModule } from "./policy/policy.module.js";
 import { ProjectsModule } from "./projects/projects.module.js";
 import { ReviewModule } from "./review/review.module.js";
@@ -34,6 +35,7 @@ import { WorkersModule } from "./workers/workers.module.js";
  * - ValidationModule: validation run tracking
  * - AuditModule: audit event recording
  * - PolicyModule: policy set management
+ * - OperatorActionsModule: operator action endpoints (§6.2)
  */
 @Module({
   imports: [
@@ -47,6 +49,7 @@ import { WorkersModule } from "./workers/workers.module.js";
     ValidationModule,
     AuditModule,
     PolicyModule,
+    OperatorActionsModule,
   ],
 })
 export class AppModule {}
