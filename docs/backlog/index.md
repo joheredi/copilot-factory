@@ -191,7 +191,7 @@ See [phase documents](phases/) for details.
 | [T068](tasks/T068-followup-task-gen.md)             | Implement follow-up task generation                                                   | E013 | P1       | feature    | done    |
 | [T069](tasks/T069-artifact-storage.md)              | Implement filesystem artifact storage                                                 | E014 | P0       | feature    | done    |
 | [T070](tasks/T070-artifact-retrieval.md)            | Implement artifact reference resolution and retrieval                                 | E014 | P0       | feature    | done    |
-| [T071](tasks/T071-retry-summarization.md)           | Implement summarization packet generation for retries                                 | E014 | P1       | feature    | pending |
+| [T071](tasks/T071-retry-summarization.md)           | Implement summarization packet generation for retries                                 | E014 | P1       | feature    | done    |
 | [T072](tasks/T072-partial-work-snapshot.md)         | Implement partial work snapshot on lease reclaim                                      | E014 | P1       | feature    | pending |
 | [T073](tasks/T073-audit-event-recording.md)         | Implement audit event recording on state transitions                                  | E015 | P0       | feature    | done    |
 | [T074](tasks/T074-audit-query-service.md)           | Implement audit event query service                                                   | E015 | P1       | feature    | done    |

@@ -343,6 +343,29 @@ export type {
   CrashRecoveryDependencies,
 } from "./services/crash-recovery.service.js";
 
+// Ports — summarization interfaces (PRD §7.11)
+export type {
+  RetrySummary,
+  SummaryFileChange,
+  SummaryValidation,
+  FailedRunInfo,
+  SummarizationArtifactReaderPort,
+  SummarizationArtifactWriterPort,
+  PartialWorkSnapshot as SummarizationPartialWorkSnapshot,
+} from "./ports/summarization.ports.js";
+
+// Services — retry summarization packet generation (PRD §7.11)
+export {
+  createSummarizationService,
+  SUMMARY_CHARACTER_LIMIT,
+} from "./services/summarization.service.js";
+export type {
+  GenerateRetrySummaryParams,
+  GenerateRetrySummaryResult,
+  SummarizationService,
+  SummarizationDependencies,
+} from "./services/summarization.service.js";
+
 // Ports — output validation interfaces
 export type {
   WorkerOutputSource,

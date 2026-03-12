@@ -359,3 +359,34 @@ Also created:
 - The span constants in `SpanNames` and `SpanAttributes` can be referenced from future instrumentation
 - `InMemorySpanExporter` is now publicly exported from `@factory/observability` for use in tests
 - The `startActiveSpan` callback may widen TypeScript literal types — use explicit return type annotation (see scheduler.service.ts for pattern)
+
+## T071 — Implement summarization packet generation for retries
+
+### Task
+
+T071 - Implement summarization packet generation for retries (Epic E014: Artifact Service)
+
+### What was done
+
+Implemented the `SummarizationService` in `packages/application/src/services/summarization.service.ts` following the existing factory-function + port-based architecture pattern:
+
+- **Ports** (`summarization.ports.ts`): Defined `SummarizationArtifactReaderPort` (reads failed run info + partial work snapshots) and `SummarizationArtifactWriterPort` (stores summaries). Also defined `RetrySummary`, `SummaryFileChange`, `SummaryValidation`, `FailedRunInfo` types.
+- **Service** (`summarization.service.ts`): Reads artifacts best-effort (missing data → degraded summary, never throws). Extracts files changed, validations run, failure points, and a human-readable failure summary. Enforces a 2000-character limit via progressive truncation (files → validations → failure points → text fields). Stores summary as artifact. Uses OTel tracing.
+- **Tests** (28 tests): Unit tests for all pure extraction functions + integration tests for the full service covering: both sources available, result-only, partial-work-only, no artifacts, reader failures, JSON round-trip, character limit enforcement with large inputs.
+- **Exports** added to `packages/application/src/index.ts`.
+
+### Patterns used
+
+- Factory function pattern with `SummarizationDependencies` struct (matching heartbeat, lease, crash-recovery services)
+- Port-based architecture: reader/writer ports for artifact I/O
+- Best-effort `safeAsync()` for all artifact reads
+- Progressive truncation for size bounding
+- `SpanStatusCode` imported from `@factory/observability` (not directly from `@opentelemetry/api`)
+- Injectable clock for deterministic test timestamps
+
+### Notes for next loop
+
+- T072 (Partial work snapshot on lease reclaim) is the other remaining E014 task — also ready
+- The `RetrySummary` type is designed to be used as `TaskPacket.context.prior_partial_work` value
+- The `SummarizationArtifactReaderPort` needs infrastructure adapter implementation that reads from ArtifactStore — can be done when wiring the control plane
+- `prior_partial_work` field in TaskPacket schema is `z.unknown().nullable()` — no schema change needed to carry `RetrySummary`
