@@ -15,7 +15,7 @@
  * @see docs/prd/007-technical-architecture.md §7.7 — Event architecture
  * @module @factory/control-plane/events
  */
-import { Injectable, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
+import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
 
 import { createLogger } from "@factory/observability";
@@ -115,8 +115,8 @@ export class QueueWorkerEventsService implements OnModuleInit, OnModuleDestroy {
   private conn!: DatabaseConnection;
 
   constructor(
-    private readonly broadcaster: EventBroadcasterService,
-    private readonly moduleRef: ModuleRef,
+    @Inject(EventBroadcasterService) private readonly broadcaster: EventBroadcasterService,
+    @Inject(ModuleRef) private readonly moduleRef: ModuleRef,
   ) {
     this.logger = createLogger("queue-worker-events");
   }

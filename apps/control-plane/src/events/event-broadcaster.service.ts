@@ -15,7 +15,7 @@
  * @see docs/prd/007-technical-architecture.md §7.7 for event architecture
  * @module @factory/control-plane/events
  */
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 
 import { EventsGateway } from "./events.gateway.js";
 import { EventChannel, FactoryEvent, buildEntityRoom } from "./types.js";
@@ -42,7 +42,7 @@ export class EventBroadcasterService {
   /** socket.io event name used for all factory events. */
   static readonly EVENT_NAME = "factory_event";
 
-  constructor(private readonly gateway: EventsGateway) {}
+  constructor(@Inject(EventsGateway) private readonly gateway: EventsGateway) {}
 
   /**
    * Broadcast an event to all clients subscribed to a channel.

@@ -17,7 +17,7 @@
  * @see docs/backlog/tasks/T088-queue-worker-events.md
  * @module @factory/control-plane/events
  */
-import { Injectable, type OnModuleInit } from "@nestjs/common";
+import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
 
 import type { DomainEventEmitter, DomainEvent } from "@factory/application";
@@ -109,8 +109,8 @@ export class DomainEventBroadcasterAdapter implements DomainEventEmitter, OnModu
   private queueWorkerEvents?: QueueWorkerEventsService;
 
   constructor(
-    private readonly broadcaster: EventBroadcasterService,
-    private readonly moduleRef: ModuleRef,
+    @Inject(EventBroadcasterService) private readonly broadcaster: EventBroadcasterService,
+    @Inject(ModuleRef) private readonly moduleRef: ModuleRef,
   ) {
     this.logger = createLogger("domain-event-broadcaster");
   }
