@@ -473,3 +473,41 @@ Implemented the conflict classifier service that determines whether merge confli
 - T109 (merge conflict tests) and T110 (lease timeout tests) follow same pattern
 - The integration test directory is at apps/control-plane/src/integration/
 - FakeRunnerAdapter from @factory/testing not needed for state-transition-level tests
+
+---
+
+## T075: Structured logging with correlation IDs — DONE
+
+**What was done:**
+
+- Implemented structured JSON logging in `packages/observability` using pino
+- Created `src/logger.ts` — `createLogger(module, options)` factory function producing structured JSON loggers
+- Created `src/context.ts` — AsyncLocalStorage-based correlation context with `runWithContext()` / `getContext()`
+- Created `src/nest-logger.ts` — NestJS LoggerService adapter (`NestLoggerAdapter`) for framework integration
+- Updated `src/index.ts` — re-exports full public API
+- Added pino dependency to `packages/observability/package.json`
+- 28 new tests across 3 test files (context, logger, nest-logger)
+- All 3,122 tests pass (93 test files)
+
+**Key design decisions:**
+
+- Pino chosen for speed (async JSON logging) per task guidance
+- AsyncLocalStorage for request-scoped correlation — no explicit context passing needed
+- Logger wraps pino child loggers and injects CorrelationContext on every log call
+- §7.14 common fields: timestamp (ISO), level, module, taskId, runId, workerId, reviewCycleId, mergeQueueItemId, eventType
+- Per-module log level config via `LogLevelConfig` map with `resolveLogLevel()`
+- NestJS adapter defined without hard dependency on `@nestjs/common` (interface-only)
+- Tests use writable stream capture for deterministic JSON output verification
+
+**Patterns used:**
+
+- Writable stream + JSON.parse for capturing/asserting structured log output in tests
+- vi.fn() mocks for NestJS adapter tests
+- runWithContext for correlation context scoping in async flows
+
+**Notes for next loops:**
+
+- T076 (OpenTelemetry init) is now unblocked — depends only on T075
+- NestLoggerAdapter can be integrated into control-plane main.ts in a future task
+- Log levels can be wired to hierarchical config (T052) when operator config UI is built
+- `getContextStorage()` is exported for NestJS interceptors that need to establish correlation context at the request boundary

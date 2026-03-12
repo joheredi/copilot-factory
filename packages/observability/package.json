@@ -23,5 +23,11 @@
     "clean": "rm -rf dist tsconfig.tsbuildinfo",
     "lint": "eslint .",
     "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@types/node": "^25.4.0"
+  },
+  "dependencies": {
+    "pino": "^10.3.1"
   }
 }

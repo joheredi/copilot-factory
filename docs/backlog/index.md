@@ -195,7 +195,7 @@ See [phase documents](phases/) for details.
 | [T072](tasks/T072-partial-work-snapshot.md)         | Implement partial work snapshot on lease reclaim                                      | E014 | P1       | feature    | pending |
 | [T073](tasks/T073-audit-event-recording.md)         | Implement audit event recording on state transitions                                  | E015 | P0       | feature    | done    |
 | [T074](tasks/T074-audit-query-service.md)           | Implement audit event query service                                                   | E015 | P1       | feature    | done    |
-| [T075](tasks/T075-structured-logging.md)            | Implement structured logging with correlation IDs                                     | E015 | P1       | feature    | pending |
+| [T075](tasks/T075-structured-logging.md)            | Implement structured logging with correlation IDs                                     | E015 | P1       | feature    | done    |
 | [T076](tasks/T076-otel-init.md)                     | Initialize OpenTelemetry TracerProvider                                               | E016 | P1       | feature    | pending |
 | [T077](tasks/T077-otel-spans.md)                    | Instrument core orchestration paths with spans                                        | E016 | P1       | feature    | pending |
 | [T078](tasks/T078-prometheus-endpoint.md)           | Implement Prometheus metrics endpoint                                                 | E016 | P1       | feature    | pending |
