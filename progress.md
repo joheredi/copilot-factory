@@ -1,5 +1,30 @@
 # Progress Log
 
+## T076: Initialize OpenTelemetry TracerProvider — Done
+
+**What was implemented:**
+
+- `packages/observability/src/tracing.ts`: Full OpenTelemetry tracing initialization with `NodeTracerProvider`, configurable OTLP/console exporters, W3C trace context propagation, and HTTP auto-instrumentation
+- `packages/observability/src/tracing.test.ts`: 15 tests covering span capture, resource attributes, parent-child relationships, span events/status/attributes, multiple exporters, and graceful shutdown
+- Updated `packages/observability/src/index.ts` to export tracing API (`initTracing`, `getTracer`, `TracingConfig`, `TracingHandle`, OTel re-exports)
+- Updated `apps/control-plane/src/main.ts` to initialize tracing before NestJS bootstrap, with env-var-driven configuration and graceful shutdown on SIGTERM/SIGINT
+- Added `@factory/observability` as dependency of `@factory/control-plane`
+
+**Patterns used:**
+
+- `NodeTracerProvider` directly (not `NodeSDK`) for better lifecycle control in tests — OTel v2 removed `addSpanProcessor()` method, replaced with constructor-based `spanProcessors` array
+- `resourceFromAttributes()` instead of `new Resource()` (OTel Resources v2 API change)
+- `trace.disable()` in shutdown to reset global TracerProvider (enables re-initialization in tests)
+- `SimpleSpanProcessor` for immediate span export (sync on `span.end()`)
+- `InMemorySpanExporter` for testing without network I/O
+- Environment variables: `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_TRACING_ENABLED`, `NODE_ENV`
+
+**Notes for next loops:**
+
+- T076 unblocks T077 (instrument core orchestration paths with spans)
+- OTel v2 API differences: `instrumentationScope` (not `instrumentationLibrary`), `parentSpanContext` (not `parentSpanId`), `resourceFromAttributes()` (not `new Resource()`)
+- `provider.shutdown()` clears `InMemorySpanExporter` — always read spans before shutdown in tests
+
 ## T085: Implement Audit, Policy, and Config endpoints — Done
 
 **What was implemented:**

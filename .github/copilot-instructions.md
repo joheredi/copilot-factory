@@ -92,6 +92,18 @@ The `eng/` directory is excluded from ESLint (utility scripts with Node.js globa
 - **Module structure:** Feature modules match domain boundaries (Projects, Tasks, Workers, Review, Merge, Validation, Audit, Policy). Add controllers/services to these modules for new endpoints.
 - **TypeScript:** The control-plane tsconfig overrides `verbatimModuleSyntax: false` and enables `experimentalDecorators`/`emitDecoratorMetadata` for NestJS decorator support. Other packages are unaffected.
 
+# OpenTelemetry Tracing
+
+- **Package:** `@factory/observability` owns tracing alongside structured logging.
+- **Provider:** `NodeTracerProvider` from `@opentelemetry/sdk-trace-node` (not `NodeSDK`).
+- **Init:** `initTracing(config?)` must be called before NestJS bootstrap. Returns `TracingHandle` with `shutdown()`.
+- **Tracer:** `getTracer(moduleName)` returns a module-scoped tracer from the global provider.
+- **Exporters:** OTLP HTTP exporter (configurable endpoint, default `http://localhost:4318`) and optional console exporter for dev.
+- **Propagation:** W3C TraceContext (default).
+- **HTTP instrumentation:** Auto-instruments inbound/outbound HTTP via `@opentelemetry/instrumentation-http`.
+- **Env vars:** `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_TRACING_ENABLED` (set to `"false"` to disable), `NODE_ENV` (set to `"development"` for console exporter).
+- **OTel v2 API notes:** Use `resourceFromAttributes()` (not `new Resource()`), `instrumentationScope` (not `instrumentationLibrary`), `parentSpanContext` (not `parentSpanId`). `provider.shutdown()` clears `InMemorySpanExporter` — read spans before shutdown in tests.
+
 # High-level architecture
 
 The intended system is a local-first orchestration platform for software delivery using bounded AI workers inside a deterministic control plane.

@@ -33,6 +33,7 @@
     "@factory/application": "workspace:*",
     "@factory/config": "workspace:*",
     "@factory/domain": "workspace:*",
+    "@factory/observability": "workspace:*",
     "@fastify/static": "^9.0.0",
     "@nestjs/common": "^11.1.16",
     "@nestjs/core": "^11.1.16",

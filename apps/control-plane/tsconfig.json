@@ -13,6 +13,7 @@
   "references": [
     { "path": "../../packages/application" },
     { "path": "../../packages/config" },
-    { "path": "../../packages/domain" }
+    { "path": "../../packages/domain" },
+    { "path": "../../packages/observability" }
   ]
 }
