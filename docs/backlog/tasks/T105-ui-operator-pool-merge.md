@@ -5,7 +5,7 @@
 | **ID**                    | T105                                                                                                        |
 | **Epic**                  | [E021: Operator Actions & Overrides](../epics/E021-operator-actions.md)                                     |
 | **Type**                  | feature                                                                                                     |
-| **Status**                | pending                                                                                                     |
+| **Status**                | done                                                                                                        |
 | **Priority**              | P2                                                                                                          |
 | **Owner**                 | frontend-engineer                                                                                           |
 | **AI Executable**         | Yes                                                                                                         |

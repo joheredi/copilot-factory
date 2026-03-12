@@ -12,6 +12,10 @@ import {
 } from "../../components/ui/card";
 import { useMergeQueue } from "../../api/hooks";
 import { MergeQueueStatusBadge } from "./MergeQueueStatusBadge";
+import { ResumeQueueButton } from "./components/resume-queue-button";
+import { QueueItemActions } from "./components/queue-item-actions";
+import { ActionFeedbackBanner } from "../task-detail/components/operator-actions/ActionFeedbackBanner";
+import { useActionFeedback } from "../task-detail/components/operator-actions/use-action-feedback";
 import type { MergeQueueListParams } from "../../api/types";
 
 /** All valid merge queue item statuses for the filter bar. */
@@ -52,10 +56,12 @@ function formatTime(dateStr: string | null): string {
  *
  * @see docs/prd/007-technical-architecture.md §7.16 — Merge Queue screen
  * @see {@link file://docs/backlog/tasks/T098-build-merge-queue-view.md}
+ * @see T105 — Integrate operator controls into pool and merge queue UI
  */
 export default function MergeQueuePage() {
   const [statusFilter, setStatusFilter] = useState<string | undefined>();
   const [showFilters, setShowFilters] = useState(false);
+  const { feedback, showSuccess, showError, clearFeedback } = useActionFeedback();
 
   const params: MergeQueueListParams = {
     page: 1,
@@ -63,13 +69,26 @@ export default function MergeQueuePage() {
     ...(statusFilter ? { status: statusFilter } : {}),
   };
 
-  const { data, isLoading, isError } = useMergeQueue(params);
+  const { data, isLoading, isError, refetch } = useMergeQueue(params);
   const items = data?.data ?? [];
   const total = data?.meta?.total ?? 0;
 
-  const hasFailedItems = items.some((item) => item.status === "FAILED");
+  const failedItems = items.filter((item) => item.status === "FAILED");
+  const hasFailedItems = failedItems.length > 0;
+  const failedTaskIds = failedItems.map((item) => item.taskId);
   const activeItem = items.find((item) => ACTIVE_STATUSES.has(item.status));
   const activeFilterCount = statusFilter ? 1 : 0;
+
+  /** Callback for operator action feedback from child components. */
+  function handleFeedback(type: "success" | "error", message: string) {
+    if (type === "success") showSuccess(message);
+    else showError(message);
+  }
+
+  /** Refresh queue data after an operator action. */
+  function handleActionComplete() {
+    void refetch();
+  }
 
   return (
     <div className="space-y-6">
@@ -79,17 +98,28 @@ export default function MergeQueuePage() {
         <p className="text-muted-foreground">Monitor merge operations and conflict resolution</p>
       </div>
 
+      {/* Operator action feedback */}
+      <ActionFeedbackBanner feedback={feedback} onDismiss={clearFeedback} />
+
       {/* Queue pause warning when failures exist */}
       {hasFailedItems && (
         <Card className="border-red-300 bg-red-50" data-testid="queue-pause-warning">
-          <CardContent className="flex items-center gap-3 py-4">
-            <PauseCircle className="h-5 w-5 text-red-600" />
-            <div>
-              <p className="font-medium text-red-800">Queue processing may be paused</p>
-              <p className="text-sm text-red-700">
-                One or more items have failed. Review failed items below.
-              </p>
+          <CardContent className="flex items-center justify-between gap-3 py-4">
+            <div className="flex items-center gap-3">
+              <PauseCircle className="h-5 w-5 text-red-600" />
+              <div>
+                <p className="font-medium text-red-800">Queue processing may be paused</p>
+                <p className="text-sm text-red-700">
+                  {failedItems.length} item{failedItems.length !== 1 ? "s have" : " has"} failed.
+                  Review failed items or resume the queue.
+                </p>
+              </div>
             </div>
+            <ResumeQueueButton
+              failedTaskIds={failedTaskIds}
+              onFeedback={handleFeedback}
+              onComplete={handleActionComplete}
+            />
           </CardContent>
         </Card>
       )}
@@ -208,7 +238,8 @@ export default function MergeQueuePage() {
                     <th className="pb-2 pr-4 font-medium">Status</th>
                     <th className="pb-2 pr-4 font-medium">Enqueued</th>
                     <th className="pb-2 pr-4 font-medium">Started</th>
-                    <th className="pb-2 font-medium">Completed</th>
+                    <th className="pb-2 pr-4 font-medium">Completed</th>
+                    <th className="pb-2 font-medium">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -248,6 +279,15 @@ export default function MergeQueuePage() {
                         </td>
                         <td className="py-3 text-muted-foreground">
                           {formatTime(item.completedAt)}
+                        </td>
+                        <td className="py-3">
+                          <QueueItemActions
+                            taskId={item.taskId}
+                            currentPosition={item.position}
+                            status={item.status}
+                            onFeedback={handleFeedback}
+                            onComplete={handleActionComplete}
+                          />
                         </td>
                       </tr>
                     );

@@ -1,207 +1,31 @@
 # Progress Log
 
-## T104 — Integrate operator controls into task detail UI
+## T105: Integrate operator controls into pool and merge queue UI (2026-03-12)
 
-### Task
+**What was done:**
 
-T104 - Integrate operator controls into task detail UI (Epic E021: Operator Actions & Overrides)
+- Created `PoolToggle` component — enable/disable toggle with confirmation dialog for disable (disruptive action), immediate enable
+- Created `ConcurrencyEditor` component — inline number input with save/cancel, keyboard shortcuts (Enter/Escape), range validation (1–100)
+- Created `ResumeQueueButton` component — requeues all failed merge queue items with confirmation, reports success/error counts
+- Created `QueueItemActions` component — per-item reorder (move up/down) for ENQUEUED/REQUEUED items, requeue for FAILED items, with confirmation dialogs
+- Integrated controls into `PoolDetailPage` (toggle in header, inline concurrency editor in stats)
+- Integrated controls into `MergeQueuePage` (resume button in pause warning, per-item actions in table)
+- Added `ActionFeedbackBanner` + `useActionFeedback` to both pages for success/error feedback
+- 35 new tests covering all controls, confirmation flows, API calls, and edge cases
 
-### What was done
+**Patterns used:**
 
-Added a complete operator action bar to the task detail page with state-dependent controls:
+- Reused `ConfirmActionDialog` from T104 for consistency across all operator actions
+- Reused `ActionFeedbackBanner` + `useActionFeedback` hook for inline feedback (no toast dependency)
+- Used `useUpdatePool` mutation for pool toggle/concurrency, direct `apiPost` for operator actions
+- Per-item actions use confirmation dialogs with required reason for audit trail
 
-- **action-definitions.ts**: Maps each of 16 task statuses to valid operator actions with metadata (label, variant, confirmation requirement, description). Mirrors backend guards.
-- **TaskActionBar.tsx**: Main orchestration component that renders state-dependent buttons, priority selector, escalation resolution panel, and feedback banners. Wires up all 11 TanStack Query mutation hooks.
-- **ConfirmActionDialog.tsx**: Reusable confirmation modal with reason textarea (required for audit trail), optional in-progress work acknowledgment checkbox (for cancel on IN_DEVELOPMENT).
-- **EscalationResolutionPanel.tsx**: Three-button panel (Retry, Cancel, Mark Done) for ESCALATED tasks, each with a tailored dialog. Mark Done requires evidence field.
-- **PriorityChangeSelect.tsx**: Inline native select for priority changes (no confirmation needed, fires immediately).
-- **ActionFeedbackBanner.tsx**: Dismissible success/error banner with auto-dismiss after 5s. No toast library needed.
-- **use-action-feedback.ts**: Hook managing feedback state with timer cleanup.
-- **35 new tests** across 2 test files covering action definitions per status, component rendering, dialog interactions, and full integration with API mocking.
+**Next loop should know:**
 
-### Patterns used
-
-- Existing TanStack Query mutation hooks from `use-tasks.ts` (already had all 11 operator action hooks)
-- Radix Dialog from existing `components/ui/dialog.tsx`
-- Native HTML select for priority (avoids adding @radix-ui/react-select dependency)
-- Inline feedback banners instead of toast library (keeps dependencies minimal)
-- `data-testid` attributes on all interactive elements for testability
-
-### Notes for next loop
-
-- T105 (operator controls for pool/merge queue UI) is the only remaining pending task
-- The `OPERATOR_ACTOR_ID` in TaskActionBar is hardcoded as "operator" — should be replaced with real auth identity when authentication is integrated
-- Override merge order currently defaults to position 1 — could be enhanced with a position input field in the confirmation dialog
-
-## T100 — Build audit explorer view
-
-### Task
-
-T100 - Build audit explorer view (Epic E020: Web UI Feature Views)
-
-### What was done
-
-Replaced the placeholder audit page with a full-featured audit explorer:
-
-- **Filter hook** (`use-audit-filters.ts`): URL-synced filter state for entity type/ID, event type, actor type/ID, time range, and pagination. Follows the `useTaskFilters` pattern.
-- **Filter bar** (`audit-filters.tsx`): Toggle buttons for entity type, event type, actor type; text inputs for entity/actor ID; datetime inputs for time range; clear-all with active count badge.
-- **Event table** (`audit-event-table.tsx`): Timeline table with expandable detail rows. Shows time, entity (colored badge), event type (with inline state transition), and actor. Expanded detail shows state transition arrows, actor info, entity links (task IDs link to task detail), and formatted metadata JSON.
-- **Pagination** (`audit-pagination.tsx`): Page navigation with smart ellipsis, range display ("Showing 1-20 of 150 events"), and page size selector.
-- **Page** (`page.tsx`): Full integration with filter toggle, error state, results summary, and loading skeleton.
-- **Updated `AuditEvent` type** to include `oldState`/`newState` fields matching backend API.
-- **30 new tests** across 3 test files covering hook state management, table rendering/expansion, and page integration.
-
-### Patterns used
-
-- URL-synced filter state via `useSearchParams` (same as tasks feature)
-- TanStack Query hook for data fetching (`useAuditLog` was already implemented)
-- Toggle-button filter UI (same as task filters)
-- Expandable table rows with toggle state via `Set<string>`
-- `data-testid` attributes on all interactive elements
-
-### Notes for next loop
-
-- T104 and T105 are the remaining pending tasks (both P2, UI operator controls)
-- The `PaginationControls` component in tasks has "tasks" hardcoded in the label; if more features need pagination, consider extracting a shared component with a configurable label
-
-## T088 — Implement queue and worker status broadcasting
-
-### What was done
-
-- Created `apps/control-plane/src/events/queue-worker-events.service.ts` with full implementation:
-  1. **Heartbeat throttling**: Per-worker throttle map, 5s window, suppresses rapid broadcasts to prevent UI flooding
-  2. **Pool summary broadcasting**: After worker status changes, queries all pool workers and broadcasts aggregate stats (total workers, active workers, status breakdown) to the Workers channel
-  3. **Merge queue position broadcasting**: After merge queue item transitions, queries repository's full queue and broadcasts ordered positions to the Queue channel
-  4. **Queue depth gauge polling**: 5s interval broadcasts pending job counts grouped by type to the Queue channel
-  5. **Throttle map cleanup**: Prunes stale entries (>30s) during polling to prevent memory leaks
-- Updated `DomainEventBroadcasterAdapter` to trigger enrichment broadcasts after entity-level events: pool summaries for worker status changes, merge queue positions for queue item transitions
-- Used ModuleRef for lazy database connection resolution (direct @Inject in EventsModule causes NestJS compilation hang with WebSocket gateway)
-- Added `.unref()` to the polling timer so it doesn't block Node.js process shutdown
-- Created comprehensive test suite (24 tests): throttling behavior, pool summary, merge queue positions, queue depth gauge, polling lifecycle, throttle cleanup, error resilience
-- Updated adapter tests (6 new tests): enrichment triggering for worker/merge events, no enrichment for task events, enrichment failure resilience, optional service availability
-
-### Patterns used
-
-- Same mock server pattern as T086/T087 event tests: manual socket.io mock with emitCalls capture
-- ModuleRef.get for lazy DI resolution (avoids WebSocket gateway + DB provider resolution hang)
-- vi.spyOn on snapshot methods to test broadcasting logic without real database
-- vi.useFakeTimers for deterministic interval testing
-- @Optional on adapter's QueueWorkerEventsService via ModuleRef (graceful degradation)
-
-### For next loop
-
-- T096-T100 (UI views: worker pools, review center, merge queue, config editor, audit explorer) are all P2 and ready
-- T104-T105 (operator controls UI) are P2 — T105 depends on T096 and T098
-- All remaining tasks are P2 UI features in E020/E021
-
-## T078 — Implement Prometheus metrics endpoint
-
-### Task
-
-T078 - Implement Prometheus metrics endpoint (Epic E016: Observability)
-
-### What was done
-
-Implemented the Prometheus /metrics endpoint with two components:
-
-1. **`packages/observability/src/metrics.ts`** — Core metrics module:
-   - `initMetrics(config?)` initializes a prom-client Registry with optional default Node.js metrics and default labels
-   - `getMetricsHandle()` singleton accessor for the active registry
-   - `createCounter()`, `createHistogram()`, `createGauge()` factory functions that register on the active registry
-   - `resetMetrics()` for test cleanup
-   - Full JSDoc with examples referencing §10.13 naming and label conventions
-
-2. **`apps/control-plane/src/metrics/`** — NestJS controller and module:
-   - `MetricsController` exposes GET /metrics with Swagger docs and Cache-Control: no-store
-   - `MetricsModule` initializes the metrics subsystem via factory provider and exports `METRICS_HANDLE` token for DI
-   - Registered in AppModule alongside existing feature modules
-
-3. **Tests:**
-   - `packages/observability/src/metrics.test.ts` — 14 tests covering init, singleton, default metrics, custom prefix, default labels, reset, counter/histogram/gauge creation with labels
-   - `apps/control-plane/src/metrics/metrics.controller.test.ts` — 3 tests covering controller delegation to MetricsHandle
-
-Also fixed T072 backlog index status (was `pending` but task file was `done`).
-
-### Patterns used
-
-- Metrics core in `@factory/observability` matching the existing tracing/logging pattern
-- NestJS DI via Symbol-based injection token (`METRICS_HANDLE`)
-- Factory provider in module for singleton initialization
-- Fake MetricsHandle in controller tests (no real prom-client needed)
-
-### Notes for next loop
-
-- T079 (starter metrics inventory) is now unblocked — it should use the `createCounter`, `createHistogram`, `createGauge` factories to register the §10.13.3 metrics
-- The `METRICS_HANDLE` is exported from MetricsModule for other modules to inject when registering custom metrics
-- Label cardinality rules from §10.13.4 must be followed: never use task_id, run_id, or branch_name as Prometheus labels
-
----
-
-## T089: Initialize React SPA with Vite, Tailwind, shadcn/ui — DONE
-
-**Date:** 2026-03-12
-
-### What was done
-
-- Transformed the empty `apps/web-ui` skeleton into a full Vite + React + TypeScript SPA
-- Configured Tailwind CSS v3 with shadcn/ui CSS variables (light/dark theme support)
-- Installed and configured shadcn/ui component primitives: Button, Card, Badge, Table, Dialog, Tabs
-- Set up React Router v7 with lazy-loaded routes and code splitting
-- Created app shell layout with sidebar navigation (Dashboard, Tasks, Workers, Reviews, Merge Queue, Config, Audit Log)
-- Created dashboard placeholder page with status cards
-- Added Vite proxy config for API (`/api`) and WebSocket (`/socket.io`) forwarding to backend
-- Added comprehensive tests: 7 test files covering cn() utility, Button, Card, Badge, Table, Tabs components, and App routing
-- All 3,581 tests pass, build succeeds (Vite produces 315KB bundle), lint clean
-
-### Patterns used
-
-- shadcn/ui components use relative imports (not `@/` path alias) for Vitest workspace compatibility
-- Vitest jsdom environment set via `// @vitest-environment jsdom` docblock in each test file
-- `@testing-library/jest-dom/vitest` imported directly in each test file for custom matchers
-- `defineProject` from `vitest/config` for workspace mode compatibility
-- `emitDeclarationOnly: true` in tsconfig — tsc handles type checking, Vite handles bundling
-- `moduleResolution: "bundler"` and `module: "ESNext"` for Vite compatibility (overrides base NodeNext)
-
-### Notes for next loop
-
-- T090 (API client with TanStack Query), T091 (WebSocket client), T092 (App shell) are now unblocked
-- Dashboard page has placeholder cards — wire up real data in T090
-- shadcn/ui components.json is configured for future `npx shadcn add` usage
-- PostCSS + Tailwind config follows standard shadcn/ui setup
-- React Router v7 is installed (package name is still `react-router-dom`)
-
-## T090: Implement API client layer with TanStack Query
-
-**Date:** 2026-03-12
-**Status:** Done
-
-### What was done
-
-- Installed `@tanstack/react-query` in `apps/web-ui`
-- Created `src/api/client.ts` — typed fetch wrapper with JSON handling, error extraction, 204 support
-- Created `src/api/types.ts` — comprehensive API response types matching all control-plane DTOs
-- Created `src/api/query-keys.ts` — centralized query key factory for predictable cache invalidation
-- Created `src/api/provider.tsx` — `ApiProvider` with `QueryClientProvider` (30s staleTime, 1 retry)
-- Created query + mutation hooks for all entities:
-  - Projects, Repositories, Tasks (with 11 operator actions), Pools, Agent Profiles, Reviews, Audit, Policies, Health
-- Created 11 test files with 67 new tests covering client, provider, query keys, and all hooks
-- Updated `App.tsx` to wrap router with `ApiProvider`
-
-### Patterns used
-
-- TanStack Query key factory pattern (all → lists → detail hierarchy)
-- `mockImplementation` for fetch mocks (Response body can only be read once)
-- `createWrapper()` helper for hook tests with isolated QueryClient per test
-- Conditional queries via `enabled: !!id` for optional parameters
-- Cache invalidation on mutation success via `queryClient.invalidateQueries`
-
-### Notes for next loops
-
-- Base URL defaults to `/api` — Vite proxy forwards to backend at localhost:3000
-- Hook tests use jsdom environment — add `// @vitest-environment jsdom` docblock
-- All hooks re-exported from `src/api/hooks/index.ts` and `src/api/index.ts`
-- Types are manually maintained — consider OpenAPI codegen if backend DTOs drift
-- T091 (WebSocket) and T092 (App Shell) are now unblocked
+- All 111 backlog tasks are now `done`. The backlog is complete.
+- The pool toggle and concurrency editor use `useUpdatePool` (PUT /pools/:id)
+- Merge queue resume/reorder use task-level operator action endpoints (POST /tasks/:id/actions/\*)
+- The `merge-queue/components/` directory was newly created for queue action components
 
 ## T092: Build app shell with navigation layout (2026-03-12)
 

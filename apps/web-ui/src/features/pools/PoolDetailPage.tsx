@@ -5,11 +5,15 @@
  * its configuration, list of registered workers, and attached agent
  * profiles. Accessed via `/workers/:id` route.
  *
+ * Includes operator controls for enable/disable toggle and inline
+ * concurrency editing, with confirmation dialogs for disruptive actions.
+ *
  * Data is fetched with TanStack Query hooks and refreshed in real-time
  * via WebSocket cache invalidation (Workers channel).
  *
  * @see docs/prd/007-technical-architecture.md §7.16 — Worker Pools screen
  * @see T096 — Build worker pool monitoring panel
+ * @see T105 — Integrate operator controls into pool and merge queue UI
  */
 
 import { Link, useParams } from "react-router-dom";
@@ -26,9 +30,13 @@ import {
 import { Badge } from "../../components/ui/badge.js";
 import { PoolStatusBadge } from "./components/pool-status-badge.js";
 import { PoolTypeBadge } from "./components/pool-type-badge.js";
+import { PoolToggle } from "./components/pool-toggle.js";
+import { ConcurrencyEditor } from "./components/concurrency-editor.js";
 import { WorkerTable } from "./components/worker-table.js";
 import type { WorkerRecord } from "./components/worker-table.js";
 import type { AgentProfile } from "../../api/types.js";
+import { ActionFeedbackBanner } from "../task-detail/components/operator-actions/ActionFeedbackBanner.js";
+import { useActionFeedback } from "../task-detail/components/operator-actions/use-action-feedback.js";
 
 /**
  * Formats an ISO timestamp to a readable date string.
@@ -49,12 +57,19 @@ export default function PoolDetailPage() {
   const { data: pool, isLoading: poolLoading, isError: poolError } = usePool(id);
   const { data: rawWorkers, isLoading: workersLoading } = usePoolWorkers(id);
   const { data: profiles, isLoading: profilesLoading } = useAgentProfiles(id);
+  const { feedback, showSuccess, showError, clearFeedback } = useActionFeedback();
 
   const workers = (rawWorkers ?? []) as WorkerRecord[];
   const profileList = (profiles ?? []) as AgentProfile[];
 
   const busyCount = workers.filter((w) => w.status === "busy").length;
   const onlineCount = workers.filter((w) => w.status === "online" || w.status === "busy").length;
+
+  /** Callback for operator action feedback from child components. */
+  function handleFeedback(type: "success" | "error", message: string) {
+    if (type === "success") showSuccess(message);
+    else showError(message);
+  }
 
   // Loading state
   if (poolLoading) {
@@ -101,6 +116,9 @@ export default function PoolDetailPage() {
         </Button>
       </Link>
 
+      {/* Operator action feedback */}
+      <ActionFeedbackBanner feedback={feedback} onDismiss={clearFeedback} />
+
       {/* Pool header */}
       <div className="flex items-start justify-between">
         <div className="space-y-2">
@@ -112,9 +130,12 @@ export default function PoolDetailPage() {
             <PoolStatusBadge enabled={pool.enabled} />
           </div>
         </div>
-        <div className="text-right text-sm text-muted-foreground">
-          <div>Created {formatDate(pool.createdAt)}</div>
-          <div>Updated {formatDate(pool.updatedAt)}</div>
+        <div className="flex items-center gap-4">
+          <PoolToggle poolId={pool.id} enabled={pool.enabled} onFeedback={handleFeedback} />
+          <div className="text-right text-sm text-muted-foreground">
+            <div>Created {formatDate(pool.createdAt)}</div>
+            <div>Updated {formatDate(pool.updatedAt)}</div>
+          </div>
         </div>
       </div>
 
@@ -138,9 +159,11 @@ export default function PoolDetailPage() {
         </Card>
         <Card>
           <CardContent className="flex flex-col items-center justify-center p-6">
-            <span className="text-2xl font-bold" data-testid="stat-max-concurrency">
-              {pool.maxConcurrency}
-            </span>
+            <ConcurrencyEditor
+              poolId={pool.id}
+              currentValue={pool.maxConcurrency}
+              onFeedback={handleFeedback}
+            />
             <span className="text-sm text-muted-foreground">Max Concurrency</span>
           </CardContent>
         </Card>
