@@ -1,10 +1,37 @@
 # Progress Log
 
-## T088 — Implement queue and worker status broadcasting
+## T100 — Build audit explorer view
 
 ### Task
 
-T088 - Implement queue and worker status broadcasting (Epic E018: Real-time Events)
+T100 - Build audit explorer view (Epic E020: Web UI Feature Views)
+
+### What was done
+
+Replaced the placeholder audit page with a full-featured audit explorer:
+
+- **Filter hook** (`use-audit-filters.ts`): URL-synced filter state for entity type/ID, event type, actor type/ID, time range, and pagination. Follows the `useTaskFilters` pattern.
+- **Filter bar** (`audit-filters.tsx`): Toggle buttons for entity type, event type, actor type; text inputs for entity/actor ID; datetime inputs for time range; clear-all with active count badge.
+- **Event table** (`audit-event-table.tsx`): Timeline table with expandable detail rows. Shows time, entity (colored badge), event type (with inline state transition), and actor. Expanded detail shows state transition arrows, actor info, entity links (task IDs link to task detail), and formatted metadata JSON.
+- **Pagination** (`audit-pagination.tsx`): Page navigation with smart ellipsis, range display ("Showing 1-20 of 150 events"), and page size selector.
+- **Page** (`page.tsx`): Full integration with filter toggle, error state, results summary, and loading skeleton.
+- **Updated `AuditEvent` type** to include `oldState`/`newState` fields matching backend API.
+- **30 new tests** across 3 test files covering hook state management, table rendering/expansion, and page integration.
+
+### Patterns used
+
+- URL-synced filter state via `useSearchParams` (same as tasks feature)
+- TanStack Query hook for data fetching (`useAuditLog` was already implemented)
+- Toggle-button filter UI (same as task filters)
+- Expandable table rows with toggle state via `Set<string>`
+- `data-testid` attributes on all interactive elements
+
+### Notes for next loop
+
+- T104 and T105 are the remaining pending tasks (both P2, UI operator controls)
+- The `PaginationControls` component in tasks has "tasks" hardcoded in the label; if more features need pagination, consider extracting a shared component with a configurable label
+
+## T088 — Implement queue and worker status broadcasting
 
 ### What was done
 

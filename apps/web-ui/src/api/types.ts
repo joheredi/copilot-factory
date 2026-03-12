@@ -462,6 +462,8 @@ export interface AuditEvent {
   readonly eventType: string;
   readonly actorType: string;
   readonly actorId: string;
+  readonly oldState: string | null;
+  readonly newState: string | null;
   readonly metadata: Record<string, unknown>;
   readonly timestamp: string;
 }

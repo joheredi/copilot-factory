@@ -220,7 +220,7 @@ See [phase documents](phases/) for details.
 | [T097](tasks/T097-ui-review-center.md)              | Build review center view                                                              | E020 | P2       | feature    | done    |
 | [T098](tasks/T098-ui-merge-queue.md)                | Build merge queue view                                                                | E020 | P2       | feature    | done    |
 | [T099](tasks/T099-ui-config-editor.md)              | Build configuration editor view                                                       | E020 | P2       | feature    | done    |
-| [T100](tasks/T100-ui-audit-explorer.md)             | Build audit explorer view                                                             | E020 | P2       | feature    | pending |
+| [T100](tasks/T100-ui-audit-explorer.md)             | Build audit explorer view                                                             | E020 | P2       | feature    | done    |
 | [T101](tasks/T101-api-operator-actions.md)          | Implement operator action API endpoints                                               | E021 | P1       | feature    | done    |
 | [T102](tasks/T102-operator-guards.md)               | Implement state transition guards for manual actions                                  | E021 | P1       | feature    | done    |
 | [T103](tasks/T103-escalation-resolution.md)         | Implement escalation resolution flow                                                  | E021 | P1       | feature    | done    |
