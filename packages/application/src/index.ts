@@ -764,3 +764,34 @@ export type {
   WorkspaceReconciliationService,
   WorkspaceReconciliationDependencies,
 } from "./services/workspace-reconciliation.service.js";
+
+// Ports — follow-up task creation interfaces (PRD 008, 009 §9.11)
+export type {
+  FollowUpSourceTask,
+  NewFollowUpTaskRecord,
+  CreatedFollowUpTaskRecord,
+  NewFollowUpDependency,
+  CreatedFollowUpDependency,
+  FollowUpAuditEvent,
+  FollowUpSourceTaskPort,
+  FollowUpTaskCreationPort,
+  FollowUpDependencyCreationPort,
+  FollowUpAuditEventPort,
+  FollowUpTransactionRepositories,
+  FollowUpUnitOfWork,
+} from "./ports/followup-task.ports.js";
+
+// Services — follow-up task generation (PRD 008, 009 §9.11)
+export { createFollowUpTaskService } from "./services/followup-task.service.js";
+export type {
+  ReviewFollowUpSource,
+  RevertFollowUpSource,
+  DiagnosticFollowUpSource,
+  HotfixFollowUpSource,
+  FollowUpSource,
+  CreateFollowUpTasksParams,
+  CreatedFollowUp,
+  CreateFollowUpTasksResult,
+  FollowUpTaskService,
+  FollowUpTaskDependencies,
+} from "./services/followup-task.service.js";

@@ -1,5 +1,33 @@
 # Progress Log
 
+## T068: Implement follow-up task generation — Done
+
+**What was implemented:**
+
+- Created `packages/application/src/ports/followup-task.ports.ts`: Port interfaces for source task lookup, task creation, dependency creation, and audit recording
+- Created `packages/application/src/services/followup-task.service.ts`: Centralized service handling all follow-up types via discriminated union (review, revert, diagnostic, hotfix)
+- Created `packages/application/src/services/followup-task.service.test.ts`: 26 tests covering all follow-up types, dependencies, audits, domain events, error handling, and atomicity
+- Updated `packages/application/src/index.ts` to export all new types and the factory function
+
+**Patterns used:**
+
+- Factory function returning service interface (same as all other application services)
+- Discriminated union (`FollowUpSource`) for type-safe follow-up source routing
+- Blueprint pattern: source-specific builders create task metadata, shared logic handles persistence
+- UnitOfWork transaction for atomic task + dependency + audit creation
+- `relates_to` (non-hard-block) dependency from follow-up to source task
+- Domain events emitted after transaction commit
+- IdGenerator + Clock injection for testability
+
+**Key design decisions:**
+
+- Follow-ups use `relates_to` dependencies (not `blocks`) so they're schedulable independently
+- Review follow-ups: one task per `follow_up_task_ref` string, type=chore, priority=medium
+- Revert tasks: type=bug_fix, priority=critical, includes revert scope in description
+- Diagnostic tasks: type=chore, priority=low, includes failed check names
+- Hotfix tasks: type=bug_fix, priority=high, includes failure attribution
+- All follow-ups enter BACKLOG state with source=follow_up
+
 ## T083: Implement WorkerPool and AgentProfile Endpoints — Done
 
 **What was implemented:**

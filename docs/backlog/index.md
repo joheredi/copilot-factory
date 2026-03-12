@@ -188,7 +188,7 @@ See [phase documents](phases/) for details.
 | [T065](tasks/T065-merge-strategies.md)              | Implement squash and merge-commit strategies                                          | E013 | P1       | feature    | done    |
 | [T066](tasks/T066-conflict-classification.md)       | Implement merge conflict classification                                               | E013 | P0       | feature    | done    |
 | [T067](tasks/T067-post-merge-failure.md)            | Implement post-merge validation and failure policy                                    | E013 | P0       | feature    | done    |
-| [T068](tasks/T068-followup-task-gen.md)             | Implement follow-up task generation                                                   | E013 | P1       | feature    | pending |
+| [T068](tasks/T068-followup-task-gen.md)             | Implement follow-up task generation                                                   | E013 | P1       | feature    | done    |
 | [T069](tasks/T069-artifact-storage.md)              | Implement filesystem artifact storage                                                 | E014 | P0       | feature    | done    |
 | [T070](tasks/T070-artifact-retrieval.md)            | Implement artifact reference resolution and retrieval                                 | E014 | P0       | feature    | done    |
 | [T071](tasks/T071-retry-summarization.md)           | Implement summarization packet generation for retries                                 | E014 | P1       | feature    | pending |
