@@ -438,3 +438,34 @@ Added 12 integration tests in `apps/control-plane/src/integration/merge-conflict
 
 - T110 (lease timeout/crash recovery) is P1 and ready
 - T096-T100 (UI views) and T104-T105 (operator controls UI) are P2 and ready
+
+## T110 — Integration test: lease timeout and crash recovery
+
+### Task
+
+T110 - Integration test: lease timeout and crash recovery (Epic E022: Integration Testing & E2E)
+
+### What was done
+
+- Created `apps/control-plane/src/integration/lease-recovery.integration.test.ts` with 11 integration tests covering all four T110 scenarios:
+  1. **Heartbeat timeout → reclaim → retry**: Detects stale leases via FakeClock, reclaims with retry policy, verifies task returns to READY
+  2. **Worker crash → CRASHED → retry**: Immediate crash reclaim with CRASHED lease state, retry granted
+  3. **Grace period acceptance**: Terminal heartbeat extends lease TTL, result accepted within grace window
+  4. **Retry exhaustion → ESCALATED**: Exhausted retries trigger escalation policy, task moves to ESCALATED
+- Additional coverage: crash during ASSIGNED (startup crash), active lease negative case, TTL expiry detection, domain event emission, zero-retry policy edge case
+- Created in-test HeartbeatUnitOfWork and ReclaimUnitOfWork adapters backed by real SQLite
+- Tests use real TransitionService, HeartbeatService, LeaseReclaimService with FakeClock for deterministic time
+- Also fixed T111 status discrepancy in backlog index (task file said done, index said pending)
+
+### Patterns used
+
+- Follows the exact integration test pattern from `escalation-triggers-resolution.integration.test.ts`: real SQLite via `createTestDatabase`, real services, direct SQL seeding, audit event verification
+- In-test UoW adapters pattern: HeartbeatUnitOfWork and ReclaimUnitOfWork are created as test helpers since no pre-built infrastructure implementations exist yet
+- FakeClock injection for deterministic heartbeat staleness: `createHeartbeatService(uow, emitter, () => new Date(clock.now()))`
+- Raw SQLite for complex UNION queries in `findStaleLeases` (Drizzle doesn't handle UNION well)
+
+### For next loop
+
+- T088 (queue/worker event broadcasting) is P2 and ready (depends on T086 which is done)
+- T096-T100 (UI views) and T104-T105 (operator controls UI) are P2 and ready
+- Consider creating permanent HeartbeatUnitOfWork and ReclaimUnitOfWork infrastructure implementations (currently only exist as test helpers)

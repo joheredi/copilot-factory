@@ -230,8 +230,8 @@ See [phase documents](phases/) for details.
 | [T107](tasks/T107-e2e-full-lifecycle.md)            | Integration test: full task lifecycle BACKLOG to DONE                                 | E022 | P0       | test       | done    |
 | [T108](tasks/T108-e2e-review-rework.md)             | Integration test: review rejection and rework loop                                    | E022 | P0       | test       | done    |
 | [T109](tasks/T109-e2e-merge-failures.md)            | Integration test: merge conflict and failure paths                                    | E022 | P1       | test       | done    |
-| [T110](tasks/T110-e2e-lease-recovery.md)            | Integration test: lease timeout and crash recovery                                    | E022 | P1       | test       | pending |
-| [T111](tasks/T111-e2e-escalation.md)                | Integration test: escalation triggers and resolution                                  | E022 | P1       | test       | pending |
+| [T110](tasks/T110-e2e-lease-recovery.md)            | Integration test: lease timeout and crash recovery                                    | E022 | P1       | test       | done    |
+| [T111](tasks/T111-e2e-escalation.md)                | Integration test: escalation triggers and resolution                                  | E022 | P1       | test       | done    |
 
 ---
 
