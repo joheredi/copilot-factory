@@ -218,6 +218,12 @@ export class ReopenActionDto {
 
 const cancelActionSchema = z.object({
   ...baseActionWithReasonFields,
+  /**
+   * Explicit acknowledgment that in-progress work will be lost.
+   * Required when cancelling a task in IN_DEVELOPMENT state.
+   * Tasks in MERGING state cannot be cancelled regardless of this flag.
+   */
+  acknowledgeInProgressWork: z.boolean().optional(),
 });
 
 /**
@@ -226,9 +232,17 @@ const cancelActionSchema = z.object({
  * Moves a task from any non-terminal state to CANCELLED.
  * This is a terminal transition — the task cannot re-enter the
  * pipeline unless explicitly reopened by an operator.
+ *
+ * If the task has active work in progress (IN_DEVELOPMENT), the
+ * operator must set `acknowledgeInProgressWork: true` to confirm
+ * that in-progress work will be discarded. Tasks in MERGING state
+ * cannot be cancelled at all — wait for the merge to complete.
+ *
+ * @see {@link file://docs/backlog/tasks/T102-operator-guards.md}
  */
 export class CancelActionDto {
   static schema = cancelActionSchema;
   actorId!: string;
   reason!: string;
+  acknowledgeInProgressWork?: boolean;
 }

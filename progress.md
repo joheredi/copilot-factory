@@ -1,5 +1,36 @@
 # Progress Log
 
+## T102: Implement state transition guards for manual actions (2026-03-12)
+
+**What was done:**
+
+- Created `apps/control-plane/src/operator-actions/operator-action-guards.ts` — `OperatorActionGuards` class with guard methods for force_unblock, reopen, cancel, and override_merge_order actions
+- Created `apps/control-plane/src/operator-actions/operator-action-guards.test.ts` — 36 tests covering all guard validation scenarios including active lease checks, MERGING state protection, in-progress work acknowledgment, and audit severity classification
+- Updated `OperatorActionsService` to integrate guards before executing actions
+- Updated `CancelActionDto` to support `acknowledgeInProgressWork` boolean for confirming cancellation of in-progress tasks
+- Updated controller to pass `acknowledgeInProgressWork` flag to service
+- Added elevated audit severity metadata to sensitive actions (force_unblock, override_merge_order, reopen)
+
+**Key guards implemented:**
+
+- **force_unblock**: Validates non-empty reason and BLOCKED state (defense-in-depth)
+- **reopen**: Validates no active (non-terminal) lease exists — prevents one-active-lease invariant violation
+- **cancel**: Blocks cancellation during MERGING (repository corruption risk); requires `acknowledgeInProgressWork: true` for IN_DEVELOPMENT tasks
+- **override_merge_order**: Validates QUEUED_FOR_MERGE state with hook for future validation extensions
+
+**Patterns used:**
+
+- Separate guard class for independent testability
+- `SENSITIVE_ACTIONS` ReadonlySet and `getAuditSeverity()` for audit severity classification
+- Guards throw `BadRequestException` with descriptive messages before the state machine is consulted
+- Guards defer not-found checks to service layer (NotFoundException has correct HTTP status)
+
+**Next loop should know:**
+
+- T103 (Escalation resolution flow) is now unblocked by T102's completion
+- The cancel action now has a breaking API change: IN_DEVELOPMENT tasks need `acknowledgeInProgressWork: true`
+- Guard pattern can be extended for future authorization checks (RBAC is out of scope per T102)
+
 ## T087: Implement task state change event broadcasting (2026-03-12)
 
 **What was done:**

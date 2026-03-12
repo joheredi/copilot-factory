@@ -13,10 +13,13 @@
  * creation in the same transaction.
  *
  * All actions record an audit event with `actorType: "operator"`.
+ * Sensitive actions (force_unblock, override_merge_order, reopen) are
+ * logged with elevated audit severity per T102 guard requirements.
  *
  * @module @factory/control-plane
  * @see {@link file://docs/prd/006-additional-refinements.md} §6.2
  * @see {@link file://docs/backlog/tasks/T101-api-operator-actions.md}
+ * @see {@link file://docs/backlog/tasks/T102-operator-guards.md}
  */
 import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
@@ -37,6 +40,7 @@ import { createTaskRepository } from "../infrastructure/repositories/task.reposi
 import { createAuditEventRepository } from "../infrastructure/repositories/audit-event.repository.js";
 import { createMergeQueueItemRepository } from "../infrastructure/repositories/merge-queue-item.repository.js";
 import { DomainEventBroadcasterAdapter } from "../events/domain-event-broadcaster.adapter.js";
+import { OperatorActionGuards, getAuditSeverity } from "./operator-action-guards.js";
 import type { DatabaseConnection } from "../infrastructure/database/connection.js";
 import type { Task } from "../infrastructure/repositories/task.repository.js";
 import type {
@@ -73,6 +77,7 @@ export interface OperatorActionResult {
 @Injectable()
 export class OperatorActionsService {
   private readonly transitionService: TransitionService;
+  private readonly guards: OperatorActionGuards;
 
   /**
    * @param conn Injected database connection.
@@ -84,6 +89,7 @@ export class OperatorActionsService {
   ) {
     const unitOfWork = createSqliteUnitOfWork(conn);
     this.transitionService = createTransitionService(unitOfWork, eventBroadcaster);
+    this.guards = new OperatorActionGuards(conn);
   }
 
   /**
@@ -178,12 +184,18 @@ export class OperatorActionsService {
    * @throws BadRequestException if the task is not in BLOCKED state.
    */
   forceUnblock(taskId: string, actorId: string, reason: string): OperatorActionResult {
+    this.guards.guardForceUnblock(taskId, reason);
+
     const actor: ActorInfo = { type: "operator", id: actorId };
     const context: TransitionContext = {
       allDependenciesResolved: true,
       hasPolicyBlockers: false,
     };
-    const metadata = { action: "force_unblock", reason };
+    const metadata = {
+      action: "force_unblock",
+      reason,
+      auditSeverity: getAuditSeverity("force_unblock"),
+    };
 
     return this.executeTransitionAction(taskId, TaskStatus.READY, context, actor, metadata);
   }
@@ -191,16 +203,27 @@ export class OperatorActionsService {
   /**
    * Cancel a task by moving it to CANCELLED state.
    *
-   * Valid from any non-terminal state. This is a terminal transition.
+   * Valid from any non-terminal state except MERGING. Tasks in MERGING
+   * state cannot be cancelled because it could leave the repository in
+   * an inconsistent state. Tasks with in-progress work (IN_DEVELOPMENT)
+   * require explicit acknowledgment via `acknowledgeInProgressWork`.
    *
    * @param taskId Task UUID.
    * @param actorId Operator identifier.
    * @param reason Human-readable cancellation reason for audit trail.
+   * @param acknowledgeInProgressWork If true, confirms that in-progress work will be lost.
    * @returns The updated task and audit event.
    * @throws NotFoundException if the task does not exist.
-   * @throws BadRequestException if the task is already in a terminal state.
+   * @throws BadRequestException if the task is in a terminal state, MERGING,
+   *   or has in-progress work without acknowledgment.
    */
-  cancel(taskId: string, actorId: string, reason: string): OperatorActionResult {
+  cancel(
+    taskId: string,
+    actorId: string,
+    reason: string,
+    acknowledgeInProgressWork?: boolean,
+  ): OperatorActionResult {
+    this.guards.guardCancel(taskId, acknowledgeInProgressWork);
     const actor: ActorInfo = { type: "operator", id: actorId };
     const context: TransitionContext = { isOperator: true };
     const metadata = { action: "cancel", reason };
@@ -356,6 +379,8 @@ export class OperatorActionsService {
    * @throws BadRequestException if the task is not in QUEUED_FOR_MERGE or has no merge queue item.
    */
   overrideMergeOrder(taskId: string, dto: OverrideMergeOrderActionDto): OperatorActionResult {
+    this.guards.guardOverrideMergeOrder(taskId);
+
     return this.conn.writeTransaction((db) => {
       const taskRepo = createTaskRepository(db);
       const auditRepo = createAuditEventRepository(db);
@@ -392,6 +417,7 @@ export class OperatorActionsService {
           action: "override_merge_order",
           taskId,
           position: dto.position,
+          auditSeverity: getAuditSeverity("override_merge_order"),
           ...(dto.reason ? { reason: dto.reason } : {}),
         },
       });
@@ -428,6 +454,8 @@ export class OperatorActionsService {
    * @throws BadRequestException if the task is not in a terminal state.
    */
   reopen(taskId: string, actorId: string, reason: string): OperatorActionResult {
+    this.guards.guardReopen(taskId);
+
     const validSourceStates = [TaskStatus.DONE, TaskStatus.FAILED, TaskStatus.CANCELLED];
 
     return this.executeOverrideAction(
@@ -561,7 +589,7 @@ export class OperatorActionsService {
         actorId,
         oldState: JSON.stringify({ status: oldStatus, version: oldVersion }),
         newState: JSON.stringify({ status: targetStatus, version: updated.version }),
-        metadataJson: { action, reason },
+        metadataJson: { action, reason, auditSeverity: getAuditSeverity(action) },
       });
 
       return {

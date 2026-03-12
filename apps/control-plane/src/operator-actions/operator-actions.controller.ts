@@ -226,9 +226,13 @@ export class OperatorActionsController {
   @ApiOperation({ summary: "Cancel a task" })
   @ApiParam({ name: "id", description: "Task UUID" })
   @ApiResponse({ status: 200, description: "Task cancelled." })
-  @ApiResponse({ status: 400, description: "Task is already in a terminal state." })
+  @ApiResponse({
+    status: 400,
+    description:
+      "Task is already in a terminal state, in MERGING, or has in-progress work without acknowledgment.",
+  })
   @ApiResponse({ status: 404, description: "Task not found." })
   cancel(@Param("id") id: string, @Body() dto: CancelActionDto): OperatorActionResult {
-    return this.service.cancel(id, dto.actorId, dto.reason);
+    return this.service.cancel(id, dto.actorId, dto.reason, dto.acknowledgeInProgressWork);
   }
 }
