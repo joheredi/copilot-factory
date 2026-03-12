@@ -438,3 +438,41 @@ Also fixed T072 backlog index status (was `pending` but task file was `done`).
 - vi.mock for socket.io-client with \_simulateEvent helper for testing connection lifecycle
 - QueryClient injection in tests via fresh instances
 - renderHook from @testing-library/react for hook isolation tests
+
+## T093: Build dashboard view with system health summary — DONE
+
+**What was done:**
+
+- Replaced placeholder dashboard page with fully data-driven implementation
+- Created `useDashboardData` aggregation hook that fires parallel queries for 15 task statuses (limit=1 each for efficient count extraction), pools, and audit events
+- Created `TaskSummaryCards` component — 4 colour-coded cards showing Active, Queued, Completed, and Needs Attention counts
+- Created `WorkerPoolSummaryCard` component — shows total pools, enabled pools, and aggregate max concurrency
+- Created `RecentActivityFeed` component — shows last 10 audit events with type badges and relative timestamps
+- Added `TotalTasksCard` in page — shows total tasks across all statuses with "Live" badge
+- Error alert displayed when API is unreachable
+- Loading skeletons shown while data is fetching
+- Empty state for activity feed on fresh systems
+- 21 new tests across 3 test files (page.test.tsx, use-dashboard-data.test.tsx, recent-activity-feed.test.tsx)
+- All 3,707 tests pass (152 test files)
+
+**Key design decisions:**
+
+- Client-side aggregation approach (no backend changes needed) using existing endpoints
+- Task statuses grouped into 4 operator-facing categories: Active (6 states), Queued (3 states), Completed (1 state), Needs Attention (5 states)
+- limit=1 per status query to minimise payload — only `total` count from PaginatedResponse is used
+- staleTime=15s for task counts (aggressive refresh) vs 30s for pools (less volatile)
+- WebSocket-driven cache invalidation already handles live updates via existing infrastructure
+
+**Patterns used:**
+
+- `useQueries` for parallel task status count queries
+- data-testid attributes on all key elements for reliable test selectors
+- vi.stubGlobal("fetch") pattern for API mocking in tests
+- QueryClient with retry:false and gcTime:0 in test wrappers
+- `// @vitest-environment jsdom` docblock + explicit `afterEach(cleanup)` for web-ui tests
+
+**For next loop:**
+
+- T094 (task board) and T095 (task detail) are ready and share similar patterns
+- The `useTasks` hook already supports filtering/pagination needed for the task board
+- Consider adding a dedicated backend summary endpoint later for efficiency
