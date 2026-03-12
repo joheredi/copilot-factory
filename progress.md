@@ -1,176 +1,38 @@
 # Progress Log
 
-## T075: Structured logging with correlation IDs — DONE
-
-**What was done:**
-
-- Implemented structured JSON logging in `packages/observability` using pino
-- Created `src/logger.ts` — `createLogger(module, options)` factory function producing structured JSON loggers
-- Created `src/context.ts` — AsyncLocalStorage-based correlation context with `runWithContext()` / `getContext()`
-- Created `src/nest-logger.ts` — NestJS LoggerService adapter (`NestLoggerAdapter`) for framework integration
-- Updated `src/index.ts` — re-exports full public API
-- Added pino dependency to `packages/observability/package.json`
-- 28 new tests across 3 test files (context, logger, nest-logger)
-- All 3,122 tests pass (93 test files)
-
-**Key design decisions:**
-
-- Pino chosen for speed (async JSON logging) per task guidance
-- AsyncLocalStorage for request-scoped correlation — no explicit context passing needed
-- Logger wraps pino child loggers and injects CorrelationContext on every log call
-- §7.14 common fields: timestamp (ISO), level, module, taskId, runId, workerId, reviewCycleId, mergeQueueItemId, eventType
-- Per-module log level config via `LogLevelConfig` map with `resolveLogLevel()`
-- NestJS adapter defined without hard dependency on `@nestjs/common` (interface-only)
-- Tests use writable stream capture for deterministic JSON output verification
-
-**Patterns used:**
-
-- Writable stream + JSON.parse for capturing/asserting structured log output in tests
-- vi.fn() mocks for NestJS adapter tests
-- runWithContext for correlation context scoping in async flows
-
-**Notes for next loops:**
-
-- T076 (OpenTelemetry init) is now unblocked — depends only on T075
-- NestLoggerAdapter can be integrated into control-plane main.ts in a future task
-- Log levels can be wired to hierarchical config (T052) when operator config UI is built
-- `getContextStorage()` is exported for NestJS interceptors that need to establish correlation context at the request boundary
-
-## T042: Implement ReconcileWorkspacesCommand — Done
-
-**What was implemented:**
-
-- Created `packages/application/src/ports/workspace-reconciliation.ports.ts`:
-  - `ExpiredWorkspaceRecord` — minimal task record for cleanup evaluation
-  - `WorkspaceDirectoryEntry` — represents a workspace directory found on disk
-  - `ExpiredWorkspaceQueryPort` — query tasks in terminal states with workspace info
-  - `WorkspaceDirectoryScannerPort` — scan workspace directories for orphan detection
-  - `CleanupJobQueryPort` — count non-terminal jobs by type (for initialize)
-  - `WorkspaceReconciliationUnitOfWork` — transaction boundary
-
-- Created `packages/application/src/services/workspace-reconciliation.service.ts`:
-  - `WorkspaceReconciliationService` interface with `initialize()` and `processReconciliation()`
-  - `createWorkspaceReconciliationService()` factory function with injected dependencies
-  - Self-rescheduling pattern using `JobType.CLEANUP` (same as reconciliation sweep)
-  - Two cleanup operations: expired workspaces and orphaned workspace directories
-  - Uses `isWorkspaceCleanupEligible()` from domain for retention policy enforcement
-  - Error-isolated per-workspace cleanup (one failure doesn't block others)
-  - Default 1-hour interval, configurable via `WorkspaceReconciliationConfig`
-  - Force-deletes branches for terminal tasks (may not be merged)
-
-- Created `packages/application/src/services/workspace-reconciliation.service.test.ts`:
-  - 29 tests covering initialization, self-rescheduling, expired cleanup, orphan detection, error isolation, combined scenarios, and default constants
-  - Follows same mock dependency pattern as reconciliation-sweep.service.test.ts
-
-- All types/functions exported from `@factory/application`
-
-**Design decision:** Created standalone `WorkspaceReconciliationService` (vs adding to existing ReconciliationSweepService) because: recommended hourly interval differs from the 60s sweep interval, `JobType.CLEANUP` already existed in the enum, and workspace cleanup involves async I/O while the sweep is synchronous.
-
-**Patterns used:**
-
-- Self-rescheduling job pattern (claim → process → complete → create next)
-- Port-based dependency injection (same as all application services)
-- Error isolation per workspace (try/catch around each cleanup)
-- Domain eligibility check before infrastructure cleanup
-
-**What the next loop should know:**
-
-- The `ExpiredWorkspaceQueryPort` and `WorkspaceDirectoryScannerPort` need infrastructure implementations when the control-plane wires up the service
-- The `WorkspaceDirectoryScannerPort` is a new port that needs a filesystem-based implementation scanning `{workspacesRoot}/{repoId}/{taskId}/` directories
-- T042 doesn't block any other tasks currently
-
-## T065: Implement squash and merge-commit strategies — Done
-
-**What was implemented:**
-
-- Extended `MergeGitOperationsPort` with `squashMerge()` and `mergeCommit()` methods and `MergeOperationResult` type
-- Added `mergeStrategy` (optional, defaults to rebase-and-merge) to `ExecuteMergeParams`
-- Updated merge executor Phase 3 to dispatch to the correct git operation based on strategy
-- Updated Phase 5 to push the correct branch: source branch for rebase-and-merge, target branch for squash/merge-commit
-- Updated Phase 7 MergePacket to record the chosen strategy and set `rebase_performed` correctly (true only for rebase-and-merge)
-- Strategy-specific summary labels in MergePacket ("Squash merge", "Merge commit", "Rebase-and-merge")
-- 12 new tests: squash happy path, merge-commit happy path, MergePacket correctness per strategy, git op dispatch verification, push branch verification, conflict handling per strategy, default strategy backward compatibility
-
-**Files changed:**
-
-- `packages/application/src/ports/merge-executor.ports.ts` — added `MergeOperationResult`, `squashMerge()`, `mergeCommit()`
-- `packages/application/src/services/merge-executor.service.ts` — strategy dispatch, push branch logic, packet details
-- `packages/application/src/services/merge-executor.service.test.ts` — 12 new tests, updated fake git ops
-- `packages/application/src/index.ts` — exported `MergeOperationResult`
-
-**What the next loop should know:**
-
-- The `MergeGitOperationsPort.squashMerge()` and `mergeCommit()` need infrastructure implementations when wiring up the merge executor
-- Strategy selection from policy (task override → repo workflow → system default) is the caller's responsibility — the merge executor receives the resolved strategy
-- All three strategies reuse the same conflict classification pipeline
-
-## T084: Implement Artifact and Review packet retrieval endpoints — Done
-
-**What was implemented:**
-
-- `review/artifacts.controller.ts` + `review/artifacts.service.ts`: Artifact tree endpoint (`GET /tasks/:taskId/artifacts`) that aggregates review packets, lead review decisions, validation runs, and merge queue items from the DB. Packet content endpoint (`GET /tasks/:taskId/packets/:packetId`) that searches review_packet and lead_review_decision tables and returns parsed JSON.
-- `review/reviews.controller.ts` + `review/reviews.service.ts`: Review history endpoint (`GET /tasks/:taskId/reviews`) returning all review cycles enriched with lead decisions and specialist packet counts. Review cycle packets endpoint (`GET /tasks/:taskId/reviews/:cycleId/packets`) returning specialist packets + lead decision for a specific cycle.
-- `merge/merge-details.controller.ts` + `merge/merge-details.service.ts`: Merge details endpoint (`GET /tasks/:taskId/merge`) returning merge queue item and validation runs for a task.
-- Updated `review.module.ts` and `merge.module.ts` to register new controllers and services.
-- 31 new tests: 6 controller tests (mock-based) + 25 service tests (in-memory SQLite with Drizzle migrations).
-
-**Patterns used:**
-
-- Same NestJS patterns as existing controllers: `@ApiTags`, `@Controller`, `@Get`, `@Param`, `NotFoundException`, Swagger decorators
-- Services injected via `@Inject(DATABASE_CONNECTION)` with functional repository factories
-- Controller tests mock the service; service tests use real in-memory SQLite (same as tasks.service.test.ts pattern)
-- Data seeding in tests uses repository factory functions (not raw SQL or `require()`)
-- Artifact tree assembled from DB records, not filesystem — DB is source of truth for artifact metadata
-- Task-scoped access control: packet retrieval verifies `taskId` ownership before returning
-
-**What the next loop should know:**
-
-- T085 (audit/policy/config endpoints) is the remaining E017 task — once done, E017 is complete and unblocks E018
-- The artifact tree currently covers DB-tracked artifacts only (review packets, lead decisions, validation runs, merge items). Filesystem artifacts via ArtifactStore could be added later if needed.
-- The `PacketContent.content` field returns the raw `packetJson` from the DB — it's the full Zod-validated packet JSON
-
-## T077 — Instrument core orchestration paths with OTel spans
+## T095 — Build task detail timeline view
 
 ### Task
 
-T077 - Instrument core orchestration paths with spans (Epic E016: Observability)
+T095 - Build task detail timeline view (Epic E020: Web UI Feature Views)
 
 ### What was done
 
-Added OpenTelemetry spans to all 9 core orchestration services per §10.13.2:
-
-1. **task.transition** — `TransitionService.transitionTask()` in transition.service.ts
-2. **task.assign** — `SchedulerService.scheduleNext()` in scheduler.service.ts
-3. **worker.prepare** / **worker.run** — `WorkerSupervisorService.spawnWorker()` in worker-supervisor.service.ts
-4. **worker.heartbeat** — `HeartbeatService.receiveHeartbeat()` in heartbeat.service.ts
-5. **validation.run** — `ValidationRunnerService.runValidation()` in validation-runner.service.ts
-6. **review.route** — `ReviewRouterService.routeReview()` in review-router.service.ts
-7. **review.lead_decision** — `ReviewDecisionService.applyDecision()` in review-decision.service.ts
-8. **merge.prepare** / **merge.execute** — `MergeExecutorService.executeMerge()` in merge-executor.service.ts
-
-Also created:
-
-- `packages/observability/src/spans.ts` — Span name and attribute key constants
-- `packages/application/src/services/orchestration-spans.test.ts` — 14 span verification tests
-- Added `@factory/observability` as a dependency to `@factory/application`
-- Re-exported `SpanStatusCode`, `Span`, `InMemorySpanExporter` from observability package
+- Created `TaskDetailPage` at `apps/web-ui/src/features/task-detail/TaskDetailPage.tsx` with five tabbed sections
+- **Overview tab**: Displays all task metadata (status, priority, type, source, size, risk, capabilities, file scope, acceptance criteria, definition of done, current lease, current review cycle)
+- **Timeline tab**: Vertical chronological audit event list with pagination, state transition metadata, actor info
+- **Packets tab**: Review cycle sections with expandable specialist review packets and lead decisions, JSON syntax-highlighted viewer
+- **Artifacts tab**: Hierarchical tree view with expand/collapse for directories and file type icons
+- **Dependencies tab**: Forward (depends on) and reverse (required by) dependency lists with navigable links, dependency type badges, hard/soft block indicators
+- Added `/tasks/:id` route to `routes.tsx` with lazy loading
+- Updated task table rows to link to detail page via React Router `<Link>`
+- Added `TaskDetail`, `TaskDependency`, `TaskLease` types to `api/types.ts`
+- Updated `useTask` hook to return enriched `TaskDetail` instead of bare `Task`
+- 23 new tests covering all tabs, loading/error/empty states, metadata display, badges, navigation
 
 ### Patterns used
 
-- Each service file gets a module-level `const tracer = getTracer("service-name")`
-- Sync methods use `tracer.startActiveSpan(name, (span) => { try/catch/finally })` pattern
-- Async methods use the same pattern with `async (span) => { ... }`
-- Worker supervisor and merge executor use separate non-nested spans (prepare + run/execute)
-- Span attributes set from available context (task.id, pool.id, result.status, etc.)
-- `SpanStatusCode.OK` on success, `SpanStatusCode.ERROR` on thrown exceptions
-- `span.end()` always called in `finally` block
+- Radix UI Tabs for accessible tabbed interface (shadcn/ui Tabs component)
+- TanStack Query hooks for data fetching with conditional `enabled` flag
+- URL-based task ID via React Router `useParams`
+- `userEvent` (not `fireEvent`) for Radix UI interaction in tests
+- Routes + Route wrapper needed in tests for `useParams` to work with MemoryRouter
 
-### Notes for next loop
+### Notes for next iteration
 
-- T078 (Prometheus endpoint) and T079 (starter metrics) are the remaining E016 tasks
-- The span constants in `SpanNames` and `SpanAttributes` can be referenced from future instrumentation
-- `InMemorySpanExporter` is now publicly exported from `@factory/observability` for use in tests
-- The `startActiveSpan` callback may widen TypeScript literal types — use explicit return type annotation (see scheduler.service.ts for pattern)
+- T104 (operator controls) builds on this page — will add action buttons to the detail view
+- `userEvent` is required instead of `fireEvent.click` for Radix UI tab switching in tests
+- The `useTask` hook now returns `TaskDetail` (enriched) — existing code that used `useTask` should be checked for compatibility
 
 ## T071 — Implement summarization packet generation for retries
 

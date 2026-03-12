@@ -12,6 +12,7 @@
  */
 
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { Link } from "react-router-dom";
 import {
   Table,
   TableBody,
@@ -254,7 +255,15 @@ export function TaskTable({ tasks, isLoading, sortField, sortDirection, onSort }
         <TableBody>
           {sortedTasks.map((task) => (
             <TableRow key={task.id} className="cursor-pointer" data-testid={`task-row-${task.id}`}>
-              <TableCell className="font-medium">{task.title}</TableCell>
+              <TableCell className="font-medium">
+                <Link
+                  to={`/tasks/${task.id}`}
+                  className="hover:underline"
+                  data-testid={`task-link-${task.id}`}
+                >
+                  {task.title}
+                </Link>
+              </TableCell>
               <TableCell>
                 <TaskStatusBadge status={task.status} />
               </TableCell>

@@ -198,6 +198,41 @@ export interface TaskListParams extends PaginationParams {
 }
 
 // ---------------------------------------------------------------------------
+// Task Detail (enriched)
+// ---------------------------------------------------------------------------
+
+/** Dependency edge between two tasks. */
+export interface TaskDependency {
+  readonly taskDependencyId: string;
+  readonly taskId: string;
+  readonly dependsOnTaskId: string;
+  readonly dependencyType: string;
+  readonly isHardBlock: boolean;
+  readonly createdAt: string;
+}
+
+/** Lease record for a task's current active worker assignment. */
+export interface TaskLease {
+  readonly leaseId: string;
+  readonly taskId: string;
+  readonly workerId: string;
+  readonly poolId: string;
+  readonly leasedAt: string;
+  readonly expiresAt: string;
+  readonly status: string;
+  readonly lastHeartbeatAt: string | null;
+}
+
+/** Enriched task detail returned by `GET /tasks/:id`. */
+export interface TaskDetail {
+  readonly task: Task;
+  readonly currentLease: TaskLease | null;
+  readonly currentReviewCycle: ReviewCycle | null;
+  readonly dependencies: TaskDependency[];
+  readonly dependents: TaskDependency[];
+}
+
+// ---------------------------------------------------------------------------
 // Operator Actions
 // ---------------------------------------------------------------------------
 

@@ -215,7 +215,7 @@ See [phase documents](phases/) for details.
 | [T092](tasks/T092-app-shell.md)                     | Build app shell with navigation layout                                                | E019 | P1       | feature    | done    |
 | [T093](tasks/T093-ui-dashboard.md)                  | Build dashboard view with system health summary                                       | E020 | P1       | feature    | done    |
 | [T094](tasks/T094-ui-task-board.md)                 | Build task board with status filtering and pagination                                 | E020 | P1       | feature    | done    |
-| [T095](tasks/T095-ui-task-detail.md)                | Build task detail timeline view                                                       | E020 | P1       | feature    | pending |
+| [T095](tasks/T095-ui-task-detail.md)                | Build task detail timeline view                                                       | E020 | P1       | feature    | done    |
 | [T096](tasks/T096-ui-worker-pools.md)               | Build worker pool monitoring panel                                                    | E020 | P2       | feature    | pending |
 | [T097](tasks/T097-ui-review-center.md)              | Build review center view                                                              | E020 | P2       | feature    | pending |
 | [T098](tasks/T098-ui-merge-queue.md)                | Build merge queue view                                                                | E020 | P2       | feature    | pending |

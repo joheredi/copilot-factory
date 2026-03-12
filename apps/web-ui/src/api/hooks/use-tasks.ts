@@ -26,6 +26,7 @@ import type {
   ReassignPoolInput,
   ResolveEscalationInput,
   Task,
+  TaskDetail,
   TaskListParams,
   UpdateTaskInput,
   AuditEvent,
@@ -51,14 +52,15 @@ export function useTasks(params?: TaskListParams) {
 /**
  * Fetches a single task by ID (enriched detail view).
  *
- * Disabled when `id` is falsy for conditional usage.
+ * Returns the task with current lease, review cycle, dependencies,
+ * and dependents. Disabled when `id` is falsy for conditional usage.
  *
  * @param id - Task UUID.
  */
 export function useTask(id: string | undefined) {
   return useQuery({
     queryKey: queryKeys.tasks.detail(id ?? ""),
-    queryFn: () => apiGet<Task>(`/tasks/${id}`),
+    queryFn: () => apiGet<TaskDetail>(`/tasks/${id}`),
     enabled: !!id,
   });
 }

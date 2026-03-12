@@ -12,6 +12,7 @@ import { AppLayout } from "./layout";
  */
 const DashboardPage = lazy(() => import("../features/dashboard/page.js"));
 const TasksPage = lazy(() => import("../features/tasks/page.js"));
+const TaskDetailPage = lazy(() => import("../features/task-detail/TaskDetailPage.js"));
 const WorkersPage = lazy(() => import("../features/workers/page.js"));
 const ReviewsPage = lazy(() => import("../features/reviews/page.js"));
 const MergeQueuePage = lazy(() => import("../features/merge-queue/page.js"));
@@ -47,6 +48,14 @@ const routes: RouteObject[] = [
         element: (
           <Suspense fallback={<PageSkeleton />}>
             <TasksPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "tasks/:id",
+        element: (
+          <Suspense fallback={<PageSkeleton />}>
+            <TaskDetailPage />
           </Suspense>
         ),
       },
