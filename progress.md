@@ -1,5 +1,27 @@
 # Progress Log
 
+## T132: Implement WorkerDispatchService (2025-07-17)
+
+**What was done:**
+
+- Created `packages/application/src/ports/worker-dispatch.ports.ts` — defines `WorkerDispatchUnitOfWork`, `WorkerDispatchContextPort`, `WorkerSpawnContext`, and transaction repository interfaces
+- Created `packages/application/src/services/worker-dispatch.service.ts` — implements `createWorkerDispatchService()` factory, `processDispatch()` async method, `ProcessDispatchResult` discriminated union, `DispatchPayload` type
+- Created `packages/application/src/services/worker-dispatch.service.test.ts` — 11 tests covering no-op (no job available), happy path (claim→resolve→spawn→complete), context resolution failure (null → fail job), spawn failure (error → fail job), configuration (custom lease owner), and payload correctness
+- Updated `packages/application/src/index.ts` — exports all new types and factory
+
+**Key design decisions:**
+
+- **Not self-rescheduling**: Unlike scheduler-tick and reconciliation-sweep, WORKER_DISPATCH jobs are created on-demand by the scheduler. No `initialize()` method needed.
+- **Context resolution port**: `WorkerDispatchContextPort.resolveSpawnContext(taskId)` returns the full `WorkerSpawnContext` (repoPath, workerName, runContext) or null. The infrastructure adapter (T136) will implement the DB lookups.
+- **Async service**: `processDispatch()` is async because `spawnWorker()` returns a Promise. The caller handles fire-and-forget with error logging.
+- **System actor**: Dispatch uses `{ type: "system", id: "worker-dispatch" }` for audit trails.
+
+**What the next loop should know:**
+
+- T132 unblocks T133 (NestJS dispatch controller), T134 (heartbeat forwarder adapter), and T139 (dispatch integration tests)
+- The `WorkerDispatchContextPort` needs an infrastructure adapter (T136) that queries task → project → repository to build `WorkerSpawnContext`
+- All 4,015 tests pass after this change
+
 ## T105: Integrate operator controls into pool and merge queue UI (2026-03-12)
 
 **What was done:**

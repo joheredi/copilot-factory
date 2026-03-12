@@ -178,6 +178,30 @@ export type {
   SchedulerTickDependencies,
 } from "./services/scheduler-tick.service.js";
 
+// Ports — worker dispatch context resolution interfaces
+export type {
+  WorkerSpawnContext,
+  WorkerDispatchContextPort,
+  WorkerDispatchTransactionRepositories,
+  WorkerDispatchUnitOfWork,
+} from "./ports/worker-dispatch.ports.js";
+
+// Services — worker dispatch for processing WORKER_DISPATCH jobs (PRD 007 §7.8)
+export {
+  createWorkerDispatchService,
+  DEFAULT_DISPATCH_LEASE_OWNER,
+} from "./services/worker-dispatch.service.js";
+export type {
+  WorkerDispatchConfig,
+  DispatchPayload,
+  DispatchSuccessResult,
+  DispatchFailedResult,
+  DispatchSkippedResult,
+  ProcessDispatchResult,
+  WorkerDispatchService,
+  WorkerDispatchDependencies,
+} from "./services/worker-dispatch.service.js";
+
 // Ports — heartbeat reception and staleness detection interfaces
 export type {
   HeartbeatableLease,
