@@ -5,7 +5,7 @@
 | **ID**                    | T078                                                  |
 | **Epic**                  | [E016: Observability](../epics/E016-observability.md) |
 | **Type**                  | feature                                               |
-| **Status**                | pending                                               |
+| **Status**                | done                                                  |
 | **Priority**              | P1                                                    |
 | **Owner**                 | backend-engineer                                      |
 | **AI Executable**         | Yes                                                   |
@@ -54,9 +54,9 @@ The implementing agent should read these files before starting:
 
 ## Acceptance Criteria
 
-- [ ] /metrics endpoint returns valid Prometheus format
-- [ ] Default Node.js metrics included
-- [ ] Custom metrics can be registered
+- [x] /metrics endpoint returns valid Prometheus format
+- [x] Default Node.js metrics included
+- [x] Custom metrics can be registered
 
 ## Definition of Done
 

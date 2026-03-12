@@ -458,3 +458,44 @@ Added `@factory/application` as a dependency to `@factory/infrastructure` — th
 
 - The `CrashRecoveryLeasePort` (DB adapter for updating `partial_result_artifact_refs`) still needs an implementation in `apps/control-plane`
 - The lease reclaim service does not yet call the crash recovery service — integration wiring is needed
+
+## T078 — Implement Prometheus metrics endpoint
+
+### Task
+
+T078 - Implement Prometheus metrics endpoint (Epic E016: Observability)
+
+### What was done
+
+Implemented the Prometheus /metrics endpoint with two components:
+
+1. **`packages/observability/src/metrics.ts`** — Core metrics module:
+   - `initMetrics(config?)` initializes a prom-client Registry with optional default Node.js metrics and default labels
+   - `getMetricsHandle()` singleton accessor for the active registry
+   - `createCounter()`, `createHistogram()`, `createGauge()` factory functions that register on the active registry
+   - `resetMetrics()` for test cleanup
+   - Full JSDoc with examples referencing §10.13 naming and label conventions
+
+2. **`apps/control-plane/src/metrics/`** — NestJS controller and module:
+   - `MetricsController` exposes GET /metrics with Swagger docs and Cache-Control: no-store
+   - `MetricsModule` initializes the metrics subsystem via factory provider and exports `METRICS_HANDLE` token for DI
+   - Registered in AppModule alongside existing feature modules
+
+3. **Tests:**
+   - `packages/observability/src/metrics.test.ts` — 14 tests covering init, singleton, default metrics, custom prefix, default labels, reset, counter/histogram/gauge creation with labels
+   - `apps/control-plane/src/metrics/metrics.controller.test.ts` — 3 tests covering controller delegation to MetricsHandle
+
+Also fixed T072 backlog index status (was `pending` but task file was `done`).
+
+### Patterns used
+
+- Metrics core in `@factory/observability` matching the existing tracing/logging pattern
+- NestJS DI via Symbol-based injection token (`METRICS_HANDLE`)
+- Factory provider in module for singleton initialization
+- Fake MetricsHandle in controller tests (no real prom-client needed)
+
+### Notes for next loop
+
+- T079 (starter metrics inventory) is now unblocked — it should use the `createCounter`, `createHistogram`, `createGauge` factories to register the §10.13.3 metrics
+- The `METRICS_HANDLE` is exported from MetricsModule for other modules to inject when registering custom metrics
+- Label cardinality rules from §10.13.4 must be followed: never use task_id, run_id, or branch_name as Prometheus labels

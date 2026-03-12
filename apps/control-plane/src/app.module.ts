@@ -14,6 +14,7 @@ import { AuditModule } from "./audit/audit.module.js";
 import { HealthModule } from "./health/health.module.js";
 import { DatabaseModule } from "./infrastructure/database/database.module.js";
 import { MergeModule } from "./merge/merge.module.js";
+import { MetricsModule } from "./metrics/metrics.module.js";
 import { OperatorActionsModule } from "./operator-actions/operator-actions.module.js";
 import { PolicyModule } from "./policy/policy.module.js";
 import { ProjectsModule } from "./projects/projects.module.js";
@@ -27,6 +28,7 @@ import { WorkersModule } from "./workers/workers.module.js";
  *
  * Module structure mirrors the domain model:
  * - HealthModule: liveness/readiness checks
+ * - MetricsModule: Prometheus /metrics endpoint (§10.13)
  * - ProjectsModule: projects and repositories
  * - TasksModule: task lifecycle and dependencies
  * - WorkersModule: worker pools, agents, profiles
@@ -41,6 +43,7 @@ import { WorkersModule } from "./workers/workers.module.js";
   imports: [
     DatabaseModule,
     HealthModule,
+    MetricsModule,
     ProjectsModule,
     TasksModule,
     WorkersModule,

@@ -37,6 +37,7 @@
     "@opentelemetry/sdk-trace-base": "^2.6.0",
     "@opentelemetry/sdk-trace-node": "^2.6.0",
     "@opentelemetry/semantic-conventions": "^1.40.0",
-    "pino": "^10.3.1"
+    "pino": "^10.3.1",
+    "prom-client": "^15.1.3"
   }
 }

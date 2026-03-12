@@ -192,13 +192,13 @@ See [phase documents](phases/) for details.
 | [T069](tasks/T069-artifact-storage.md)              | Implement filesystem artifact storage                                                 | E014 | P0       | feature    | done    |
 | [T070](tasks/T070-artifact-retrieval.md)            | Implement artifact reference resolution and retrieval                                 | E014 | P0       | feature    | done    |
 | [T071](tasks/T071-retry-summarization.md)           | Implement summarization packet generation for retries                                 | E014 | P1       | feature    | done    |
-| [T072](tasks/T072-partial-work-snapshot.md)         | Implement partial work snapshot on lease reclaim                                      | E014 | P1       | feature    | pending |
+| [T072](tasks/T072-partial-work-snapshot.md)         | Implement partial work snapshot on lease reclaim                                      | E014 | P1       | feature    | done    |
 | [T073](tasks/T073-audit-event-recording.md)         | Implement audit event recording on state transitions                                  | E015 | P0       | feature    | done    |
 | [T074](tasks/T074-audit-query-service.md)           | Implement audit event query service                                                   | E015 | P1       | feature    | done    |
 | [T075](tasks/T075-structured-logging.md)            | Implement structured logging with correlation IDs                                     | E015 | P1       | feature    | done    |
 | [T076](tasks/T076-otel-init.md)                     | Initialize OpenTelemetry TracerProvider                                               | E016 | P1       | feature    | done    |
 | [T077](tasks/T077-otel-spans.md)                    | Instrument core orchestration paths with spans                                        | E016 | P1       | feature    | done    |
-| [T078](tasks/T078-prometheus-endpoint.md)           | Implement Prometheus metrics endpoint                                                 | E016 | P1       | feature    | pending |
+| [T078](tasks/T078-prometheus-endpoint.md)           | Implement Prometheus metrics endpoint                                                 | E016 | P1       | feature    | done    |
 | [T079](tasks/T079-starter-metrics.md)               | Implement starter metrics inventory                                                   | E016 | P1       | feature    | pending |
 | [T080](tasks/T080-nestjs-bootstrap.md)              | Implement NestJS application bootstrap and module structure                           | E017 | P0       | foundation | done    |
 | [T081](tasks/T081-api-project-repo.md)              | Implement Project and Repository CRUD endpoints                                       | E017 | P0       | feature    | done    |

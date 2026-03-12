@@ -24,3 +24,13 @@ export {
 export type { TracingConfig, TracingHandle, Span } from "./tracing.js";
 
 export { SpanNames, SpanAttributes } from "./spans.js";
+
+export {
+  initMetrics,
+  getMetricsHandle,
+  createCounter,
+  createHistogram,
+  createGauge,
+  resetMetrics,
+} from "./metrics.js";
+export type { MetricsConfig, MetricsHandle } from "./metrics.js";
