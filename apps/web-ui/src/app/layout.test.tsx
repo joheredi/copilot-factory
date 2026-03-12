@@ -4,29 +4,39 @@ import "@testing-library/jest-dom/vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppLayout } from "./layout";
+import { WebSocketProvider } from "../lib/websocket";
 
 afterEach(cleanup);
 
 /**
  * Helper to render the AppLayout within a MemoryRouter at a given path.
- * Includes child routes so Outlet can render content for verification.
+ * Wraps in QueryClientProvider and WebSocketProvider (autoConnect=false)
+ * so the layout can use useWebSocket without a real connection.
  */
 function renderLayout(initialPath = "/dashboard") {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   return render(
-    <MemoryRouter initialEntries={[initialPath]}>
-      <Routes>
-        <Route path="/" element={<AppLayout />}>
-          <Route path="dashboard" element={<div>Dashboard Content</div>} />
-          <Route path="tasks" element={<div>Tasks Content</div>} />
-          <Route path="workers" element={<div>Workers Content</div>} />
-          <Route path="reviews" element={<div>Reviews Content</div>} />
-          <Route path="merge-queue" element={<div>Merge Queue Content</div>} />
-          <Route path="config" element={<div>Config Content</div>} />
-          <Route path="audit" element={<div>Audit Content</div>} />
-        </Route>
-      </Routes>
-    </MemoryRouter>,
+    <QueryClientProvider client={queryClient}>
+      <WebSocketProvider autoConnect={false}>
+        <MemoryRouter initialEntries={[initialPath]}>
+          <Routes>
+            <Route path="/" element={<AppLayout />}>
+              <Route path="dashboard" element={<div>Dashboard Content</div>} />
+              <Route path="tasks" element={<div>Tasks Content</div>} />
+              <Route path="workers" element={<div>Workers Content</div>} />
+              <Route path="reviews" element={<div>Reviews Content</div>} />
+              <Route path="merge-queue" element={<div>Merge Queue Content</div>} />
+              <Route path="config" element={<div>Config Content</div>} />
+              <Route path="audit" element={<div>Audit Content</div>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </WebSocketProvider>
+    </QueryClientProvider>,
   );
 }
 

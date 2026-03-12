@@ -10,9 +10,9 @@ afterEach(cleanup);
  * Tests for the ConnectionStatus component.
  *
  * Validates that the WebSocket connection indicator accurately reflects
- * connected and disconnected states. This is important because operators
- * rely on this indicator to know if they are receiving live updates;
- * a wrong status would undermine trust in the dashboard data.
+ * connected, reconnecting, and disconnected states. This is important
+ * because operators rely on this indicator to know if they are receiving
+ * live updates; a wrong status would undermine trust in the dashboard data.
  */
 describe("ConnectionStatus", () => {
   /**
@@ -20,7 +20,7 @@ describe("ConnectionStatus", () => {
    * an accessible status region with the correct aria-label.
    */
   it("renders connected state", () => {
-    render(<ConnectionStatus connected={true} />);
+    render(<ConnectionStatus status="connected" />);
     expect(screen.getByText("Connected")).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveAttribute("aria-label", "Connected to server");
   });
@@ -30,9 +30,21 @@ describe("ConnectionStatus", () => {
    * and an accessible status region with the correct aria-label.
    */
   it("renders disconnected state", () => {
-    render(<ConnectionStatus connected={false} />);
+    render(<ConnectionStatus status="disconnected" />);
     expect(screen.getByText("Disconnected")).toBeInTheDocument();
     expect(screen.getByLabelText("Disconnected from server")).toBeInTheDocument();
+  });
+
+  /**
+   * Verifies the reconnecting state renders the "Reconnecting…" label
+   * and an accessible status region with the correct aria-label.
+   * This state is shown during transient connection loss so operators
+   * know data may be momentarily stale but recovery is in progress.
+   */
+  it("renders reconnecting state", () => {
+    render(<ConnectionStatus status="reconnecting" />);
+    expect(screen.getByText("Reconnecting…")).toBeInTheDocument();
+    expect(screen.getByLabelText("Reconnecting to server")).toBeInTheDocument();
   });
 
   /**
@@ -40,7 +52,7 @@ describe("ConnectionStatus", () => {
    * announce connection status changes without interrupting the user.
    */
   it("has aria-live polite for screen reader announcements", () => {
-    render(<ConnectionStatus connected={true} />);
+    render(<ConnectionStatus status="connected" />);
     expect(screen.getByLabelText("Connected to server")).toHaveAttribute("aria-live", "polite");
   });
 });

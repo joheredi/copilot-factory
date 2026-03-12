@@ -405,3 +405,36 @@ Also fixed T072 backlog index status (was `pending` but task file was `done`).
 - ConnectionStatus currently hardcoded to `connected={false}`. T091 (WebSocket client) will wire it to real state.
 - All 6 feature pages are placeholders — T093-T100 implement the actual views.
 - Test cleanup must be explicit in web-ui test files (add `afterEach(cleanup)` import from vitest + @testing-library/react).
+
+## T091: Implement WebSocket client for live updates — DONE
+
+**What was done:**
+
+- Installed `socket.io-client` in `apps/web-ui`
+- Created `src/lib/websocket/` module with 5 files:
+  - `types.ts` — ConnectionState, FactoryEvent, EventChannel, WebSocketContextValue (mirrors backend types)
+  - `invalidation.ts` — Maps event channels/types to TanStack Query cache invalidation keys
+  - `provider.tsx` — WebSocketProvider (React context, socket.io lifecycle, auto-subscribe to all channels)
+  - `use-websocket.ts` — Hook for accessing connection state + subscribe/unsubscribe
+  - `index.ts` — Barrel exports
+- Updated `ConnectionStatus` component from boolean `connected` prop to `status: ConnectionState` (connected/reconnecting/disconnected) with three visual states (green/amber-pulsing/red)
+- Updated `App.tsx` to wrap with WebSocketProvider inside ApiProvider
+- Updated `AppLayout` to use `useWebSocket()` hook for real connection status
+- Created 3 test files with 20+ tests covering invalidation mapping, provider lifecycle, and hook behavior
+- Updated existing `connection-status.test.tsx` and `layout.test.tsx` for new API
+- All 3,685 tests pass, lint clean
+
+**Key design decisions:**
+
+- Context-based provider pattern (matches existing ApiProvider) — single shared connection
+- Auto-subscribe to all 3 channels (tasks, workers, queue) on connect for broad cache invalidation
+- Channel-level invalidation (not per-entity) for correctness; TanStack Query dedup prevents excess refetch
+- Event-type extras (e.g., task.state_changed also invalidates pools) for cross-entity effects
+- socket.io-client with WebSocket+polling transports, exponential backoff reconnection
+- autoConnect=false prop for test isolation without real connections
+
+**Patterns used:**
+
+- vi.mock for socket.io-client with \_simulateEvent helper for testing connection lifecycle
+- QueryClient injection in tests via fresh instances
+- renderHook from @testing-library/react for hook isolation tests

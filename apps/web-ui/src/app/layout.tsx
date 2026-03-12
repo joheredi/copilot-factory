@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Breadcrumbs } from "../components/layout/breadcrumbs";
 import { ConnectionStatus } from "../components/layout/connection-status";
+import { useWebSocket } from "../lib/websocket";
 
 /**
  * Navigation item definition for the sidebar.
@@ -53,6 +54,7 @@ const navItems: NavItem[] = [
  */
 export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { state: connectionState } = useWebSocket();
 
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
   const toggleSidebar = useCallback(() => setSidebarOpen((prev) => !prev), []);
@@ -112,7 +114,7 @@ export function AppLayout() {
         </nav>
         {/* Connection status indicator in sidebar footer */}
         <div className="border-t p-3">
-          <ConnectionStatus connected={false} />
+          <ConnectionStatus status={connectionState} />
         </div>
       </aside>
 
