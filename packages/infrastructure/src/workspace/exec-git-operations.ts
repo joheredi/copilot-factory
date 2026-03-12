@@ -145,5 +145,36 @@ export function createExecGitOperations(): GitOperations {
         return null;
       }
     },
+
+    async removeWorktree(repoPath: string, worktreePath: string): Promise<void> {
+      try {
+        await git(["worktree", "remove", worktreePath, "--force"], repoPath);
+      } catch (error: unknown) {
+        // Ignore errors when the worktree is already gone
+        if (error instanceof GitOperationError) {
+          const msg = error.stderr.toLowerCase();
+          if (msg.includes("is not a working tree") || msg.includes("no such file")) {
+            return;
+          }
+        }
+        throw error;
+      }
+    },
+
+    async deleteBranch(repoPath: string, branchName: string, force?: boolean): Promise<void> {
+      const flag = force ? "-D" : "-d";
+      try {
+        await git(["branch", flag, branchName], repoPath);
+      } catch (error: unknown) {
+        // Ignore errors when the branch doesn't exist
+        if (error instanceof GitOperationError) {
+          const msg = error.stderr.toLowerCase();
+          if (msg.includes("not found")) {
+            return;
+          }
+        }
+        throw error;
+      }
+    },
   };
 }

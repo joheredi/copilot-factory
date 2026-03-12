@@ -5,7 +5,7 @@
 | **ID**                    | T041                                                                |
 | **Epic**                  | [E008: Workspace Management](../epics/E008-workspace-management.md) |
 | **Type**                  | feature                                                             |
-| **Status**                | pending                                                             |
+| **Status**                | done                                                                |
 | **Priority**              | P1                                                                  |
 | **Owner**                 | backend-engineer                                                    |
 | **AI Executable**         | Yes                                                                 |

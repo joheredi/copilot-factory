@@ -7,7 +7,12 @@
  * @module @factory/testing/fakes/fake-workspace-manager
  */
 
-import type { WorkspaceProviderPort, SupervisorWorkspaceResult } from "@factory/application";
+import type {
+  WorkspaceProviderPort,
+  SupervisorWorkspaceResult,
+  SupervisorCleanupOptions,
+  SupervisorCleanupResult,
+} from "@factory/application";
 
 /**
  * Configuration options for {@link FakeWorkspaceManager}.
@@ -33,6 +38,15 @@ export interface TrackedWorkspace {
 }
 
 /**
+ * Record of a workspace cleanup performed by {@link FakeWorkspaceManager}.
+ */
+export interface TrackedCleanup {
+  readonly taskId: string;
+  readonly repoPath: string;
+  readonly options: SupervisorCleanupOptions | undefined;
+}
+
+/**
  * In-memory fake of the workspace provider for deterministic testing.
  *
  * All workspace paths are derived from the taskId, repoPath, and basePath
@@ -51,6 +65,9 @@ export class FakeWorkspaceManager implements WorkspaceProviderPort {
 
   /** Task IDs passed to {@link cleanupWorkspace}. */
   readonly cleanedWorkspaces: string[] = [];
+
+  /** Detailed cleanup records with all parameters. */
+  readonly cleanupRecords: TrackedCleanup[] = [];
 
   private readonly basePath: string;
   private readonly createError: Error | undefined;
@@ -114,14 +131,28 @@ export class FakeWorkspaceManager implements WorkspaceProviderPort {
   /**
    * Record a workspace cleanup for a task.
    *
+   * Returns a deterministic result indicating all cleanup steps were performed.
+   *
    * @param taskId - The task whose workspace should be cleaned up.
+   * @param repoPath - Absolute path to the source repository.
+   * @param options - Optional cleanup configuration.
    * @throws The configured {@link FakeWorkspaceManagerConfig.cleanupError} if set.
    */
-  async cleanupWorkspace(taskId: string): Promise<void> {
+  async cleanupWorkspace(
+    taskId: string,
+    repoPath: string,
+    options?: SupervisorCleanupOptions,
+  ): Promise<SupervisorCleanupResult> {
     if (this.cleanupError) {
       throw this.cleanupError;
     }
     this.cleanedWorkspaces.push(taskId);
+    this.cleanupRecords.push({ taskId, repoPath, options });
+    return {
+      worktreeRemoved: true,
+      directoryRemoved: true,
+      branchDeleted: options?.deleteBranch !== false,
+    };
   }
 
   /**
@@ -131,5 +162,6 @@ export class FakeWorkspaceManager implements WorkspaceProviderPort {
   reset(): void {
     this.createdWorkspaces.length = 0;
     this.cleanedWorkspaces.length = 0;
+    this.cleanupRecords.length = 0;
   }
 }

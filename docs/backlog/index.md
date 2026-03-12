@@ -161,7 +161,7 @@ See [phase documents](phases/) for details.
 | [T038](tasks/T038-dep-reconciliation.md)            | Implement dependency reconciliation loop                                              | E007 | P1       | feature    | done    |
 | [T039](tasks/T039-worktree-creation.md)             | Implement git worktree creation per task                                              | E008 | P0       | feature    | done    |
 | [T040](tasks/T040-workspace-mounting.md)            | Implement workspace packet and config mounting                                        | E008 | P0       | feature    | done    |
-| [T041](tasks/T041-workspace-cleanup.md)             | Implement workspace cleanup for terminal states                                       | E008 | P1       | feature    | pending |
+| [T041](tasks/T041-workspace-cleanup.md)             | Implement workspace cleanup for terminal states                                       | E008 | P1       | feature    | done    |
 | [T042](tasks/T042-reconcile-workspaces.md)          | Implement ReconcileWorkspacesCommand                                                  | E008 | P1       | feature    | pending |
 | [T043](tasks/T043-worker-runtime-interface.md)      | Define worker runtime interface                                                       | E009 | P0       | foundation | done    |
 | [T044](tasks/T044-worker-supervisor.md)             | Implement Worker Supervisor                                                           | E009 | P0       | feature    | done    |

@@ -31,6 +31,8 @@ function createMockGit(
     branchExists: vi.fn().mockResolvedValue(false),
     isCleanWorkingTree: vi.fn().mockResolvedValue(true),
     getCurrentBranch: vi.fn().mockResolvedValue("factory/T001"),
+    removeWorktree: vi.fn().mockResolvedValue(undefined),
+    deleteBranch: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   } as GitOperations & {
     [K in keyof GitOperations]: ReturnType<typeof vi.fn>;
@@ -50,6 +52,8 @@ function createMockFs(
     readFile: vi.fn().mockResolvedValue(""),
     unlink: vi.fn().mockResolvedValue(undefined),
     rename: vi.fn().mockResolvedValue(undefined),
+    readdir: vi.fn().mockResolvedValue([]),
+    rm: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   } as FileSystem & { [K in keyof FileSystem]: ReturnType<typeof vi.fn> };
 }
@@ -361,6 +365,200 @@ describe("WorkspaceManager", () => {
 
       expect(result.reused).toBe(true);
       expect(result.branchName).toBe("HEAD");
+    });
+  });
+
+  // ─── cleanupWorkspace ─────────────────────────────────────────────────────
+
+  describe("cleanupWorkspace", () => {
+    /**
+     * @why The primary cleanup flow must remove the worktree, delete the
+     * workspace directory, and delete the branch. This validates the full
+     * happy path where all resources exist and are cleaned up.
+     */
+    it("should remove worktree, directory, and branch when all exist", async () => {
+      mockFs.exists.mockResolvedValue(true);
+      mockGit.branchExists.mockResolvedValue(true);
+
+      const result = await manager.cleanupWorkspace({
+        taskId: TASK_ID,
+        repoPath: REPO_PATH,
+      });
+
+      expect(result.worktreeRemoved).toBe(true);
+      expect(result.directoryRemoved).toBe(true);
+      expect(result.branchDeleted).toBe(true);
+
+      // Verify git worktree remove was called with the correct path
+      const expectedWorktreePath = join(WORKSPACES_ROOT, "my-project", "T001", "worktree");
+      expect(mockGit.removeWorktree).toHaveBeenCalledWith(REPO_PATH, expectedWorktreePath);
+
+      // Verify directory was removed recursively
+      const expectedRootPath = join(WORKSPACES_ROOT, "my-project", "T001");
+      expect(mockFs.rm).toHaveBeenCalledWith(expectedRootPath, {
+        recursive: true,
+        force: true,
+      });
+
+      // Verify branch was deleted (safe delete by default)
+      expect(mockGit.deleteBranch).toHaveBeenCalledWith(REPO_PATH, "factory/T001", false);
+    });
+
+    /**
+     * @why Cleanup must be idempotent — if the worktree is already gone,
+     * the cleanup should still succeed and remove remaining resources.
+     * This handles crash recovery and partial cleanup scenarios.
+     */
+    it("should handle already-removed worktree gracefully", async () => {
+      // worktree doesn't exist, but directory and branch do
+      mockFs.exists
+        .mockResolvedValueOnce(false) // worktree check
+        .mockResolvedValueOnce(true); // directory check
+      mockGit.branchExists.mockResolvedValue(true);
+
+      const result = await manager.cleanupWorkspace({
+        taskId: TASK_ID,
+        repoPath: REPO_PATH,
+      });
+
+      expect(result.worktreeRemoved).toBe(false);
+      expect(result.directoryRemoved).toBe(true);
+      expect(result.branchDeleted).toBe(true);
+      expect(mockGit.removeWorktree).not.toHaveBeenCalled();
+    });
+
+    /**
+     * @why If the workspace directory is already gone (e.g., manual cleanup),
+     * the operation should succeed without error. The branch should still
+     * be cleaned up.
+     */
+    it("should handle already-removed directory gracefully", async () => {
+      mockFs.exists
+        .mockResolvedValueOnce(true) // worktree check
+        .mockResolvedValueOnce(false); // directory check
+      mockGit.branchExists.mockResolvedValue(true);
+
+      const result = await manager.cleanupWorkspace({
+        taskId: TASK_ID,
+        repoPath: REPO_PATH,
+      });
+
+      expect(result.worktreeRemoved).toBe(true);
+      expect(result.directoryRemoved).toBe(false);
+      expect(result.branchDeleted).toBe(true);
+    });
+
+    /**
+     * @why If the branch is already deleted, the operation should succeed.
+     * This handles scenarios where branches were cleaned up separately
+     * (e.g., after merge).
+     */
+    it("should handle already-deleted branch gracefully", async () => {
+      mockFs.exists.mockResolvedValue(true);
+      mockGit.branchExists.mockResolvedValue(false);
+
+      const result = await manager.cleanupWorkspace({
+        taskId: TASK_ID,
+        repoPath: REPO_PATH,
+      });
+
+      expect(result.worktreeRemoved).toBe(true);
+      expect(result.directoryRemoved).toBe(true);
+      expect(result.branchDeleted).toBe(false);
+      expect(mockGit.deleteBranch).not.toHaveBeenCalled();
+    });
+
+    /**
+     * @why When all resources are already gone, cleanup should return all-false
+     * without throwing. This is the fully idempotent case.
+     */
+    it("should handle fully cleaned-up workspace gracefully", async () => {
+      mockFs.exists.mockResolvedValue(false);
+      mockGit.branchExists.mockResolvedValue(false);
+
+      const result = await manager.cleanupWorkspace({
+        taskId: TASK_ID,
+        repoPath: REPO_PATH,
+      });
+
+      expect(result.worktreeRemoved).toBe(false);
+      expect(result.directoryRemoved).toBe(false);
+      expect(result.branchDeleted).toBe(false);
+    });
+
+    /**
+     * @why The deleteBranch option lets callers skip branch deletion when
+     * they want to preserve the branch (e.g., for post-merge reference).
+     */
+    it("should skip branch deletion when deleteBranch is false", async () => {
+      mockFs.exists.mockResolvedValue(true);
+      mockGit.branchExists.mockResolvedValue(true);
+
+      const result = await manager.cleanupWorkspace({
+        taskId: TASK_ID,
+        repoPath: REPO_PATH,
+        deleteBranch: false,
+      });
+
+      expect(result.branchDeleted).toBe(false);
+      expect(mockGit.branchExists).not.toHaveBeenCalled();
+      expect(mockGit.deleteBranch).not.toHaveBeenCalled();
+    });
+
+    /**
+     * @why Force branch deletion is needed for FAILED/CANCELLED tasks whose
+     * branches were never merged. Without force, git -d would refuse to
+     * delete unmerged branches.
+     */
+    it("should use force delete when forceBranchDelete is true", async () => {
+      mockFs.exists.mockResolvedValue(true);
+      mockGit.branchExists.mockResolvedValue(true);
+
+      await manager.cleanupWorkspace({
+        taskId: TASK_ID,
+        repoPath: REPO_PATH,
+        forceBranchDelete: true,
+      });
+
+      expect(mockGit.deleteBranch).toHaveBeenCalledWith(REPO_PATH, "factory/T001", true);
+    });
+
+    /**
+     * @why Custom repoId must be used in path computation, same as
+     * createWorkspace, to ensure cleanup targets the correct directory.
+     */
+    it("should use explicit repoId when provided", async () => {
+      mockFs.exists.mockResolvedValue(true);
+      mockGit.branchExists.mockResolvedValue(true);
+
+      await manager.cleanupWorkspace({
+        taskId: TASK_ID,
+        repoPath: REPO_PATH,
+        repoId: "custom-id",
+      });
+
+      const expectedWorktreePath = join(WORKSPACES_ROOT, "custom-id", "T001", "worktree");
+      expect(mockGit.removeWorktree).toHaveBeenCalledWith(REPO_PATH, expectedWorktreePath);
+    });
+
+    /**
+     * @why The default repoId is derived from the basename of repoPath,
+     * consistent with createWorkspace behavior.
+     */
+    it("should default repoId to basename of repoPath", async () => {
+      mockFs.exists.mockResolvedValue(true);
+      mockGit.branchExists.mockResolvedValue(true);
+
+      await manager.cleanupWorkspace({
+        taskId: TASK_ID,
+        repoPath: "/repos/some-repo",
+      });
+
+      const expectedRootPath = join(WORKSPACES_ROOT, "some-repo", "T001");
+      expect(mockFs.rm).toHaveBeenCalledWith(expectedRootPath, {
+        recursive: true,
+        force: true,
+      });
     });
   });
 });

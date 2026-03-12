@@ -291,4 +291,98 @@ describe("ExecGitOperations", () => {
     const branch = await git.getCurrentBranch(wtPath);
     expect(branch).toBeNull();
   });
+
+  // ─── removeWorktree ───────────────────────────────────────────────────
+
+  /**
+   * @why removeWorktree must successfully remove an existing worktree so
+   * that workspace cleanup can reclaim the directory and git metadata.
+   * After removal, the worktree path should no longer appear in the list.
+   */
+  it("should remove an existing worktree", async () => {
+    const wtPath = join(repoPath, "worktrees", "task-remove");
+    await git.addWorktree(repoPath, wtPath, "factory/T-remove", "main");
+
+    // Verify worktree exists
+    const before = await git.listWorktrees(repoPath);
+    expect(before.some((e) => e.path === wtPath)).toBe(true);
+
+    await git.removeWorktree(repoPath, wtPath);
+
+    // Verify worktree is gone
+    const after = await git.listWorktrees(repoPath);
+    expect(after.some((e) => e.path === wtPath)).toBe(false);
+  });
+
+  /**
+   * @why removeWorktree must be idempotent — removing a non-existent worktree
+   * should not throw. This is critical for crash recovery where cleanup
+   * might be retried after a partial failure.
+   */
+  it("should not throw when removing a non-existent worktree", async () => {
+    const wtPath = join(repoPath, "worktrees", "nonexistent-worktree");
+
+    await expect(git.removeWorktree(repoPath, wtPath)).resolves.toBeUndefined();
+  });
+
+  // ─── deleteBranch ─────────────────────────────────────────────────────
+
+  /**
+   * @why deleteBranch with safe mode must delete a fully merged branch.
+   * This is the normal cleanup path for DONE tasks whose branches have
+   * been merged to the main branch.
+   */
+  it("should delete a merged branch with safe delete", async () => {
+    // Create and merge a branch to make it safe-deletable
+    const wtPath = join(repoPath, "worktrees", "task-merge");
+    await git.addWorktree(repoPath, wtPath, "factory/T-merge", "main");
+
+    // Make a commit on the branch
+    await writeFile(join(wtPath, "feature.txt"), "feature\n");
+    await gitCmd(["add", "."], wtPath);
+    await gitCmd(["commit", "-m", "add feature"], wtPath);
+
+    // Merge the branch into main
+    await gitCmd(["merge", "factory/T-merge"], repoPath);
+
+    // Now remove the worktree first (required before branch delete)
+    await git.removeWorktree(repoPath, wtPath);
+
+    // Safe delete should succeed because the branch is merged
+    await git.deleteBranch(repoPath, "factory/T-merge", false);
+    expect(await git.branchExists(repoPath, "factory/T-merge")).toBe(false);
+  });
+
+  /**
+   * @why deleteBranch with force mode must delete an unmerged branch.
+   * This is needed for FAILED/CANCELLED tasks where the branch was
+   * never merged but needs to be cleaned up.
+   */
+  it("should force-delete an unmerged branch", async () => {
+    const wtPath = join(repoPath, "worktrees", "task-force");
+    await git.addWorktree(repoPath, wtPath, "factory/T-force", "main");
+
+    // Make a commit on the branch (NOT merged)
+    await writeFile(join(wtPath, "wip.txt"), "work in progress\n");
+    await gitCmd(["add", "."], wtPath);
+    await gitCmd(["commit", "-m", "wip"], wtPath);
+
+    // Remove worktree first
+    await git.removeWorktree(repoPath, wtPath);
+
+    // Force delete should succeed even though branch is unmerged
+    await git.deleteBranch(repoPath, "factory/T-force", true);
+    expect(await git.branchExists(repoPath, "factory/T-force")).toBe(false);
+  });
+
+  /**
+   * @why deleteBranch must be idempotent — deleting a non-existent branch
+   * should not throw. This handles cases where the branch was already
+   * cleaned up by a previous run or by git merge auto-cleanup.
+   */
+  it("should not throw when deleting a non-existent branch", async () => {
+    await expect(
+      git.deleteBranch(repoPath, "factory/nonexistent-branch", false),
+    ).resolves.toBeUndefined();
+  });
 });

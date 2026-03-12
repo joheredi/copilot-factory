@@ -1,5 +1,32 @@
 # Progress Log
 
+## T041: Implement workspace cleanup for terminal states — DONE (2026-03-12)
+
+**Status:** Done
+
+**What was done:**
+
+- Added `removeWorktree()` and `deleteBranch()` to `GitOperations` interface and `createExecGitOperations()` implementation
+- Added `rm()` to `FileSystem` interface and `createNodeFileSystem()` implementation
+- Added `CleanupWorkspaceOptions` and `CleanupWorkspaceResult` types to workspace module
+- Implemented `cleanupWorkspace()` on `WorkspaceManager` — removes worktree, deletes directory tree, optionally deletes branch. Fully idempotent (handles already-gone resources)
+- Created `isWorkspaceCleanupEligible()` in domain layer (`workspace-cleanup-policy.ts`) — pure function encoding PRD §2.9 retention rules: terminal state check, ESCALATED retention, FAILED retention policy, retention period
+- Added `cleanupWorkspace()` to `WorkspaceProviderPort` with `SupervisorCleanupOptions` and `SupervisorCleanupResult` types
+- Updated `FakeWorkspaceManager` with `TrackedCleanup` records and result-returning cleanup
+- 39 new tests added (3,094 total): domain eligibility tests (14), workspace manager cleanup tests (10), git operations integration tests (6), fake manager tests (9 updated)
+
+**Patterns used:**
+
+- Domain layer owns eligibility rules (retention policy, task state); infrastructure executes raw git/fs operations
+- `WorkspaceRetentionPolicy` interface defined in domain to avoid coupling to `@factory/schemas`
+- All cleanup operations are idempotent — safe for crash recovery and retry
+- `forceBranchDelete` option distinguishes merged (safe -d) vs unmerged (-D) branch deletion
+
+**Notes for next loops:**
+
+- T042 (ReconcileWorkspacesCommand) is now unblocked — it should use `isWorkspaceCleanupEligible()` to filter candidates then call `cleanupWorkspace()` on eligible ones
+- The `retain_escalated_workspaces` flag in retention policy is not yet fully utilized — ESCALATED tasks are always retained since they're non-terminal. T042 may need to track "previously escalated" tasks for post-resolution cleanup
+
 ## T038: Mark dependency reconciliation loop as done — DONE (2026-03-12)
 
 **Status:** Done

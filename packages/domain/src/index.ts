@@ -41,6 +41,14 @@ export {
 
 export type { TransitionContext, TransitionResult } from "./state-machines/task-state-machine.js";
 
+export { isWorkspaceCleanupEligible } from "./workspace-cleanup-policy.js";
+
+export type {
+  WorkspaceRetentionPolicy,
+  WorkspaceCleanupInput,
+  WorkspaceCleanupEligibility,
+} from "./workspace-cleanup-policy.js";
+
 export {
   validateWorkerLeaseTransition,
   getValidWorkerLeaseTargets,

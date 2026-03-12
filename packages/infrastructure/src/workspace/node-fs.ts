@@ -3,7 +3,7 @@
  * Production {@link FileSystem} implementation using Node.js `fs/promises`.
  */
 
-import { mkdir, access, writeFile, readFile, readdir, unlink, rename } from "node:fs/promises";
+import { mkdir, access, writeFile, readFile, readdir, unlink, rename, rm } from "node:fs/promises";
 
 import type { FileSystem } from "./types.js";
 
@@ -72,6 +72,25 @@ export function createNodeFileSystem(): FileSystem {
           (err as NodeJS.ErrnoException).code === "ENOENT"
         ) {
           return [];
+        }
+        throw err;
+      }
+    },
+
+    async rm(path: string, options?: { recursive?: boolean; force?: boolean }): Promise<void> {
+      try {
+        await rm(path, {
+          recursive: options?.recursive ?? false,
+          force: options?.force ?? false,
+        });
+      } catch (err: unknown) {
+        // Ignore ENOENT — path already gone
+        if (
+          err instanceof Error &&
+          "code" in err &&
+          (err as NodeJS.ErrnoException).code === "ENOENT"
+        ) {
+          return;
         }
         throw err;
       }

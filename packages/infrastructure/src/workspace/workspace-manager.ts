@@ -19,6 +19,8 @@ import type {
   CreateWorkspaceOptions,
   WorkspaceLayout,
   WorkspaceResult,
+  CleanupWorkspaceOptions,
+  CleanupWorkspaceResult,
 } from "./types.js";
 import { WorkspaceBranchExistsError, WorkspaceDirtyError } from "./errors.js";
 
@@ -193,5 +195,99 @@ export class WorkspaceManager {
     await this.fs.mkdir(layout.rootPath, { recursive: true });
     await this.fs.mkdir(layout.logsPath, { recursive: true });
     await this.fs.mkdir(layout.outputsPath, { recursive: true });
+  }
+
+  /**
+   * Clean up a task workspace by removing the git worktree, workspace directory,
+   * and optionally the task branch.
+   *
+   * This operation is **idempotent** — it handles cases where the worktree,
+   * directory, or branch are already gone without throwing errors. This is
+   * important for crash recovery and retry scenarios.
+   *
+   * The caller is responsible for checking task state eligibility and retention
+   * policy before invoking cleanup. This method performs the raw infrastructure
+   * operations only.
+   *
+   * Cleanup order:
+   * 1. Remove the git worktree (via `git worktree remove --force`)
+   * 2. Remove the workspace directory tree (root, logs, outputs)
+   * 3. Delete the task branch (if `deleteBranch` is true)
+   *
+   * @param options - Cleanup configuration including taskId, repoPath, and branch options.
+   * @returns Result indicating which cleanup steps were performed.
+   * @throws {GitOperationError} If a git operation fails for reasons other than non-existence.
+   *
+   * @see docs/prd/007-technical-architecture.md §7.10 — Workspace Strategy
+   * @see docs/prd/002-data-model.md §2.9 — Workspace Retention Rules
+   */
+  async cleanupWorkspace(options: CleanupWorkspaceOptions): Promise<CleanupWorkspaceResult> {
+    const { taskId, repoPath } = options;
+    const repoId = options.repoId ?? basename(repoPath);
+    const shouldDeleteBranch = options.deleteBranch ?? true;
+    const forceBranchDelete = options.forceBranchDelete ?? false;
+
+    const layout = this.computeLayout(repoId, taskId);
+
+    // Step 1: Remove the git worktree
+    const worktreeRemoved = await this.removeWorktreeIfExists(repoPath, layout.worktreePath);
+
+    // Step 2: Remove the workspace directory tree
+    const directoryRemoved = await this.removeDirectoryIfExists(layout.rootPath);
+
+    // Step 3: Optionally delete the task branch
+    let branchDeleted = false;
+    if (shouldDeleteBranch) {
+      const branchName = this.computeBranchName(taskId);
+      branchDeleted = await this.deleteBranchIfExists(repoPath, branchName, forceBranchDelete);
+    }
+
+    return { worktreeRemoved, directoryRemoved, branchDeleted };
+  }
+
+  /**
+   * Remove a git worktree if it exists.
+   * Returns true if the worktree was removed, false if it was already gone.
+   */
+  private async removeWorktreeIfExists(repoPath: string, worktreePath: string): Promise<boolean> {
+    const exists = await this.fs.exists(worktreePath);
+    if (!exists) {
+      return false;
+    }
+
+    await this.git.removeWorktree(repoPath, worktreePath);
+    return true;
+  }
+
+  /**
+   * Remove a directory tree if it exists.
+   * Returns true if the directory was removed, false if it was already gone.
+   */
+  private async removeDirectoryIfExists(dirPath: string): Promise<boolean> {
+    const exists = await this.fs.exists(dirPath);
+    if (!exists) {
+      return false;
+    }
+
+    await this.fs.rm(dirPath, { recursive: true, force: true });
+    return true;
+  }
+
+  /**
+   * Delete a branch if it exists.
+   * Returns true if the branch was deleted, false if it was already gone.
+   */
+  private async deleteBranchIfExists(
+    repoPath: string,
+    branchName: string,
+    force: boolean,
+  ): Promise<boolean> {
+    const exists = await this.git.branchExists(repoPath, branchName);
+    if (!exists) {
+      return false;
+    }
+
+    await this.git.deleteBranch(repoPath, branchName, force);
+    return true;
   }
 }

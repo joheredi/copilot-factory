@@ -114,6 +114,30 @@ export interface SupervisorWorkspaceResult {
 }
 
 /**
+ * Options for workspace cleanup via the port.
+ * Mirrors CleanupWorkspaceOptions from infrastructure but decoupled.
+ */
+export interface SupervisorCleanupOptions {
+  /** Whether to delete the task branch. Defaults to true. */
+  readonly deleteBranch?: boolean;
+  /** Whether to force-delete unmerged branches. Defaults to false. */
+  readonly forceBranchDelete?: boolean;
+}
+
+/**
+ * Result of a workspace cleanup operation.
+ * Mirrors CleanupWorkspaceResult from infrastructure but decoupled.
+ */
+export interface SupervisorCleanupResult {
+  /** Whether a git worktree was removed. */
+  readonly worktreeRemoved: boolean;
+  /** Whether the workspace directory tree was removed. */
+  readonly directoryRemoved: boolean;
+  /** Whether the task branch was deleted. */
+  readonly branchDeleted: boolean;
+}
+
+/**
  * Port for workspace provisioning.
  *
  * Abstracts the WorkspaceManager so the supervisor doesn't depend
@@ -133,6 +157,28 @@ export interface WorkspaceProviderPort {
     repoPath: string,
     attempt?: number,
   ): Promise<SupervisorWorkspaceResult>;
+
+  /**
+   * Clean up a workspace for a task that has reached a terminal state.
+   *
+   * Removes the git worktree, deletes the workspace directory tree,
+   * and deletes the task branch. This operation is idempotent — it
+   * handles cases where resources are already gone.
+   *
+   * The caller is responsible for checking task state eligibility and
+   * retention policy before invoking cleanup (use {@link isWorkspaceCleanupEligible}
+   * from `@factory/domain`).
+   *
+   * @param taskId - The task whose workspace should be cleaned up.
+   * @param repoPath - Absolute path to the source repository.
+   * @param options - Optional cleanup configuration.
+   * @returns Result indicating which cleanup steps were performed.
+   */
+  cleanupWorkspace(
+    taskId: string,
+    repoPath: string,
+    options?: SupervisorCleanupOptions,
+  ): Promise<SupervisorCleanupResult>;
 }
 
 /**

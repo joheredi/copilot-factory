@@ -83,10 +83,38 @@ describe("FakeWorkspaceManager", () => {
    */
   it("tracks cleaned workspaces", async () => {
     const mgr = new FakeWorkspaceManager();
-    await mgr.cleanupWorkspace("task-1");
-    await mgr.cleanupWorkspace("task-2");
+    await mgr.cleanupWorkspace("task-1", "/repo");
+    await mgr.cleanupWorkspace("task-2", "/repo");
 
     expect(mgr.cleanedWorkspaces).toEqual(["task-1", "task-2"]);
+  });
+
+  /**
+   * Validates cleanup returns a result indicating what was done.
+   */
+  it("returns cleanup result with branch deletion status", async () => {
+    const mgr = new FakeWorkspaceManager();
+
+    const result1 = await mgr.cleanupWorkspace("task-1", "/repo");
+    expect(result1.worktreeRemoved).toBe(true);
+    expect(result1.directoryRemoved).toBe(true);
+    expect(result1.branchDeleted).toBe(true);
+
+    const result2 = await mgr.cleanupWorkspace("task-2", "/repo", { deleteBranch: false });
+    expect(result2.branchDeleted).toBe(false);
+  });
+
+  /**
+   * Validates detailed cleanup records with all parameters.
+   */
+  it("tracks cleanup records with full details", async () => {
+    const mgr = new FakeWorkspaceManager();
+    await mgr.cleanupWorkspace("task-1", "/repo", { forceBranchDelete: true });
+
+    expect(mgr.cleanupRecords).toHaveLength(1);
+    expect(mgr.cleanupRecords[0]!.taskId).toBe("task-1");
+    expect(mgr.cleanupRecords[0]!.repoPath).toBe("/repo");
+    expect(mgr.cleanupRecords[0]!.options?.forceBranchDelete).toBe(true);
   });
 
   /**
@@ -96,7 +124,7 @@ describe("FakeWorkspaceManager", () => {
     const error = new Error("Cleanup failed");
     const mgr = new FakeWorkspaceManager({ cleanupError: error });
 
-    await expect(mgr.cleanupWorkspace("task-1")).rejects.toThrow("Cleanup failed");
+    await expect(mgr.cleanupWorkspace("task-1", "/repo")).rejects.toThrow("Cleanup failed");
   });
 
   /**
@@ -105,10 +133,11 @@ describe("FakeWorkspaceManager", () => {
   it("resets all tracked state", async () => {
     const mgr = new FakeWorkspaceManager();
     await mgr.createWorkspace("task-1", "/repo");
-    await mgr.cleanupWorkspace("task-2");
+    await mgr.cleanupWorkspace("task-2", "/repo");
     mgr.reset();
 
     expect(mgr.createdWorkspaces).toHaveLength(0);
     expect(mgr.cleanedWorkspaces).toHaveLength(0);
+    expect(mgr.cleanupRecords).toHaveLength(0);
   });
 });

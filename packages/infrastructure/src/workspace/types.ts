@@ -152,6 +152,35 @@ export interface GitOperations {
    * @returns The short branch name (e.g., "factory/T001") or null if detached HEAD.
    */
   getCurrentBranch(worktreePath: string): Promise<string | null>;
+
+  /**
+   * Remove a git worktree.
+   * Equivalent to: `git worktree remove <worktreePath> --force`
+   *
+   * Does not throw if the worktree has already been removed or the path
+   * does not exist — this makes cleanup idempotent.
+   *
+   * @param repoPath - Absolute path to the main repository.
+   * @param worktreePath - Absolute path to the worktree to remove.
+   * @throws {GitOperationError} If the worktree cannot be removed for reasons other than non-existence.
+   */
+  removeWorktree(repoPath: string, worktreePath: string): Promise<void>;
+
+  /**
+   * Delete a local branch from the repository.
+   *
+   * Uses safe delete (`-d`) by default, which refuses to delete unmerged branches.
+   * Set `force` to true to use force delete (`-D`) for terminal task branches
+   * that may not have been merged.
+   *
+   * Does not throw if the branch does not exist — this makes cleanup idempotent.
+   *
+   * @param repoPath - Absolute path to the git repository.
+   * @param branchName - Branch name to delete (without refs/heads/ prefix).
+   * @param force - If true, use force delete (-D) to remove unmerged branches.
+   * @throws {GitOperationError} If the branch cannot be deleted for reasons other than non-existence.
+   */
+  deleteBranch(repoPath: string, branchName: string, force?: boolean): Promise<void>;
 }
 
 // ─── File System Interface ─────────────────────────────────────────────────────
@@ -224,4 +253,60 @@ export interface FileSystem {
    * @returns Array of directory entries with name and type.
    */
   readdir(path: string): Promise<Array<{ name: string; isDirectory: boolean }>>;
+
+  /**
+   * Remove a file or directory. Does not throw if the path does not exist.
+   *
+   * @param path - Absolute path to remove.
+   * @param options - Options: `recursive` for directories, `force` to ignore non-existence.
+   */
+  rm(path: string, options?: { recursive?: boolean; force?: boolean }): Promise<void>;
+}
+
+// ─── Cleanup Types ─────────────────────────────────────────────────────────────
+
+/**
+ * Options for cleaning up a task workspace.
+ *
+ * Cleanup removes the git worktree, workspace directory tree, and optionally
+ * the task branch. The caller is responsible for checking retention policy
+ * and task state eligibility before invoking cleanup.
+ *
+ * @see docs/prd/007-technical-architecture.md §7.10 — Workspace Strategy
+ */
+export interface CleanupWorkspaceOptions {
+  /** The task identifier whose workspace should be cleaned up. */
+  readonly taskId: string;
+  /** Absolute path to the source git repository. */
+  readonly repoPath: string;
+  /**
+   * Repository identifier for workspace path construction.
+   * Defaults to the basename of repoPath.
+   */
+  readonly repoId?: string;
+  /**
+   * Whether to delete the task branch after removing the worktree.
+   * Defaults to true.
+   */
+  readonly deleteBranch?: boolean;
+  /**
+   * Whether to force-delete the branch even if it is not fully merged.
+   * Use true for terminal task states (FAILED, CANCELLED) where the branch
+   * was never merged. Defaults to false (safe delete).
+   */
+  readonly forceBranchDelete?: boolean;
+}
+
+/**
+ * Result of a workspace cleanup operation.
+ * Each boolean indicates whether that specific cleanup step was performed.
+ * A step may be skipped if the resource was already gone (idempotent cleanup).
+ */
+export interface CleanupWorkspaceResult {
+  /** Whether a git worktree was removed (false if already gone). */
+  readonly worktreeRemoved: boolean;
+  /** Whether the workspace directory tree was removed (false if already gone). */
+  readonly directoryRemoved: boolean;
+  /** Whether the task branch was deleted (false if skipped, already gone, or deleteBranch=false). */
+  readonly branchDeleted: boolean;
 }

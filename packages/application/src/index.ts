@@ -270,6 +270,8 @@ export type {
   WorkerSupervisorRepositoryPort,
   SupervisorWorkspaceLayout,
   SupervisorWorkspaceResult,
+  SupervisorCleanupOptions,
+  SupervisorCleanupResult,
   WorkspaceProviderPort,
   SupervisorMountInput,
   PacketMounterPort,

@@ -49,6 +49,8 @@ export type {
   WorkspaceLayout,
   WorkspaceResult,
   CreateWorkspaceOptions,
+  CleanupWorkspaceOptions,
+  CleanupWorkspaceResult,
   WorktreeEntry,
   GitOperations,
   FileSystem,

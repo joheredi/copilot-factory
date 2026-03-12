@@ -80,7 +80,11 @@ export function sleep(ms: number): Promise<void> {
 
 export { FakeClock, DEFAULT_INITIAL_TIME } from "./fakes/index.js";
 export { FakeWorkspaceManager } from "./fakes/index.js";
-export type { FakeWorkspaceManagerConfig, TrackedWorkspace } from "./fakes/index.js";
+export type {
+  FakeWorkspaceManagerConfig,
+  TrackedWorkspace,
+  TrackedCleanup,
+} from "./fakes/index.js";
 export { FakeRunnerAdapter } from "./fakes/index.js";
 export type { FakeRunnerConfig, FakeRunOutcome, FakeRunnerCall } from "./fakes/index.js";
 
