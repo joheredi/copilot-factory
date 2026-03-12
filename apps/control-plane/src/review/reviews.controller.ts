@@ -8,7 +8,7 @@
  * @module @factory/control-plane
  * @see {@link file://docs/backlog/tasks/T084-api-artifacts-reviews.md}
  */
-import { Controller, Get, NotFoundException, Param } from "@nestjs/common";
+import { Controller, Get, NotFoundException, Param, Inject } from "@nestjs/common";
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
 
 import { ReviewsService } from "./reviews.service.js";
@@ -26,7 +26,7 @@ import type { ReviewHistoryResponse, ReviewCyclePacketsResponse } from "./review
 @Controller("tasks/:taskId/reviews")
 export class ReviewsController {
   /** @param reviewsService Injected reviews service. */
-  constructor(private readonly reviewsService: ReviewsService) {}
+  constructor(@Inject(ReviewsService) private readonly reviewsService: ReviewsService) {}
 
   /**
    * Get review cycle history for a task.

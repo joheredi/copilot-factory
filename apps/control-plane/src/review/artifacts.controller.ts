@@ -9,7 +9,7 @@
  * @module @factory/control-plane
  * @see {@link file://docs/backlog/tasks/T084-api-artifacts-reviews.md}
  */
-import { Controller, Get, NotFoundException, Param } from "@nestjs/common";
+import { Controller, Get, NotFoundException, Param, Inject } from "@nestjs/common";
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
 
 import { ArtifactsService } from "./artifacts.service.js";
@@ -27,7 +27,7 @@ import type { ArtifactTree, PacketContent } from "./artifacts.service.js";
 @Controller("tasks/:taskId")
 export class ArtifactsController {
   /** @param artifactsService Injected artifacts service. */
-  constructor(private readonly artifactsService: ArtifactsService) {}
+  constructor(@Inject(ArtifactsService) private readonly artifactsService: ArtifactsService) {}
 
   /**
    * List all artifacts for a task, organized by type.

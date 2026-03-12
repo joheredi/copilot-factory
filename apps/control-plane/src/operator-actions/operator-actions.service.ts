@@ -86,7 +86,7 @@ export class OperatorActionsService {
    */
   constructor(
     @Inject(DATABASE_CONNECTION) private readonly conn: DatabaseConnection,
-    eventBroadcaster: DomainEventBroadcasterAdapter,
+    @Inject(DomainEventBroadcasterAdapter) eventBroadcaster: DomainEventBroadcasterAdapter,
   ) {
     const unitOfWork = createSqliteUnitOfWork(conn);
     this.transitionService = createTransitionService(unitOfWork, eventBroadcaster);

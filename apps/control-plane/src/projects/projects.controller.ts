@@ -19,6 +19,7 @@ import {
   Post,
   Put,
   Query,
+  Inject,
 } from "@nestjs/common";
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
 
@@ -40,7 +41,7 @@ import type { Project } from "../infrastructure/repositories/project.repository.
 @Controller("projects")
 export class ProjectsController {
   /** @param projectsService Injected projects service. */
-  constructor(private readonly projectsService: ProjectsService) {}
+  constructor(@Inject(ProjectsService) private readonly projectsService: ProjectsService) {}
 
   /**
    * Create a new project.

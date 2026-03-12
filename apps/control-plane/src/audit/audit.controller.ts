@@ -9,7 +9,7 @@
  * @module @factory/control-plane
  * @see {@link file://docs/backlog/tasks/T085-api-audit-policy-config.md}
  */
-import { Controller, Get, Query } from "@nestjs/common";
+import { Controller, Get, Query, Inject } from "@nestjs/common";
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
 
 import { AuditService } from "./audit.service.js";
@@ -27,7 +27,7 @@ import type { PaginatedAuditResponse } from "./audit.service.js";
 @Controller("audit")
 export class AuditController {
   /** @param auditService Injected audit service. */
-  constructor(private readonly auditService: AuditService) {}
+  constructor(@Inject(AuditService) private readonly auditService: AuditService) {}
 
   /**
    * Search audit events with optional filters and pagination.

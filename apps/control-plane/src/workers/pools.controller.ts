@@ -24,6 +24,7 @@ import {
   Post,
   Put,
   Query,
+  Inject,
 } from "@nestjs/common";
 import { ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
 
@@ -50,7 +51,7 @@ import type { Worker } from "../infrastructure/repositories/worker.repository.js
 @Controller("pools")
 export class PoolsController {
   /** @param poolsService Injected pools service. */
-  constructor(private readonly poolsService: PoolsService) {}
+  constructor(@Inject(PoolsService) private readonly poolsService: PoolsService) {}
 
   /**
    * Create a new worker pool.

@@ -8,7 +8,16 @@
  * @module @factory/control-plane
  * @see {@link file://docs/backlog/tasks/T085-api-audit-policy-config.md}
  */
-import { Body, Controller, Get, NotFoundException, Param, Put, Query } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Put,
+  Query,
+  Inject,
+} from "@nestjs/common";
 import { ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
 
 import { PoliciesService } from "./policies.service.js";
@@ -28,7 +37,7 @@ import type { PolicySet } from "../infrastructure/repositories/policy-set.reposi
 @Controller("policies")
 export class PoliciesController {
   /** @param policiesService Injected policies service. */
-  constructor(private readonly policiesService: PoliciesService) {}
+  constructor(@Inject(PoliciesService) private readonly policiesService: PoliciesService) {}
 
   /**
    * List all policy sets with pagination.

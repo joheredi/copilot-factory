@@ -7,7 +7,7 @@
  * @module @factory/control-plane
  * @see {@link file://docs/backlog/tasks/T084-api-artifacts-reviews.md}
  */
-import { Controller, Get, NotFoundException, Param } from "@nestjs/common";
+import { Controller, Get, NotFoundException, Param, Inject } from "@nestjs/common";
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
 
 import { MergeDetailsService } from "./merge-details.service.js";
@@ -24,7 +24,9 @@ import type { MergeDetailResponse } from "./merge-details.service.js";
 @Controller("tasks/:taskId/merge")
 export class MergeDetailsController {
   /** @param mergeDetailsService Injected merge details service. */
-  constructor(private readonly mergeDetailsService: MergeDetailsService) {}
+  constructor(
+    @Inject(MergeDetailsService) private readonly mergeDetailsService: MergeDetailsService,
+  ) {}
 
   /**
    * Get merge details for a task.

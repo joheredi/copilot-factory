@@ -16,7 +16,7 @@
  * @see {@link file://docs/prd/006-additional-refinements.md} §6.2
  * @see {@link file://docs/backlog/tasks/T101-api-operator-actions.md}
  */
-import { Body, Controller, HttpCode, HttpStatus, Param, Post } from "@nestjs/common";
+import { Body, Controller, HttpCode, HttpStatus, Param, Post, Inject } from "@nestjs/common";
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
 
 import { OperatorActionsService } from "./operator-actions.service.js";
@@ -46,7 +46,7 @@ import {
 @Controller("tasks")
 export class OperatorActionsController {
   /** @param service Injected operator actions service. */
-  constructor(private readonly service: OperatorActionsService) {}
+  constructor(@Inject(OperatorActionsService) private readonly service: OperatorActionsService) {}
 
   /**
    * Pause a task (move to ESCALATED).

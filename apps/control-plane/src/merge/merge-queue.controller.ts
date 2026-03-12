@@ -8,7 +8,7 @@
  * @module @factory/control-plane
  * @see {@link file://docs/backlog/tasks/T098-build-merge-queue-view.md}
  */
-import { Controller, Get, Query } from "@nestjs/common";
+import { Controller, Get, Query, Inject } from "@nestjs/common";
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
 
 import { MergeQueueFilterQueryDto } from "./dtos/merge-queue-filter-query.dto.js";
@@ -25,7 +25,7 @@ import type { PaginatedMergeQueueResponse } from "./merge-queue.service.js";
 @Controller("merge-queue")
 export class MergeQueueController {
   /** @param mergeQueueService Injected merge queue service. */
-  constructor(private readonly mergeQueueService: MergeQueueService) {}
+  constructor(@Inject(MergeQueueService) private readonly mergeQueueService: MergeQueueService) {}
 
   /**
    * List merge queue items with optional filters.

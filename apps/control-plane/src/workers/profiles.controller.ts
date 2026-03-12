@@ -23,6 +23,7 @@ import {
   Param,
   Post,
   Put,
+  Inject,
 } from "@nestjs/common";
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
 
@@ -45,7 +46,7 @@ import type { AgentProfile } from "../infrastructure/repositories/agent-profile.
 @Controller("pools/:poolId/profiles")
 export class ProfilesController {
   /** @param profilesService Injected profiles service. */
-  constructor(private readonly profilesService: ProfilesService) {}
+  constructor(@Inject(ProfilesService) private readonly profilesService: ProfilesService) {}
 
   /**
    * Create a new agent profile in the specified pool.

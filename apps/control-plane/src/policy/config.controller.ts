@@ -8,7 +8,7 @@
  * @module @factory/control-plane
  * @see {@link file://docs/backlog/tasks/T085-api-audit-policy-config.md}
  */
-import { Controller, Get } from "@nestjs/common";
+import { Controller, Get, Inject } from "@nestjs/common";
 import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 
 import { ConfigService } from "./config.service.js";
@@ -26,7 +26,7 @@ import type { EffectiveConfigResponse } from "./config.service.js";
 @Controller("config")
 export class ConfigController {
   /** @param configService Injected config resolution service. */
-  constructor(private readonly configService: ConfigService) {}
+  constructor(@Inject(ConfigService) private readonly configService: ConfigService) {}
 
   /**
    * Get the effective resolved configuration.

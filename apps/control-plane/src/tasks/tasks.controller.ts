@@ -18,6 +18,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Inject,
   NotFoundException,
   Param,
   Post,
@@ -52,8 +53,8 @@ export class TasksController {
    * @param auditService Injected audit service for timeline queries.
    */
   constructor(
-    private readonly tasksService: TasksService,
-    private readonly auditService: AuditService,
+    @Inject(TasksService) private readonly tasksService: TasksService,
+    @Inject(AuditService) private readonly auditService: AuditService,
   ) {}
 
   /**

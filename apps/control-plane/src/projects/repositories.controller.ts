@@ -19,6 +19,7 @@ import {
   Post,
   Put,
   Query,
+  Inject,
 } from "@nestjs/common";
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
 
@@ -40,7 +41,9 @@ import type { Repository } from "../infrastructure/repositories/repository.repos
 @Controller()
 export class RepositoriesController {
   /** @param repositoriesService Injected repositories service. */
-  constructor(private readonly repositoriesService: RepositoriesService) {}
+  constructor(
+    @Inject(RepositoriesService) private readonly repositoriesService: RepositoriesService,
+  ) {}
 
   /**
    * Create a new repository within a project.
