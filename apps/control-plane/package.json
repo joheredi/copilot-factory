@@ -38,11 +38,14 @@
     "@nestjs/common": "^11.1.16",
     "@nestjs/core": "^11.1.16",
     "@nestjs/platform-fastify": "^11.1.16",
+    "@nestjs/platform-socket.io": "^11.1.16",
     "@nestjs/swagger": "^11.2.6",
+    "@nestjs/websockets": "^11.1.16",
     "better-sqlite3": "^12.6.2",
     "drizzle-orm": "^0.45.1",
     "fastify": "^5.8.2",
     "reflect-metadata": "^0.2.2",
+    "socket.io": "^4.8.3",
     "zod": "^4.3.6"
   },
   "devDependencies": {

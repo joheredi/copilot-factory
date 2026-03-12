@@ -11,6 +11,7 @@
 import { Module } from "@nestjs/common";
 
 import { AuditModule } from "./audit/audit.module.js";
+import { EventsModule } from "./events/events.module.js";
 import { HealthModule } from "./health/health.module.js";
 import { DatabaseModule } from "./infrastructure/database/database.module.js";
 import { MergeModule } from "./merge/merge.module.js";
@@ -37,11 +38,13 @@ import { WorkersModule } from "./workers/workers.module.js";
  * - ValidationModule: validation run tracking
  * - AuditModule: audit event recording
  * - PolicyModule: policy set management
+ * - EventsModule: WebSocket gateway for real-time event delivery (§7.7)
  * - OperatorActionsModule: operator action endpoints (§6.2)
  */
 @Module({
   imports: [
     DatabaseModule,
+    EventsModule,
     HealthModule,
     MetricsModule,
     ProjectsModule,
