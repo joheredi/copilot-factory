@@ -476,3 +476,33 @@ Also fixed T072 backlog index status (was `pending` but task file was `done`).
 - T094 (task board) and T095 (task detail) are ready and share similar patterns
 - The `useTasks` hook already supports filtering/pagination needed for the task board
 - Consider adding a dedicated backend summary endpoint later for efficiency
+
+## T094: Build task board with status filtering and pagination — DONE
+
+**What was done:**
+
+- Replaced placeholder task board page with full implementation
+- Created `features/tasks/hooks/use-task-filters.ts` — URL-synced filter/pagination state hook
+- Created `features/tasks/components/task-status-badge.tsx` — Color-coded status badges grouped by lifecycle phase
+- Created `features/tasks/components/task-priority-badge.tsx` — Color-coded priority badges
+- Created `features/tasks/components/task-filters.tsx` — Toggle button filters for status, priority, and task type
+- Created `features/tasks/components/task-table.tsx` — Sortable data table with loading skeleton and empty state
+- Created `features/tasks/components/pagination-controls.tsx` — Page navigation with size selector
+- Updated `features/tasks/page.tsx` — Full task board with filters, table, and pagination
+- Created `features/tasks/page.test.tsx` — 15 tests covering all acceptance criteria
+- All 3,722 tests pass (153 test files)
+
+**Key patterns used:**
+
+- Filter state in URL search params via `useSearchParams` for shareable/bookmarkable URLs
+- Client-side sorting (API lacks sort params) with column header toggles
+- Status color categories matching dashboard's state groupings (active=blue, review=purple, queued=amber, success=green, error=red, blocked=orange)
+- Toggle button UX instead of Select (no Select component in UI library)
+- Follows dashboard page pattern: data-testid attributes, loading skeletons, error alerts
+
+**For next loop:**
+
+- T095 (task detail timeline) is now ready and shares the same API types
+- T096-T100 (other UI views) are also ready in parallel
+- T104 (operator controls in task detail) is now unblocked by T094+T095
+- Consider adding a Select/Combobox shadcn component for more compact filter UIs in future views
