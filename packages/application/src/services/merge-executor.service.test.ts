@@ -1,13 +1,19 @@
 /**
  * Tests for the merge executor service.
  *
- * Validates the full rebase-and-merge pipeline including:
- * - Happy path: rebase → validate → push → MERGED
- * - Rebase conflict with reworkable classification → CHANGES_REQUESTED
- * - Rebase conflict with non-reworkable classification → FAILED
+ * Validates the merge pipeline for all three strategies:
+ * - Rebase-and-merge: rebase → validate → push source branch → MERGED
+ * - Squash: squash merge → validate → push target branch → MERGED
+ * - Merge-commit: merge --no-ff → validate → push target branch → MERGED
+ *
+ * Also validates:
+ * - Rebase/merge conflict with reworkable classification → CHANGES_REQUESTED
+ * - Rebase/merge conflict with non-reworkable classification → FAILED
  * - Merge-gate validation failure → item FAILED
  * - Git push failure → item FAILED
  * - Error cases: item not found, wrong status, task not found
+ * - Strategy defaults to rebase-and-merge when not specified
+ * - Push branch varies per strategy (source for rebase, target for squash/merge-commit)
  *
  * Each test uses fake implementations of all ports (git, validation,
  * conflict classifier, artifact store) to verify orchestration logic
@@ -38,6 +44,7 @@ import type {
   ConflictClassifierPort,
   ConflictClassification,
   RebaseResult,
+  MergeOperationResult,
   MergeExecutorTaskRepositoryPort,
   MergeExecutorItemRepositoryPort,
 } from "../ports/merge-executor.ports.js";
@@ -169,9 +176,12 @@ function createFakeUnitOfWork(
 
 /**
  * Creates a fake git operations port with configurable behavior.
+ * Supports all three merge strategies: rebase-and-merge, squash, merge-commit.
  */
 function createFakeGitOps(overrides?: {
   rebaseResult?: RebaseResult;
+  squashMergeResult?: MergeOperationResult;
+  mergeCommitResult?: MergeOperationResult;
   pushError?: Error;
   headSha?: string;
   currentBranch?: string;
@@ -182,6 +192,21 @@ function createFakeGitOps(overrides?: {
     },
     async rebase(_workspacePath: string, _onto: string): Promise<RebaseResult> {
       return overrides?.rebaseResult ?? { success: true, conflictFiles: [] };
+    },
+    async squashMerge(
+      _workspacePath: string,
+      _sourceBranch: string,
+      _targetBranch: string,
+      _commitMessage: string,
+    ): Promise<MergeOperationResult> {
+      return overrides?.squashMergeResult ?? { success: true, conflictFiles: [] };
+    },
+    async mergeCommit(
+      _workspacePath: string,
+      _sourceBranch: string,
+      _targetBranch: string,
+    ): Promise<MergeOperationResult> {
+      return overrides?.mergeCommitResult ?? { success: true, conflictFiles: [] };
     },
     async push(_workspacePath: string, _remote: string, _branch: string): Promise<void> {
       if (overrides?.pushError) {
@@ -787,6 +812,372 @@ describe("MergeExecutorService", () => {
         (e) => e.metadata && e.metadata.includes("requestedBy"),
       );
       expect(eventsWithMetadata.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("executeMerge — squash strategy", () => {
+    /**
+     * Validates the full successful squash merge pipeline.
+     *
+     * Squash merges combine all feature branch commits into a single commit
+     * on the target branch. This test verifies the executor correctly calls
+     * squashMerge instead of rebase, pushes the target branch (not source),
+     * and records the correct strategy in the MergePacket.
+     *
+     * @see docs/prd/010-integration-contracts.md §10.10.1
+     */
+    it("should complete the full squash merge pipeline successfully", async () => {
+      const fixture = createDefaultFixture();
+      const result = await fixture.service.executeMerge({
+        ...fixture.defaultParams,
+        mergeStrategy: MergeStrategy.SQUASH,
+      });
+
+      expect(result.outcome).toBe("merged");
+      const merged = result as MergeSuccessResult;
+
+      expect(merged.item.status).toBe(MergeQueueItemStatus.MERGED);
+      expect(merged.task.status).toBe(TaskStatus.POST_MERGE_VALIDATION);
+      expect(merged.mergedCommitSha).toBe(MERGED_SHA);
+      expect(merged.artifactPath).toContain("merge-packet.json");
+    });
+
+    /**
+     * Validates that the MergePacket records the squash strategy and
+     * rebase_performed=false, since squash merges do not rebase.
+     *
+     * Important because downstream consumers use the MergePacket to
+     * understand exactly how the merge was performed.
+     */
+    it("should emit a MergePacket with squash strategy and rebase_performed=false", async () => {
+      const fixture = createDefaultFixture();
+      const result = await fixture.service.executeMerge({
+        ...fixture.defaultParams,
+        mergeStrategy: MergeStrategy.SQUASH,
+      });
+
+      const merged = result as MergeSuccessResult;
+      const packet = merged.mergePacket;
+
+      expect(packet.details.merge_strategy).toBe(MergeStrategy.SQUASH);
+      expect(packet.details.rebase_performed).toBe(false);
+      expect(packet.summary).toContain("Squash merge");
+    });
+
+    /**
+     * Validates that squash merge calls squashMerge (not rebase) on the
+     * git operations port, and passes the correct arguments.
+     *
+     * Important because calling the wrong git operation would produce
+     * incorrect repository state.
+     */
+    it("should call squashMerge instead of rebase", async () => {
+      const squashCalls: Array<{
+        workspacePath: string;
+        sourceBranch: string;
+        targetBranch: string;
+        commitMessage: string;
+      }> = [];
+      const rebaseCalls: Array<{ workspacePath: string; onto: string }> = [];
+
+      const gitOps = createFakeGitOps();
+      const trackedGitOps: MergeGitOperationsPort = {
+        ...gitOps,
+        async rebase(workspacePath, onto) {
+          rebaseCalls.push({ workspacePath, onto });
+          return gitOps.rebase(workspacePath, onto);
+        },
+        async squashMerge(workspacePath, sourceBranch, targetBranch, commitMessage) {
+          squashCalls.push({ workspacePath, sourceBranch, targetBranch, commitMessage });
+          return gitOps.squashMerge(workspacePath, sourceBranch, targetBranch, commitMessage);
+        },
+      };
+
+      const fixture = createDefaultFixture({ gitOps: trackedGitOps });
+      await fixture.service.executeMerge({
+        ...fixture.defaultParams,
+        mergeStrategy: MergeStrategy.SQUASH,
+      });
+
+      expect(rebaseCalls).toHaveLength(0);
+      expect(squashCalls).toHaveLength(1);
+      expect(squashCalls[0]!.workspacePath).toBe(WORKSPACE);
+      expect(squashCalls[0]!.sourceBranch).toBe(SOURCE_BRANCH);
+      expect(squashCalls[0]!.targetBranch).toBe(`origin/${TARGET_BRANCH}`);
+    });
+
+    /**
+     * Validates that squash merge pushes the target branch (not source).
+     *
+     * For squash merges, the squashed commit lives on the target branch,
+     * so the target branch must be pushed to the remote.
+     */
+    it("should push the target branch for squash strategy", async () => {
+      const pushCalls: Array<{ remote: string; branch: string }> = [];
+
+      const gitOps = createFakeGitOps();
+      const trackedGitOps: MergeGitOperationsPort = {
+        ...gitOps,
+        async push(_wp, remote, branch) {
+          pushCalls.push({ remote, branch });
+        },
+      };
+
+      const fixture = createDefaultFixture({ gitOps: trackedGitOps });
+      await fixture.service.executeMerge({
+        ...fixture.defaultParams,
+        mergeStrategy: MergeStrategy.SQUASH,
+      });
+
+      expect(pushCalls).toHaveLength(1);
+      expect(pushCalls[0]!.branch).toBe(TARGET_BRANCH);
+    });
+
+    /**
+     * Validates that squash merge conflicts are handled identically to
+     * rebase conflicts — classified and transitioned appropriately.
+     *
+     * Important because merge conflicts can occur with any strategy,
+     * and the conflict classification pipeline must work for all of them.
+     */
+    it("should handle squash merge conflicts correctly", async () => {
+      const conflictFiles = ["src/utils.ts"];
+      const fixture = createDefaultFixture({
+        gitOps: createFakeGitOps({
+          squashMergeResult: { success: false, conflictFiles },
+        }),
+        conflictClassifier: createFakeClassifier("reworkable"),
+      });
+
+      const result = await fixture.service.executeMerge({
+        ...fixture.defaultParams,
+        mergeStrategy: MergeStrategy.SQUASH,
+      });
+
+      expect(result.outcome).toBe("rebase_conflict");
+      const conflict = result as RebaseConflictResult;
+
+      expect(conflict.classification).toBe("reworkable");
+      expect(conflict.conflictFiles).toEqual(conflictFiles);
+      expect(conflict.item.status).toBe(MergeQueueItemStatus.REQUEUED);
+      expect(conflict.task.status).toBe(TaskStatus.CHANGES_REQUESTED);
+    });
+  });
+
+  describe("executeMerge — merge-commit strategy", () => {
+    /**
+     * Validates the full successful merge-commit pipeline.
+     *
+     * Merge-commit creates a merge commit preserving the full branch
+     * topology (git merge --no-ff). This test verifies the executor
+     * correctly calls mergeCommit, pushes the target branch, and records
+     * the correct strategy in the MergePacket.
+     *
+     * @see docs/prd/010-integration-contracts.md §10.10.1
+     */
+    it("should complete the full merge-commit pipeline successfully", async () => {
+      const fixture = createDefaultFixture();
+      const result = await fixture.service.executeMerge({
+        ...fixture.defaultParams,
+        mergeStrategy: MergeStrategy.MERGE_COMMIT,
+      });
+
+      expect(result.outcome).toBe("merged");
+      const merged = result as MergeSuccessResult;
+
+      expect(merged.item.status).toBe(MergeQueueItemStatus.MERGED);
+      expect(merged.task.status).toBe(TaskStatus.POST_MERGE_VALIDATION);
+      expect(merged.mergedCommitSha).toBe(MERGED_SHA);
+      expect(merged.artifactPath).toContain("merge-packet.json");
+    });
+
+    /**
+     * Validates that the MergePacket records the merge-commit strategy and
+     * rebase_performed=false, since merge-commit does not rebase.
+     *
+     * Important because the MergePacket is the canonical record of the
+     * merge operation, and downstream processes use it to understand
+     * how the merge was performed.
+     */
+    it("should emit a MergePacket with merge-commit strategy and rebase_performed=false", async () => {
+      const fixture = createDefaultFixture();
+      const result = await fixture.service.executeMerge({
+        ...fixture.defaultParams,
+        mergeStrategy: MergeStrategy.MERGE_COMMIT,
+      });
+
+      const merged = result as MergeSuccessResult;
+      const packet = merged.mergePacket;
+
+      expect(packet.details.merge_strategy).toBe(MergeStrategy.MERGE_COMMIT);
+      expect(packet.details.rebase_performed).toBe(false);
+      expect(packet.summary).toContain("Merge commit");
+    });
+
+    /**
+     * Validates that merge-commit calls mergeCommit (not rebase or squashMerge)
+     * on the git operations port.
+     *
+     * Important because calling the wrong git operation would produce
+     * incorrect repository history.
+     */
+    it("should call mergeCommit instead of rebase or squashMerge", async () => {
+      const mergeCommitCalls: Array<{
+        workspacePath: string;
+        sourceBranch: string;
+        targetBranch: string;
+      }> = [];
+      const rebaseCalls: Array<{ workspacePath: string; onto: string }> = [];
+      const squashCalls: Array<{ workspacePath: string }> = [];
+
+      const gitOps = createFakeGitOps();
+      const trackedGitOps: MergeGitOperationsPort = {
+        ...gitOps,
+        async rebase(workspacePath, onto) {
+          rebaseCalls.push({ workspacePath, onto });
+          return gitOps.rebase(workspacePath, onto);
+        },
+        async squashMerge(workspacePath, s, t, m) {
+          squashCalls.push({ workspacePath });
+          return gitOps.squashMerge(workspacePath, s, t, m);
+        },
+        async mergeCommit(workspacePath, sourceBranch, targetBranch) {
+          mergeCommitCalls.push({ workspacePath, sourceBranch, targetBranch });
+          return gitOps.mergeCommit(workspacePath, sourceBranch, targetBranch);
+        },
+      };
+
+      const fixture = createDefaultFixture({ gitOps: trackedGitOps });
+      await fixture.service.executeMerge({
+        ...fixture.defaultParams,
+        mergeStrategy: MergeStrategy.MERGE_COMMIT,
+      });
+
+      expect(rebaseCalls).toHaveLength(0);
+      expect(squashCalls).toHaveLength(0);
+      expect(mergeCommitCalls).toHaveLength(1);
+      expect(mergeCommitCalls[0]!.workspacePath).toBe(WORKSPACE);
+      expect(mergeCommitCalls[0]!.sourceBranch).toBe(SOURCE_BRANCH);
+      expect(mergeCommitCalls[0]!.targetBranch).toBe(`origin/${TARGET_BRANCH}`);
+    });
+
+    /**
+     * Validates that merge-commit pushes the target branch (not source).
+     *
+     * For merge-commit, the merge commit lives on the target branch,
+     * so the target branch must be pushed to the remote.
+     */
+    it("should push the target branch for merge-commit strategy", async () => {
+      const pushCalls: Array<{ remote: string; branch: string }> = [];
+
+      const gitOps = createFakeGitOps();
+      const trackedGitOps: MergeGitOperationsPort = {
+        ...gitOps,
+        async push(_wp, remote, branch) {
+          pushCalls.push({ remote, branch });
+        },
+      };
+
+      const fixture = createDefaultFixture({ gitOps: trackedGitOps });
+      await fixture.service.executeMerge({
+        ...fixture.defaultParams,
+        mergeStrategy: MergeStrategy.MERGE_COMMIT,
+      });
+
+      expect(pushCalls).toHaveLength(1);
+      expect(pushCalls[0]!.branch).toBe(TARGET_BRANCH);
+    });
+
+    /**
+     * Validates that merge-commit conflicts are handled identically to
+     * rebase conflicts — classified and transitioned appropriately.
+     */
+    it("should handle merge-commit conflicts correctly", async () => {
+      const conflictFiles = ["src/index.ts", "package.json"];
+      const fixture = createDefaultFixture({
+        gitOps: createFakeGitOps({
+          mergeCommitResult: { success: false, conflictFiles },
+        }),
+        conflictClassifier: createFakeClassifier("non_reworkable"),
+      });
+
+      const result = await fixture.service.executeMerge({
+        ...fixture.defaultParams,
+        mergeStrategy: MergeStrategy.MERGE_COMMIT,
+      });
+
+      expect(result.outcome).toBe("rebase_conflict");
+      const conflict = result as RebaseConflictResult;
+
+      expect(conflict.classification).toBe("non_reworkable");
+      expect(conflict.conflictFiles).toEqual(conflictFiles);
+      expect(conflict.item.status).toBe(MergeQueueItemStatus.FAILED);
+      expect(conflict.task.status).toBe(TaskStatus.FAILED);
+    });
+  });
+
+  describe("executeMerge — strategy defaults", () => {
+    /**
+     * Validates that when no mergeStrategy is specified, the executor
+     * defaults to rebase-and-merge per §10.10.1.
+     *
+     * Important because backward compatibility requires existing callers
+     * (that don't pass mergeStrategy) to get the original behavior.
+     */
+    it("should default to rebase-and-merge when mergeStrategy is not specified", async () => {
+      const fixture = createDefaultFixture();
+      const result = await fixture.service.executeMerge(fixture.defaultParams);
+
+      const merged = result as MergeSuccessResult;
+      expect(merged.mergePacket.details.merge_strategy).toBe(MergeStrategy.REBASE_AND_MERGE);
+      expect(merged.mergePacket.details.rebase_performed).toBe(true);
+    });
+
+    /**
+     * Validates that push target differs per strategy:
+     * rebase-and-merge pushes source branch, others push target branch.
+     *
+     * Important because pushing the wrong branch would corrupt the
+     * repository state.
+     */
+    it("should push source branch for rebase-and-merge but target for other strategies", async () => {
+      const pushBranches: string[] = [];
+
+      const gitOps = createFakeGitOps({ currentBranch: "factory/task-001" });
+      const trackedGitOps: MergeGitOperationsPort = {
+        ...gitOps,
+        async push(_wp, _remote, branch) {
+          pushBranches.push(branch);
+        },
+      };
+
+      // Rebase-and-merge: pushes source branch
+      const fixture1 = createDefaultFixture({ gitOps: trackedGitOps });
+      await fixture1.service.executeMerge({
+        ...fixture1.defaultParams,
+        mergeStrategy: MergeStrategy.REBASE_AND_MERGE,
+      });
+      expect(pushBranches[0]).toBe("factory/task-001");
+
+      pushBranches.length = 0;
+
+      // Squash: pushes target branch
+      const fixture2 = createDefaultFixture({ gitOps: trackedGitOps });
+      await fixture2.service.executeMerge({
+        ...fixture2.defaultParams,
+        mergeStrategy: MergeStrategy.SQUASH,
+      });
+      expect(pushBranches[0]).toBe(TARGET_BRANCH);
+
+      pushBranches.length = 0;
+
+      // Merge-commit: pushes target branch
+      const fixture3 = createDefaultFixture({ gitOps: trackedGitOps });
+      await fixture3.service.executeMerge({
+        ...fixture3.defaultParams,
+        mergeStrategy: MergeStrategy.MERGE_COMMIT,
+      });
+      expect(pushBranches[0]).toBe(TARGET_BRANCH);
     });
   });
 });

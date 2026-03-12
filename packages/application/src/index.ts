@@ -624,6 +624,7 @@ export type {
   MergeExecutorTask,
   MergeExecutorItem,
   RebaseResult,
+  MergeOperationResult,
   MergeGitOperationsPort,
   MergeValidationPort,
   ConflictClassification,

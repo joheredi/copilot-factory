@@ -349,3 +349,28 @@ Implemented the conflict classifier service that determines whether merge confli
 - The `ExpiredWorkspaceQueryPort` and `WorkspaceDirectoryScannerPort` need infrastructure implementations when the control-plane wires up the service
 - The `WorkspaceDirectoryScannerPort` is a new port that needs a filesystem-based implementation scanning `{workspacesRoot}/{repoId}/{taskId}/` directories
 - T042 doesn't block any other tasks currently
+
+## T065: Implement squash and merge-commit strategies — Done
+
+**What was implemented:**
+
+- Extended `MergeGitOperationsPort` with `squashMerge()` and `mergeCommit()` methods and `MergeOperationResult` type
+- Added `mergeStrategy` (optional, defaults to rebase-and-merge) to `ExecuteMergeParams`
+- Updated merge executor Phase 3 to dispatch to the correct git operation based on strategy
+- Updated Phase 5 to push the correct branch: source branch for rebase-and-merge, target branch for squash/merge-commit
+- Updated Phase 7 MergePacket to record the chosen strategy and set `rebase_performed` correctly (true only for rebase-and-merge)
+- Strategy-specific summary labels in MergePacket ("Squash merge", "Merge commit", "Rebase-and-merge")
+- 12 new tests: squash happy path, merge-commit happy path, MergePacket correctness per strategy, git op dispatch verification, push branch verification, conflict handling per strategy, default strategy backward compatibility
+
+**Files changed:**
+
+- `packages/application/src/ports/merge-executor.ports.ts` — added `MergeOperationResult`, `squashMerge()`, `mergeCommit()`
+- `packages/application/src/services/merge-executor.service.ts` — strategy dispatch, push branch logic, packet details
+- `packages/application/src/services/merge-executor.service.test.ts` — 12 new tests, updated fake git ops
+- `packages/application/src/index.ts` — exported `MergeOperationResult`
+
+**What the next loop should know:**
+
+- The `MergeGitOperationsPort.squashMerge()` and `mergeCommit()` need infrastructure implementations when wiring up the merge executor
+- Strategy selection from policy (task override → repo workflow → system default) is the caller's responsibility — the merge executor receives the resolved strategy
+- All three strategies reuse the same conflict classification pipeline

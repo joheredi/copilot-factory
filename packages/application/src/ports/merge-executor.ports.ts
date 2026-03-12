@@ -4,7 +4,8 @@
  * Defines the minimal contracts for git operations, validation, conflict
  * classification, artifact persistence, and data access required by the
  * merge executor. Each port is intentionally narrow — exposing only the
- * operations needed for rebase-and-merge execution.
+ * operations needed for merge execution across all supported strategies
+ * (rebase-and-merge, squash, merge-commit).
  *
  * @see docs/prd/010-integration-contracts.md §10.10 — Merge Pipeline
  * @see docs/prd/002-data-model.md §2.2 MergeQueueItem State
@@ -58,6 +59,18 @@ export interface RebaseResult {
 }
 
 /**
+ * Result of a merge operation (squash or merge-commit).
+ * Structurally identical to RebaseResult — when `success` is false,
+ * `conflictFiles` lists the files with conflicts.
+ */
+export interface MergeOperationResult {
+  /** Whether the merge completed without conflicts. */
+  readonly success: boolean;
+  /** Files with conflicts when the merge fails. Empty array on success. */
+  readonly conflictFiles: readonly string[];
+}
+
+/**
  * Port for git operations needed during merge execution.
  *
  * Implementations execute real git CLI commands; test doubles mock
@@ -87,6 +100,52 @@ export interface MergeGitOperationsPort {
    * @returns A RebaseResult indicating success or failure with conflict files.
    */
   rebase(workspacePath: string, onto: string): Promise<RebaseResult>;
+
+  /**
+   * Squash-merge a source branch into the current (target) branch.
+   * Equivalent to: `git checkout <targetBranch> && git merge --squash <sourceBranch> && git commit -m <message>`
+   *
+   * The workspace must have the target branch checked out (or this method
+   * checks it out). All source branch commits are squashed into a single
+   * commit on the target branch.
+   *
+   * If conflicts occur, the merge is automatically aborted and the
+   * conflicting files are reported.
+   *
+   * @param workspacePath - Absolute path to the git worktree.
+   * @param sourceBranch - The branch whose changes are being squashed (e.g., "factory/task-001").
+   * @param targetBranch - The branch to squash into (e.g., "origin/main").
+   * @param commitMessage - The commit message for the squashed commit.
+   * @returns A MergeOperationResult indicating success or failure with conflict files.
+   */
+  squashMerge(
+    workspacePath: string,
+    sourceBranch: string,
+    targetBranch: string,
+    commitMessage: string,
+  ): Promise<MergeOperationResult>;
+
+  /**
+   * Merge a source branch into the current (target) branch with a merge commit.
+   * Equivalent to: `git checkout <targetBranch> && git merge --no-ff <sourceBranch>`
+   *
+   * The workspace must have the target branch checked out (or this method
+   * checks it out). A merge commit is created preserving the full branch
+   * topology.
+   *
+   * If conflicts occur, the merge is automatically aborted and the
+   * conflicting files are reported.
+   *
+   * @param workspacePath - Absolute path to the git worktree.
+   * @param sourceBranch - The branch being merged (e.g., "factory/task-001").
+   * @param targetBranch - The branch to merge into (e.g., "origin/main").
+   * @returns A MergeOperationResult indicating success or failure with conflict files.
+   */
+  mergeCommit(
+    workspacePath: string,
+    sourceBranch: string,
+    targetBranch: string,
+  ): Promise<MergeOperationResult>;
 
   /**
    * Push the current branch to a remote.

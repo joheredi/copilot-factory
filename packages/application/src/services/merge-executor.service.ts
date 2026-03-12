@@ -1,21 +1,26 @@
 /**
- * Merge executor service — orchestrates the rebase-and-merge strategy.
+ * Merge executor service — orchestrates all merge strategies.
  *
- * Executes the default merge pipeline for a dequeued merge queue item:
+ * Executes the merge pipeline for a dequeued merge queue item using the
+ * configured strategy (rebase-and-merge, squash, or merge-commit):
  * 1. Transition item PREPARING → REBASING, task QUEUED_FOR_MERGE → MERGING
- * 2. Fetch latest refs and rebase onto target branch
- * 3. On rebase failure: classify conflict, transition to FAILED/CHANGES_REQUESTED
- * 4. On rebase success: run merge-gate validation
+ * 2. Fetch latest refs and perform strategy-specific merge operation
+ * 3. On merge failure: classify conflict, transition to FAILED/CHANGES_REQUESTED
+ * 4. On merge success: run merge-gate validation
  * 5. On validation failure: transition item to FAILED
  * 6. On validation pass: push to remote, transition item MERGING → MERGED
  * 7. Transition task MERGING → POST_MERGE_VALIDATION
- * 8. Emit MergePacket with full details
+ * 8. Emit MergePacket with full details including chosen strategy
+ *
+ * Strategy precedence (§10.10.1):
+ *   task-level override → repo workflow template → system default (rebase-and-merge)
  *
  * All state transitions use the domain state machine guards and are
  * persisted atomically with audit events. Domain events are emitted
  * after each transaction commits.
  *
  * @see docs/prd/010-integration-contracts.md §10.10 — Merge Pipeline
+ * @see docs/prd/010-integration-contracts.md §10.10.1 — Merge Strategy
  * @see docs/prd/002-data-model.md §2.2 MergeQueueItem State
  * @see docs/prd/008-packet-and-schema-spec.md §8.8 MergePacket
  * @module @factory/application/services/merge-executor.service
@@ -100,8 +105,16 @@ export interface ExecuteMergeParams {
   readonly mergeQueueItemId: string;
   /** Absolute path to the git worktree for this task. */
   readonly workspacePath: string;
-  /** Target branch to rebase onto and merge into (e.g., "main"). */
+  /** Target branch to merge into (e.g., "main"). */
   readonly targetBranch: string;
+  /**
+   * Merge strategy to use. Resolved by the caller via policy precedence:
+   * task-level override → repo workflow template → system default (rebase-and-merge).
+   *
+   * @see docs/prd/010-integration-contracts.md §10.10.1
+   * @default MergeStrategy.REBASE_AND_MERGE
+   */
+  readonly mergeStrategy?: MergeStrategy;
   /** Who is executing the merge. */
   readonly actor: ActorInfo;
   /** Optional metadata to include in audit events. */
@@ -186,16 +199,19 @@ export type ExecuteMergeResult =
 // ─── Service Interface ──────────────────────────────────────────────────────
 
 /**
- * Service for executing the rebase-and-merge strategy.
+ * Service for executing merge operations using the configured strategy.
  *
  * Takes a dequeued merge queue item (in PREPARING state) and runs
- * it through the full merge pipeline: rebase → validate → push → done.
+ * it through the full merge pipeline using the specified strategy:
+ * - rebase-and-merge: rebase → validate → push source branch
+ * - squash: squash-merge into target → validate → push target branch
+ * - merge-commit: merge --no-ff into target → validate → push target branch
  */
 export interface MergeExecutorService {
   /**
-   * Execute a rebase-and-merge operation for a merge queue item.
+   * Execute a merge operation for a merge queue item.
    *
-   * @param params - The merge execution parameters.
+   * @param params - The merge execution parameters including strategy.
    * @returns The execution result indicating outcome and final state.
    *
    * @throws {EntityNotFoundError} If the item or task does not exist.
@@ -319,7 +335,14 @@ export function createMergeExecutorService(deps: MergeExecutorDependencies): Mer
 
   return {
     async executeMerge(params: ExecuteMergeParams): Promise<ExecuteMergeResult> {
-      const { mergeQueueItemId, workspacePath, targetBranch, actor, metadata } = params;
+      const {
+        mergeQueueItemId,
+        workspacePath,
+        targetBranch,
+        mergeStrategy = MergeStrategy.REBASE_AND_MERGE,
+        actor,
+        metadata,
+      } = params;
       const auditEvents: AuditEventRecord[] = [];
 
       // ── Phase 1: Load and validate current state ──────────────────────
@@ -443,15 +466,36 @@ export function createMergeExecutorService(deps: MergeExecutorDependencies): Mer
         timestamp: clock(),
       });
 
-      // ── Phase 3: Fetch and Rebase ─────────────────────────────────────
+      // ── Phase 3: Fetch and execute strategy-specific merge operation ──
 
       await gitOps.fetch(workspacePath, "origin");
 
-      const rebaseResult = await gitOps.rebase(workspacePath, `origin/${targetBranch}`);
+      // Get the current branch name before any operations (it's the source/feature branch)
+      const sourceBranch = await gitOps.getCurrentBranch(workspacePath);
 
-      if (!rebaseResult.success) {
+      // Dispatch to strategy-specific merge operation
+      let mergeOpResult: { success: boolean; conflictFiles: readonly string[] };
+      if (mergeStrategy === MergeStrategy.REBASE_AND_MERGE) {
+        mergeOpResult = await gitOps.rebase(workspacePath, `origin/${targetBranch}`);
+      } else if (mergeStrategy === MergeStrategy.SQUASH) {
+        const commitMessage = `squash: merge ${sourceBranch} into ${targetBranch}`;
+        mergeOpResult = await gitOps.squashMerge(
+          workspacePath,
+          sourceBranch,
+          `origin/${targetBranch}`,
+          commitMessage,
+        );
+      } else {
+        mergeOpResult = await gitOps.mergeCommit(
+          workspacePath,
+          sourceBranch,
+          `origin/${targetBranch}`,
+        );
+      }
+
+      if (!mergeOpResult.success) {
         // Classify the conflict via the classifier port
-        const classification = await conflictClassifier.classify(rebaseResult.conflictFiles);
+        const classification = await conflictClassifier.classify(mergeOpResult.conflictFiles);
 
         // Determine task and item transitions based on classification
         const failResult = unitOfWork.runInTransaction((repos) => {
@@ -523,7 +567,7 @@ export function createMergeExecutorService(deps: MergeExecutorDependencies): Mer
             newState: itemTarget,
             metadata: JSON.stringify({
               ...metadata,
-              conflictFiles: rebaseResult.conflictFiles,
+              conflictFiles: mergeOpResult.conflictFiles,
               classification,
             }),
           });
@@ -538,8 +582,9 @@ export function createMergeExecutorService(deps: MergeExecutorDependencies): Mer
             newState: taskTarget,
             metadata: JSON.stringify({
               ...metadata,
-              reason: "rebase_conflict",
-              conflictFiles: rebaseResult.conflictFiles,
+              reason: "merge_conflict",
+              mergeStrategy,
+              conflictFiles: mergeOpResult.conflictFiles,
               classification,
             }),
           });
@@ -581,7 +626,7 @@ export function createMergeExecutorService(deps: MergeExecutorDependencies): Mer
           item: failResult.item,
           task: failResult.task,
           auditEvents,
-          conflictFiles: rebaseResult.conflictFiles,
+          conflictFiles: mergeOpResult.conflictFiles,
           classification,
         };
       }
@@ -755,12 +800,15 @@ export function createMergeExecutorService(deps: MergeExecutorDependencies): Mer
         timestamp: clock(),
       });
 
-      // Get the current branch name for push
-      const sourceBranch = await gitOps.getCurrentBranch(workspacePath);
+      // Determine which branch to push based on strategy:
+      // - rebase-and-merge: push the source (feature) branch
+      // - squash / merge-commit: push the target branch (we merged into it)
+      const pushBranch =
+        mergeStrategy === MergeStrategy.REBASE_AND_MERGE ? sourceBranch : targetBranch;
 
-      // Push the rebased branch
+      // Push the branch
       try {
-        await gitOps.push(workspacePath, "origin", sourceBranch);
+        await gitOps.push(workspacePath, "origin", pushBranch);
       } catch (error: unknown) {
         const pushError = error instanceof Error ? error.message : String(error);
 
@@ -940,6 +988,13 @@ export function createMergeExecutorService(deps: MergeExecutorDependencies): Mer
 
       // ── Phase 7: Build and persist MergePacket ────────────────────────
 
+      /** Strategy-specific labels for human-readable MergePacket summaries. */
+      const STRATEGY_LABELS: Record<MergeStrategy, string> = {
+        [MergeStrategy.REBASE_AND_MERGE]: "Rebase-and-merge",
+        [MergeStrategy.SQUASH]: "Squash merge",
+        [MergeStrategy.MERGE_COMMIT]: "Merge commit",
+      };
+
       const mergePacketData: MergePacket = {
         packet_type: "merge_packet",
         schema_version: "1.0",
@@ -948,14 +1003,14 @@ export function createMergeExecutorService(deps: MergeExecutorDependencies): Mer
         repository_id: currentTask.repositoryId,
         merge_queue_item_id: mergeQueueItemId,
         status: PacketStatus.SUCCESS,
-        summary: `Rebase-and-merge completed successfully. Merged commit: ${mergedCommitSha}`,
+        summary: `${STRATEGY_LABELS[mergeStrategy]} completed successfully. Merged commit: ${mergedCommitSha}`,
         details: {
           source_branch: sourceBranch,
           target_branch: targetBranch,
           approved_commit_sha: initialState.item.approvedCommitSha ?? "",
           merged_commit_sha: mergedCommitSha,
-          merge_strategy: MergeStrategy.REBASE_AND_MERGE,
-          rebase_performed: true,
+          merge_strategy: mergeStrategy,
+          rebase_performed: mergeStrategy === MergeStrategy.REBASE_AND_MERGE,
           validation_results: validationResult.checkOutcomes.map(mapCheckOutcomeToSchemaResult),
         },
         artifact_refs: [],
