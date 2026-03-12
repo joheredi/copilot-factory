@@ -150,3 +150,9 @@ The main runtime components described across the docs are the control plane serv
 - **tsconfig:** Overrides base config with `jsx: "react-jsx"`, `module: "ESNext"`, `moduleResolution: "bundler"`, `emitDeclarationOnly: true`
 - **Imports:** Use relative imports (not `@/` path alias) for Vitest workspace compatibility
 - **Test cleanup:** In vitest workspace mode, `setupFiles` from per-project `vitest.config.ts` may not execute when running from root. Always add explicit `afterEach(cleanup)` from `@testing-library/react` + `vitest` in web-ui test files to ensure DOM cleanup between tests.
+
+## NestJS DI: EventsModule and DATABASE_CONNECTION
+
+- **Do NOT use `@Inject(DATABASE_CONNECTION)` in providers registered in `EventsModule`.** Direct injection of the database connection token in the EventsModule causes NestJS module compilation to hang indefinitely (likely due to a resolution ordering issue between the WebSocket gateway and the global database provider).
+- **Use `ModuleRef.get("DATABASE_CONNECTION", { strict: false })` in `onModuleInit()` instead.** This defers resolution until after the module tree is fully compiled. See `QueueWorkerEventsService` for the pattern.
+- Other modules (WorkersModule, TasksModule, etc.) can use `@Inject(DATABASE_CONNECTION)` normally — this issue is specific to EventsModule.

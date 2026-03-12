@@ -1,168 +1,38 @@
 # Progress Log
 
-## T096 — Build worker pool monitoring panel
+## T088 — Implement queue and worker status broadcasting
 
 ### Task
 
-T096 - Build worker pool monitoring panel (Epic E020: Web UI Feature Views)
+T088 - Implement queue and worker status broadcasting (Epic E018: Real-time Events)
 
 ### What was done
 
-- Replaced the placeholder `WorkersPage` with a full pool monitoring feature at `apps/web-ui/src/features/pools/`
-- **PoolsPage** (list view): Displays all pools as clickable cards in a responsive grid with pool name, type badge, enabled/disabled status badge, max concurrency, provider/model info, and runtime. Includes filter bar for pool type and enabled status.
-- **PoolDetailPage** (detail view): Shows pool header with type/status badges, 3 stat cards (workers online, active tasks, max concurrency), full configuration section (provider, model, runtime, cost profile, timeout, token budget, capabilities), worker table with status/task assignment/heartbeat, and agent profiles list with policy badges.
-- **Components**: `PoolCard` (clickable summary card), `PoolStatusBadge` (green enabled / gray disabled), `PoolTypeBadge` (color-coded by pool type), `WorkerTable` (workers with status badges and heartbeat times)
-- Added `/workers/:id` route for pool detail with lazy loading in `routes.tsx`
-- Leveraged existing hooks (`usePools`, `usePool`, `usePoolWorkers`, `useAgentProfiles`) and query keys — no API changes needed
-- 25 tests across PoolsPage and PoolDetailPage covering: pool card rendering, count display, type/status badges, provider info, loading skeletons, error states, empty states, navigation links, filter toggle, worker stats, configuration display, capabilities, worker table with status badges, task assignment display, agent profiles with policy badges, back navigation, loading/error/empty states for workers and profiles
+- Created `apps/control-plane/src/events/queue-worker-events.service.ts` with full implementation:
+  1. **Heartbeat throttling**: Per-worker throttle map, 5s window, suppresses rapid broadcasts to prevent UI flooding
+  2. **Pool summary broadcasting**: After worker status changes, queries all pool workers and broadcasts aggregate stats (total workers, active workers, status breakdown) to the Workers channel
+  3. **Merge queue position broadcasting**: After merge queue item transitions, queries repository's full queue and broadcasts ordered positions to the Queue channel
+  4. **Queue depth gauge polling**: 5s interval broadcasts pending job counts grouped by type to the Queue channel
+  5. **Throttle map cleanup**: Prunes stale entries (>30s) during polling to prevent memory leaks
+- Updated `DomainEventBroadcasterAdapter` to trigger enrichment broadcasts after entity-level events: pool summaries for worker status changes, merge queue positions for queue item transitions
+- Used ModuleRef for lazy database connection resolution (direct @Inject in EventsModule causes NestJS compilation hang with WebSocket gateway)
+- Added `.unref()` to the polling timer so it doesn't block Node.js process shutdown
+- Created comprehensive test suite (24 tests): throttling behavior, pool summary, merge queue positions, queue depth gauge, polling lifecycle, throttle cleanup, error resilience
+- Updated adapter tests (6 new tests): enrichment triggering for worker/merge events, no enrichment for task events, enrichment failure resilience, optional service availability
 
 ### Patterns used
 
-- Card-based grid layout for pool list (responsive: 1/2/3 columns)
-- List → detail drill-down via React Router (same pattern as tasks)
-- TanStack Query hooks with conditional `enabled` flag for detail queries
-- React Router `useParams` for pool ID extraction
-- `data-testid` attributes for all testable elements
-- Mock fetch with URL pattern matching in tests (same pattern as dashboard tests)
+- Same mock server pattern as T086/T087 event tests: manual socket.io mock with emitCalls capture
+- ModuleRef.get for lazy DI resolution (avoids WebSocket gateway + DB provider resolution hang)
+- vi.spyOn on snapshot methods to test broadcasting logic without real database
+- vi.useFakeTimers for deterministic interval testing
+- @Optional on adapter's QueueWorkerEventsService via ModuleRef (graceful degradation)
 
-### Notes for next iteration
+### For next loop
 
-- T105 (operator controls in pool/merge queue UI) builds on this page — will add enable/disable toggle and concurrency editing
-- Pool cards link to `/workers/:id` to stay consistent with existing nav item
-- The workers page is now at `features/pools/` but the route remains `/workers` for backward compatibility with existing nav links
-
-## T095 — Build task detail timeline view
-
-### Task
-
-T095 - Build task detail timeline view (Epic E020: Web UI Feature Views)
-
-### What was done
-
-- Created `TaskDetailPage` at `apps/web-ui/src/features/task-detail/TaskDetailPage.tsx` with five tabbed sections
-- **Overview tab**: Displays all task metadata (status, priority, type, source, size, risk, capabilities, file scope, acceptance criteria, definition of done, current lease, current review cycle)
-- **Timeline tab**: Vertical chronological audit event list with pagination, state transition metadata, actor info
-- **Packets tab**: Review cycle sections with expandable specialist review packets and lead decisions, JSON syntax-highlighted viewer
-- **Artifacts tab**: Hierarchical tree view with expand/collapse for directories and file type icons
-- **Dependencies tab**: Forward (depends on) and reverse (required by) dependency lists with navigable links, dependency type badges, hard/soft block indicators
-- Added `/tasks/:id` route to `routes.tsx` with lazy loading
-- Updated task table rows to link to detail page via React Router `<Link>`
-- Added `TaskDetail`, `TaskDependency`, `TaskLease` types to `api/types.ts`
-- Updated `useTask` hook to return enriched `TaskDetail` instead of bare `Task`
-- 23 new tests covering all tabs, loading/error/empty states, metadata display, badges, navigation
-
-### Patterns used
-
-- Radix UI Tabs for accessible tabbed interface (shadcn/ui Tabs component)
-- TanStack Query hooks for data fetching with conditional `enabled` flag
-- URL-based task ID via React Router `useParams`
-- `userEvent` (not `fireEvent`) for Radix UI interaction in tests
-- Routes + Route wrapper needed in tests for `useParams` to work with MemoryRouter
-
-### Notes for next iteration
-
-- T104 (operator controls) builds on this page — will add action buttons to the detail view
-- `userEvent` is required instead of `fireEvent.click` for Radix UI tab switching in tests
-- The `useTask` hook now returns `TaskDetail` (enriched) — existing code that used `useTask` should be checked for compatibility
-
-## T071 — Implement summarization packet generation for retries
-
-### Task
-
-T071 - Implement summarization packet generation for retries (Epic E014: Artifact Service)
-
-### What was done
-
-Implemented the `SummarizationService` in `packages/application/src/services/summarization.service.ts` following the existing factory-function + port-based architecture pattern:
-
-- **Ports** (`summarization.ports.ts`): Defined `SummarizationArtifactReaderPort` (reads failed run info + partial work snapshots) and `SummarizationArtifactWriterPort` (stores summaries). Also defined `RetrySummary`, `SummaryFileChange`, `SummaryValidation`, `FailedRunInfo` types.
-- **Service** (`summarization.service.ts`): Reads artifacts best-effort (missing data → degraded summary, never throws). Extracts files changed, validations run, failure points, and a human-readable failure summary. Enforces a 2000-character limit via progressive truncation (files → validations → failure points → text fields). Stores summary as artifact. Uses OTel tracing.
-- **Tests** (28 tests): Unit tests for all pure extraction functions + integration tests for the full service covering: both sources available, result-only, partial-work-only, no artifacts, reader failures, JSON round-trip, character limit enforcement with large inputs.
-- **Exports** added to `packages/application/src/index.ts`.
-
-### Patterns used
-
-- Factory function pattern with `SummarizationDependencies` struct (matching heartbeat, lease, crash-recovery services)
-- Port-based architecture: reader/writer ports for artifact I/O
-- Best-effort `safeAsync()` for all artifact reads
-- Progressive truncation for size bounding
-- `SpanStatusCode` imported from `@factory/observability` (not directly from `@opentelemetry/api`)
-- Injectable clock for deterministic test timestamps
-
-### Notes for next loop
-
-- T072 (Partial work snapshot on lease reclaim) is the other remaining E014 task — also ready
-- The `RetrySummary` type is designed to be used as `TaskPacket.context.prior_partial_work` value
-- The `SummarizationArtifactReaderPort` needs infrastructure adapter implementation that reads from ArtifactStore — can be done when wiring the control plane
-- `prior_partial_work` field in TaskPacket schema is `z.unknown().nullable()` — no schema change needed to carry `RetrySummary`
-
-## T101 — Implement operator action API endpoints
-
-### Task
-
-T101 - Implement operator action API endpoints (Epic E021: Operator Actions & Overrides)
-
-### What was done
-
-Implemented all 10 operator actions from §6.2 of the additional refinements PRD as REST API endpoints under `POST /tasks/:id/actions/{action}`:
-
-- **State transition actions** (via TransitionService): `pause` (→ESCALATED), `resume` (ESCALATED→ASSIGNED), `requeue` (ASSIGNED/IN_DEV→READY), `force-unblock` (BLOCKED→READY), `cancel` (→CANCELLED)
-- **Metadata actions** (direct DB + audit): `change-priority`, `reassign-pool`
-- **Operator override actions** (bypass state machine): `rerun-review` (APPROVED/IN_REVIEW→DEV_COMPLETE), `reopen` (DONE/FAILED/CANCELLED→BACKLOG)
-- **Merge queue action**: `override-merge-order`
-
-All actions create audit events with `actorType: "operator"`. State machine invariants are respected — only valid transitions are allowed.
-
-### Files created
-
-- `apps/control-plane/src/operator-actions/operator-actions.module.ts`
-- `apps/control-plane/src/operator-actions/operator-actions.controller.ts`
-- `apps/control-plane/src/operator-actions/operator-actions.service.ts`
-- `apps/control-plane/src/operator-actions/dtos/operator-action.dto.ts`
-- `apps/control-plane/src/operator-actions/operator-actions.service.test.ts` (34 tests)
-
-### Architecture patterns used
-
-- **Hybrid approach**: TransitionService for state transitions (atomic state change + audit), direct DB for metadata and operator overrides
-- **No-op DomainEventEmitter**: Ready for WebSocket gateway (T086/T087) integration later
-- **Explicit state pre-validation**: For actions like `resume` where the state machine allows the transition from multiple source states, but the operator action should only be valid from one (ESCALATED)
-- **Override pattern**: For transitions not in the state machine (reopen, rerun-review), uses direct DB writes with manual audit events
-
-### Notes for next loop
-
-- T102 (State transition guards for manual actions) is now unblocked
-- T103 (Escalation resolution flow) is now unblocked
-- The no-op DomainEventEmitter should be replaced with a real implementation once T086 (WebSocket gateway) is done
-- The `reassign-pool` action records a pool hint via audit events — when pool assignment columns are added to the task table, this should be updated to persist the hint directly
-
-## T072 — Implement partial work snapshot on lease reclaim
-
-### Task
-
-T072 - Implement partial work snapshot on lease reclaim (Epic E014: Artifact Service)
-
-### What was done
-
-Implemented infrastructure adapters for crash recovery partial work snapshot capture in `packages/infrastructure/src/crash-recovery/`:
-
-- **WorkspaceInspector**: Reads filesystem-persisted result packets, git diffs, modified files, and output files from a workspace. Best-effort — gracefully returns empty/partial results if workspace is missing or corrupted.
-- **CrashRecoveryArtifactAdapter**: Stores crash recovery artifacts via `ArtifactStore` using the §7.11 directory layout. Writes partial work snapshots as JSON artifacts with proper path construction.
-- **ResultPacketValidator**: Validates result packet content against `DevResultPacketSchema`. Returns structured validation results (valid/invalid with error details).
-
-33 new tests covering all three adapters.
-
-Added `@factory/application` as a dependency to `@factory/infrastructure` — this is a valid inward dependency in clean architecture (infrastructure depends on application ports/interfaces).
-
-### Patterns used
-
-- Port-adapter pattern with dependency injection (adapters implement application-layer port interfaces)
-- `FakeFileSystem` and `FakeGitDiffProvider` fakes for testing without real I/O
-- Best-effort error handling throughout — workspace may be in any state after a crash, so all reads are defensive and never throw
-
-### Notes for next loop
-
-- The `CrashRecoveryLeasePort` (DB adapter for updating `partial_result_artifact_refs`) still needs an implementation in `apps/control-plane`
-- The lease reclaim service does not yet call the crash recovery service — integration wiring is needed
+- T096-T100 (UI views: worker pools, review center, merge queue, config editor, audit explorer) are all P2 and ready
+- T104-T105 (operator controls UI) are P2 — T105 depends on T096 and T098
+- All remaining tasks are P2 UI features in E020/E021
 
 ## T078 — Implement Prometheus metrics endpoint
 

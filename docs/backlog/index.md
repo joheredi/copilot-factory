@@ -208,7 +208,7 @@ See [phase documents](phases/) for details.
 | [T085](tasks/T085-api-audit-policy-config.md)       | Implement Audit, Policy, and Config endpoints                                         | E017 | P1       | feature    | done    |
 | [T086](tasks/T086-websocket-gateway.md)             | Implement WebSocket gateway for live events                                           | E018 | P1       | feature    | done    |
 | [T087](tasks/T087-task-events.md)                   | Implement task state change event broadcasting                                        | E018 | P1       | feature    | done    |
-| [T088](tasks/T088-queue-worker-events.md)           | Implement queue and worker status broadcasting                                        | E018 | P2       | feature    | pending |
+| [T088](tasks/T088-queue-worker-events.md)           | Implement queue and worker status broadcasting                                        | E018 | P2       | feature    | done    |
 | [T089](tasks/T089-react-spa-init.md)                | Initialize React SPA with Vite, Tailwind, shadcn/ui                                   | E019 | P1       | foundation | done    |
 | [T090](tasks/T090-api-client-tanstack.md)           | Implement API client layer with TanStack Query                                        | E019 | P1       | feature    | done    |
 | [T091](tasks/T091-websocket-client.md)              | Implement WebSocket client for live updates                                           | E019 | P1       | feature    | done    |

@@ -12,6 +12,7 @@
  *
  * @see docs/prd/007-technical-architecture.md §7.7 for event architecture
  * @see docs/backlog/tasks/T087-task-events.md
+ * @see docs/backlog/tasks/T088-queue-worker-events.md
  * @module @factory/control-plane/events
  */
 import { Module } from "@nestjs/common";
@@ -19,16 +20,28 @@ import { Module } from "@nestjs/common";
 import { DomainEventBroadcasterAdapter } from "./domain-event-broadcaster.adapter.js";
 import { EventBroadcasterService } from "./event-broadcaster.service.js";
 import { EventsGateway } from "./events.gateway.js";
+import { QueueWorkerEventsService } from "./queue-worker-events.service.js";
 
 /**
  * Module providing WebSocket event infrastructure.
  *
- * Exports {@link EventBroadcasterService} for direct broadcasting and
+ * Exports {@link EventBroadcasterService} for direct broadcasting,
  * {@link DomainEventBroadcasterAdapter} for use as a DomainEventEmitter
- * in services that create a TransitionService.
+ * in services that create a TransitionService, and
+ * {@link QueueWorkerEventsService} for throttled heartbeat and aggregate
+ * queue/worker event broadcasting (T088).
+ *
+ * Imports {@link DatabaseModule} explicitly for QueueWorkerEventsService
+ * database access, even though DatabaseModule is @Global(). This makes
+ * the dependency visible in the module declaration.
  */
 @Module({
-  providers: [EventsGateway, EventBroadcasterService, DomainEventBroadcasterAdapter],
-  exports: [EventBroadcasterService, DomainEventBroadcasterAdapter],
+  providers: [
+    EventsGateway,
+    EventBroadcasterService,
+    QueueWorkerEventsService,
+    DomainEventBroadcasterAdapter,
+  ],
+  exports: [EventBroadcasterService, DomainEventBroadcasterAdapter, QueueWorkerEventsService],
 })
 export class EventsModule {}

@@ -24,6 +24,7 @@ import {
 
 import { DomainEventBroadcasterAdapter } from "./domain-event-broadcaster.adapter.js";
 import { EventBroadcasterService } from "./event-broadcaster.service.js";
+import { QueueWorkerEventsService } from "./queue-worker-events.service.js";
 import { EventsGateway } from "./events.gateway.js";
 import { EventChannel } from "./types.js";
 import type { FactoryEvent } from "./types.js";
@@ -42,6 +43,18 @@ function createMockServer() {
       }),
     })),
   };
+}
+
+/**
+ * Create a mock ModuleRef that returns the given QueueWorkerEventsService.
+ */
+function createMockModuleRef(queueWorkerEvents?: QueueWorkerEventsService) {
+  return {
+    get: vi.fn((_type: unknown, _opts?: unknown) => {
+      if (queueWorkerEvents) return queueWorkerEvents;
+      throw new Error("Provider not found");
+    }),
+  } as never;
 }
 
 /**
@@ -77,13 +90,21 @@ describe("DomainEventBroadcasterAdapter", () => {
   let gateway: EventsGateway;
   let broadcaster: EventBroadcasterService;
   let mockServer: ReturnType<typeof createMockServer>;
+  let mockQueueWorkerEvents: QueueWorkerEventsService;
 
   beforeEach(() => {
     gateway = new EventsGateway();
     mockServer = createMockServer();
     gateway.server = mockServer as unknown as Server;
     broadcaster = new EventBroadcasterService(gateway);
-    adapter = new DomainEventBroadcasterAdapter(broadcaster);
+    mockQueueWorkerEvents = {
+      broadcastPoolSummary: vi.fn(),
+      broadcastMergeQueueUpdate: vi.fn(),
+    } as unknown as QueueWorkerEventsService;
+    const mockModuleRef = createMockModuleRef(mockQueueWorkerEvents);
+    adapter = new DomainEventBroadcasterAdapter(broadcaster, mockModuleRef);
+    // Trigger onModuleInit to resolve the QueueWorkerEventsService
+    adapter.onModuleInit();
   });
 
   describe("task events", () => {
@@ -371,6 +392,115 @@ describe("DomainEventBroadcasterAdapter", () => {
       adapter.emit(event);
 
       expect(mockServer.emitCalls[0]!.data.type).toBe("worker.status_changed");
+    });
+  });
+
+  describe("T088 enrichment broadcasting", () => {
+    /**
+     * Validates that worker status change events trigger a pool summary
+     * broadcast via QueueWorkerEventsService. This keeps the pool
+     * monitoring panel updated when any worker in a pool changes state.
+     */
+    it("should trigger pool summary on worker status change", () => {
+      const event: DomainEvent = {
+        type: "worker.status-changed",
+        entityType: "worker",
+        entityId: "w-1",
+        fromStatus: "idle" as never,
+        toStatus: "running" as never,
+        actor: { type: "system", id: "supervisor" },
+        timestamp: new Date(),
+      };
+
+      adapter.emit(event);
+
+      expect(mockQueueWorkerEvents.broadcastPoolSummary).toHaveBeenCalledWith("w-1");
+    });
+
+    /**
+     * Validates that merge queue item transitions trigger a merge queue
+     * position broadcast. This keeps the merge queue view updated when
+     * items are enqueued, dequeued, or change status.
+     */
+    it("should trigger merge queue update on merge queue item transition", () => {
+      const event: DomainEvent = {
+        type: "merge-queue-item.transitioned",
+        entityType: "merge-queue-item",
+        entityId: "mqi-1",
+        fromStatus: MergeQueueItemStatus.ENQUEUED,
+        toStatus: MergeQueueItemStatus.PREPARING,
+        actor: { type: "system", id: "merge-coordinator" },
+        timestamp: new Date(),
+      };
+
+      adapter.emit(event);
+
+      expect(mockQueueWorkerEvents.broadcastMergeQueueUpdate).toHaveBeenCalledWith("mqi-1");
+    });
+
+    /**
+     * Validates that task events do NOT trigger enrichment broadcasts.
+     * Pool summaries and merge queue updates are only relevant for
+     * worker and merge-queue-item entity types.
+     */
+    it("should not trigger enrichment for task events", () => {
+      adapter.emit(createTaskTransitionedEvent());
+
+      expect(mockQueueWorkerEvents.broadcastPoolSummary).not.toHaveBeenCalled();
+      expect(mockQueueWorkerEvents.broadcastMergeQueueUpdate).not.toHaveBeenCalled();
+    });
+
+    /**
+     * Validates that enrichment failures do not prevent the primary
+     * domain event from being broadcast. Enrichment is supplementary —
+     * the entity-level event is the critical path.
+     */
+    it("should not fail if enrichment throws", () => {
+      vi.mocked(mockQueueWorkerEvents.broadcastPoolSummary).mockImplementation(() => {
+        throw new Error("enrichment exploded");
+      });
+
+      const event: DomainEvent = {
+        type: "worker.status-changed",
+        entityType: "worker",
+        entityId: "w-1",
+        fromStatus: "idle" as never,
+        toStatus: "running" as never,
+        actor: { type: "system", id: "supervisor" },
+        timestamp: new Date(),
+      };
+
+      // Should not throw and primary event should still be broadcast
+      expect(() => adapter.emit(event)).not.toThrow();
+      expect(mockServer.emitCalls.length).toBeGreaterThan(0);
+      expect(mockServer.emitCalls[0]!.data.type).toBe("worker.status_changed");
+    });
+
+    /**
+     * Validates that the adapter works correctly when QueueWorkerEventsService
+     * is not available via ModuleRef. This supports environments where the
+     * service is not registered.
+     */
+    it("should work without QueueWorkerEventsService", () => {
+      const mockModuleRef = createMockModuleRef(undefined);
+      const adapterWithoutEnrichment = new DomainEventBroadcasterAdapter(
+        broadcaster,
+        mockModuleRef,
+      );
+      adapterWithoutEnrichment.onModuleInit();
+
+      const event: DomainEvent = {
+        type: "worker.status-changed",
+        entityType: "worker",
+        entityId: "w-1",
+        fromStatus: "idle" as never,
+        toStatus: "running" as never,
+        actor: { type: "system", id: "supervisor" },
+        timestamp: new Date(),
+      };
+
+      expect(() => adapterWithoutEnrichment.emit(event)).not.toThrow();
+      expect(mockServer.emitCalls.length).toBeGreaterThan(0);
     });
   });
 });

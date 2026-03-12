@@ -14,15 +14,18 @@
  *
  * @see docs/prd/007-technical-architecture.md §7.7 — Event architecture
  * @see docs/backlog/tasks/T087-task-events.md
+ * @see docs/backlog/tasks/T088-queue-worker-events.md
  * @module @factory/control-plane/events
  */
-import { Injectable } from "@nestjs/common";
+import { Injectable, type OnModuleInit } from "@nestjs/common";
+import { ModuleRef } from "@nestjs/core";
 
 import type { DomainEventEmitter, DomainEvent } from "@factory/application";
 import { createLogger } from "@factory/observability";
 import type { Logger } from "@factory/observability";
 
 import { EventBroadcasterService } from "./event-broadcaster.service.js";
+import { QueueWorkerEventsService } from "./queue-worker-events.service.js";
 import { EventChannel } from "./types.js";
 
 /**
@@ -93,13 +96,38 @@ function buildEventData(event: DomainEvent): Record<string, unknown> {
  * 2. The channel room (e.g., "tasks")
  *
  * This dual-emit is handled by {@link EventBroadcasterService.broadcastToEntity}.
+ *
+ * After broadcasting the individual event, the adapter triggers aggregate
+ * enrichment via {@link QueueWorkerEventsService} (T088): pool summaries
+ * for worker status changes, and merge queue position updates for queue
+ * item transitions. The service reference is resolved lazily via ModuleRef
+ * to avoid constructor-level DI coupling.
  */
 @Injectable()
-export class DomainEventBroadcasterAdapter implements DomainEventEmitter {
+export class DomainEventBroadcasterAdapter implements DomainEventEmitter, OnModuleInit {
   private readonly logger: Logger;
+  private queueWorkerEvents?: QueueWorkerEventsService;
 
-  constructor(private readonly broadcaster: EventBroadcasterService) {
+  constructor(
+    private readonly broadcaster: EventBroadcasterService,
+    private readonly moduleRef: ModuleRef,
+  ) {
     this.logger = createLogger("domain-event-broadcaster");
+  }
+
+  /**
+   * Lazily resolve QueueWorkerEventsService after module initialization.
+   *
+   * Uses ModuleRef.get with strict: false to search across the entire
+   * module tree. This avoids a direct constructor dependency that could
+   * cause DI resolution issues.
+   */
+  onModuleInit(): void {
+    try {
+      this.queueWorkerEvents = this.moduleRef.get(QueueWorkerEventsService, { strict: false });
+    } catch {
+      this.logger.debug("QueueWorkerEventsService not available, enrichment disabled");
+    }
   }
 
   /**
@@ -137,10 +165,47 @@ export class DomainEventBroadcasterAdapter implements DomainEventEmitter {
         channel,
         entityId: event.entityId,
       });
+
+      // T088: Trigger aggregate enrichment broadcasts after the entity-level event.
+      this.emitEnrichment(event);
     } catch (error: unknown) {
       // Per the DomainEventEmitter contract: MUST NOT throw.
       // State transition is already committed — log and continue.
       this.logger.error("Failed to broadcast domain event via WebSocket", {
+        eventType: event.type,
+        entityId: event.entityId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  /**
+   * Trigger aggregate enrichment broadcasts after an entity-level event.
+   *
+   * Worker status changes trigger a pool summary broadcast so UI clients
+   * see updated pool health. Merge queue item transitions trigger a
+   * position list broadcast so UI clients see updated queue ordering.
+   *
+   * Failures are logged and swallowed — enrichment events are supplementary
+   * and must not interfere with the primary domain event delivery.
+   *
+   * @param event - The domain event that was just broadcast
+   */
+  private emitEnrichment(event: DomainEvent): void {
+    if (!this.queueWorkerEvents) {
+      return;
+    }
+
+    try {
+      if (event.entityType === "worker") {
+        this.queueWorkerEvents.broadcastPoolSummary(event.entityId);
+      }
+
+      if (event.entityType === "merge-queue-item") {
+        this.queueWorkerEvents.broadcastMergeQueueUpdate(event.entityId);
+      }
+    } catch (error: unknown) {
+      this.logger.warn("Failed to broadcast enrichment event", {
         eventType: event.type,
         entityId: event.entityId,
         error: error instanceof Error ? error.message : String(error),

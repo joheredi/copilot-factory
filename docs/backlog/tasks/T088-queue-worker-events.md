@@ -5,7 +5,7 @@
 | **ID**                    | T088                                                       |
 | **Epic**                  | [E018: Real-time Events](../epics/E018-realtime-events.md) |
 | **Type**                  | feature                                                    |
-| **Status**                | pending                                                    |
+| **Status**                | done                                                       |
 | **Priority**              | P2                                                         |
 | **Owner**                 | backend-engineer                                           |
 | **AI Executable**         | Yes                                                        |
