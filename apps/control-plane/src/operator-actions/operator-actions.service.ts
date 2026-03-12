@@ -47,6 +47,7 @@ import type {
   ChangePriorityActionDto,
   ReassignPoolActionDto,
   OverrideMergeOrderActionDto,
+  ResolveEscalationDto,
 } from "./dtos/operator-action.dto.js";
 
 /** Result shape returned by all operator actions. */
@@ -229,6 +230,108 @@ export class OperatorActionsService {
     const metadata = { action: "cancel", reason };
 
     return this.executeTransitionAction(taskId, TaskStatus.CANCELLED, context, actor, metadata);
+  }
+
+  /**
+   * Resolve an escalated task using one of three resolution strategies.
+   *
+   * This is the primary endpoint for operators handling escalated tasks.
+   * It consolidates retry, cancel, and mark_done into a single action
+   * with resolution-specific behavior:
+   *
+   * - **retry**: Clears the escalation context and moves the task to
+   *   ASSIGNED so it can be picked up by a worker again. Optionally
+   *   reassigns the task to a different worker pool.
+   * - **cancel**: Moves the task to CANCELLED, preserving the full
+   *   escalation context in the audit event metadata.
+   * - **mark_done**: Moves the task to DONE, requiring evidence of
+   *   external completion. This is a sensitive action logged with
+   *   elevated audit severity since it bypasses normal quality checks.
+   *
+   * @param taskId Task UUID.
+   * @param dto Validated escalation resolution payload.
+   * @returns The updated task and audit event.
+   * @throws NotFoundException if the task does not exist.
+   * @throws BadRequestException if the task is not in ESCALATED state,
+   *   or if mark_done is missing evidence.
+   *
+   * @see {@link file://docs/prd/002-data-model.md} §2.7 Escalation
+   * @see {@link file://docs/backlog/tasks/T103-escalation-resolution.md}
+   */
+  resolveEscalation(taskId: string, dto: ResolveEscalationDto): OperatorActionResult {
+    this.guards.guardResolveEscalation(taskId, dto.resolutionType, dto.evidence);
+
+    const actor: ActorInfo = { type: "operator", id: dto.actorId };
+
+    switch (dto.resolutionType) {
+      case "retry": {
+        const context: TransitionContext = { isOperator: true, leaseAcquired: true };
+        const metadata: Record<string, unknown> = {
+          action: "resolve_escalation",
+          resolutionType: "retry",
+          reason: dto.reason,
+        };
+        if (dto.poolId) {
+          metadata["poolId"] = dto.poolId;
+        }
+
+        const result = this.executeTransitionAction(
+          taskId,
+          TaskStatus.ASSIGNED,
+          context,
+          actor,
+          metadata,
+        );
+
+        // If a pool reassignment was requested, record it as metadata on the task.
+        if (dto.poolId) {
+          this.conn.writeTransaction((db) => {
+            const auditRepo = createAuditEventRepository(db);
+            auditRepo.create({
+              auditEventId: randomUUID(),
+              entityType: "task",
+              entityId: taskId,
+              eventType: "task.operator.reassign_pool",
+              actorType: "operator",
+              actorId: dto.actorId,
+              oldState: null,
+              newState: JSON.stringify({ poolId: dto.poolId }),
+              metadataJson: {
+                action: "resolve_escalation_reassign_pool",
+                poolId: dto.poolId,
+                reason: dto.reason,
+              },
+            });
+          });
+        }
+
+        return result;
+      }
+
+      case "cancel": {
+        const context: TransitionContext = { isOperator: true };
+        const metadata: Record<string, unknown> = {
+          action: "resolve_escalation",
+          resolutionType: "cancel",
+          reason: dto.reason,
+        };
+
+        return this.executeTransitionAction(taskId, TaskStatus.CANCELLED, context, actor, metadata);
+      }
+
+      case "mark_done": {
+        const context: TransitionContext = { isOperator: true };
+        const metadata: Record<string, unknown> = {
+          action: "resolve_escalation",
+          resolutionType: "mark_done",
+          reason: dto.reason,
+          evidence: dto.evidence,
+          auditSeverity: getAuditSeverity("resolve_escalation_mark_done"),
+        };
+
+        return this.executeTransitionAction(taskId, TaskStatus.DONE, context, actor, metadata);
+      }
+    }
   }
 
   /**

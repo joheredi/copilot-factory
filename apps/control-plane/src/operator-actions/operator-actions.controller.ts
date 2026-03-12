@@ -32,6 +32,7 @@ import {
   OverrideMergeOrderActionDto,
   ReopenActionDto,
   CancelActionDto,
+  ResolveEscalationDto,
 } from "./dtos/operator-action.dto.js";
 
 /**
@@ -234,5 +235,35 @@ export class OperatorActionsController {
   @ApiResponse({ status: 404, description: "Task not found." })
   cancel(@Param("id") id: string, @Body() dto: CancelActionDto): OperatorActionResult {
     return this.service.cancel(id, dto.actorId, dto.reason, dto.acknowledgeInProgressWork);
+  }
+
+  /**
+   * Resolve an escalated task with a chosen resolution strategy.
+   *
+   * Supports three resolution types:
+   * - `retry`: Move back to ASSIGNED for a new development attempt,
+   *   optionally with a different worker pool.
+   * - `cancel`: Move to CANCELLED, preserving escalation context.
+   * - `mark_done`: Mark as externally completed (requires evidence).
+   *
+   * @param id Task UUID.
+   * @param dto Validated escalation resolution payload.
+   * @returns Updated task and audit event.
+   */
+  @Post(":id/actions/resolve-escalation")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Resolve an escalated task" })
+  @ApiParam({ name: "id", description: "Task UUID" })
+  @ApiResponse({
+    status: 200,
+    description: "Escalation resolved. Task moved to the target state.",
+  })
+  @ApiResponse({ status: 400, description: "Task is not in ESCALATED state or invalid payload." })
+  @ApiResponse({ status: 404, description: "Task not found." })
+  resolveEscalation(
+    @Param("id") id: string,
+    @Body() dto: ResolveEscalationDto,
+  ): OperatorActionResult {
+    return this.service.resolveEscalation(id, dto);
   }
 }

@@ -1,5 +1,30 @@
 # Progress Log
 
+## T103: Implement escalation resolution flow (2026-03-12)
+
+**What was done:**
+
+- Added `POST /api/tasks/:id/actions/resolve-escalation` endpoint with three resolution types:
+  - **retry**: ESCALATED → ASSIGNED (optionally reassign pool, clear escalation context)
+  - **cancel**: ESCALATED → CANCELLED (preserve escalation context in audit trail)
+  - **mark_done**: ESCALATED → DONE (requires evidence, logged with elevated audit severity)
+- Created `ResolveEscalationDto` with Zod schema including cross-field validation (evidence required for mark_done)
+- Added `guardResolveEscalation()` guard in `OperatorActionGuards` — validates ESCALATED state and mark_done evidence
+- Added `resolve_escalation_mark_done` to `SENSITIVE_ACTIONS` set for elevated audit logging
+- 19 new tests: 10 guard tests + 9 service tests covering all resolution paths, audit metadata, and error cases
+
+**Patterns used:**
+
+- Follows existing operator action patterns: DTO → guard → service → controller
+- Uses `executeTransitionAction()` for all three resolutions (all transitions exist in state machine)
+- Pool reassignment on retry recorded as separate audit event (matches reassign_pool pattern)
+- Metadata parsing in tests handles both object and string forms of `metadataJson`
+
+**Next loop should know:**
+
+- T103 unblocks T104 (UI operator task integration)
+- The `resolve_escalation` endpoint is distinct from existing `resume` and `cancel` — it adds resolution-type metadata, evidence tracking, and pool reassignment on retry
+
 ## T102: Implement state transition guards for manual actions (2026-03-12)
 
 **What was done:**

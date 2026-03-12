@@ -527,11 +527,116 @@ describe("OperatorActionGuards", () => {
      * is added that should be sensitive, this test will catch the
      * omission.
      */
-    it("should contain exactly force_unblock, override_merge_order, reopen", () => {
-      expect(SENSITIVE_ACTIONS.size).toBe(3);
+    it("should contain exactly force_unblock, override_merge_order, reopen, resolve_escalation_mark_done", () => {
+      expect(SENSITIVE_ACTIONS.size).toBe(4);
       expect(SENSITIVE_ACTIONS.has("force_unblock")).toBe(true);
       expect(SENSITIVE_ACTIONS.has("override_merge_order")).toBe(true);
       expect(SENSITIVE_ACTIONS.has("reopen")).toBe(true);
+      expect(SENSITIVE_ACTIONS.has("resolve_escalation_mark_done")).toBe(true);
+    });
+  });
+
+  // ─── Resolve Escalation Guards ──────────────────────────────────────────
+
+  describe("guardResolveEscalation", () => {
+    /**
+     * Validates that resolve_escalation requires ESCALATED state.
+     * This guard prevents operators from accidentally applying escalation
+     * resolution logic to tasks in other states, which would cause
+     * confusing state transitions.
+     */
+    it("should reject when task is not in ESCALATED state", () => {
+      const taskId = createTaskInState(conn, "READY");
+
+      expect(() => guards.guardResolveEscalation(taskId, "retry")).toThrow(
+        /must be in ESCALATED state/i,
+      );
+    });
+
+    /**
+     * Validates that retry resolution is accepted for ESCALATED tasks.
+     * Retry is the most common resolution — the operator retries the
+     * task with a fresh development attempt.
+     */
+    it("should accept retry for ESCALATED task", () => {
+      const taskId = createTaskInState(conn, "ESCALATED");
+
+      expect(() => guards.guardResolveEscalation(taskId, "retry")).not.toThrow();
+    });
+
+    /**
+     * Validates that cancel resolution is accepted for ESCALATED tasks.
+     */
+    it("should accept cancel for ESCALATED task", () => {
+      const taskId = createTaskInState(conn, "ESCALATED");
+
+      expect(() => guards.guardResolveEscalation(taskId, "cancel")).not.toThrow();
+    });
+
+    /**
+     * Validates that mark_done requires non-empty evidence.
+     * mark_done bypasses normal quality checks (no review, no merge,
+     * no validation). Requiring evidence ensures accountability
+     * and creates an audit trail for compliance.
+     */
+    it("should reject mark_done without evidence", () => {
+      const taskId = createTaskInState(conn, "ESCALATED");
+
+      expect(() => guards.guardResolveEscalation(taskId, "mark_done")).toThrow(/evidence/i);
+    });
+
+    /**
+     * Validates that whitespace-only evidence is rejected for mark_done.
+     * Prevents operators from circumventing the evidence requirement.
+     */
+    it("should reject mark_done with whitespace-only evidence", () => {
+      const taskId = createTaskInState(conn, "ESCALATED");
+
+      expect(() => guards.guardResolveEscalation(taskId, "mark_done", "   ")).toThrow(/evidence/i);
+    });
+
+    /**
+     * Validates that mark_done with proper evidence is accepted.
+     */
+    it("should accept mark_done with valid evidence", () => {
+      const taskId = createTaskInState(conn, "ESCALATED");
+
+      expect(() =>
+        guards.guardResolveEscalation(taskId, "mark_done", "Completed manually via hotfix PR #123"),
+      ).not.toThrow();
+    });
+
+    /**
+     * Validates that guard passes silently for non-existent tasks,
+     * letting the service layer handle the NotFoundException.
+     * This matches the pattern used by other guards (guardReopen, etc.).
+     */
+    it("should pass for non-existent task (service handles not-found)", () => {
+      expect(() => guards.guardResolveEscalation("nonexistent-id", "retry")).not.toThrow();
+    });
+
+    /**
+     * Validates rejection from multiple non-ESCALATED states to ensure
+     * the guard is comprehensive.
+     */
+    it("should reject from IN_DEVELOPMENT state", () => {
+      const taskId = createTaskInState(conn, "IN_DEVELOPMENT");
+
+      expect(() => guards.guardResolveEscalation(taskId, "cancel")).toThrow(
+        /must be in ESCALATED state/i,
+      );
+    });
+
+    /**
+     * Validates rejection from terminal states — operators should use
+     * reopen instead of resolve_escalation for terminal tasks.
+     */
+    it("should reject from DONE state", () => {
+      const taskId = createTaskInState(conn, "DONE");
+
+      expect(() => guards.guardResolveEscalation(taskId, "mark_done", "evidence")).toThrow(
+        /must be in ESCALATED state/i,
+      );
     });
   });
 });

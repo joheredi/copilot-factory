@@ -24,6 +24,7 @@ import { TaskStatus } from "@factory/domain";
 import { createTaskRepository } from "../infrastructure/repositories/task.repository.js";
 import { createTaskLeaseRepository } from "../infrastructure/repositories/task-lease.repository.js";
 import type { DatabaseConnection } from "../infrastructure/database/connection.js";
+import type { EscalationResolutionType } from "./dtos/operator-action.dto.js";
 
 /**
  * Actions classified as sensitive that require elevated audit logging.
@@ -35,6 +36,7 @@ export const SENSITIVE_ACTIONS: ReadonlySet<string> = new Set([
   "force_unblock",
   "override_merge_order",
   "reopen",
+  "resolve_escalation_mark_done",
 ]);
 
 /**
@@ -235,6 +237,51 @@ export class OperatorActionGuards {
       throw new BadRequestException(
         `Cannot override merge order for task "${taskId}" in state ` +
           `"${task.status}". Task must be in QUEUED_FOR_MERGE state.`,
+      );
+    }
+  }
+
+  /**
+   * Guard for the resolve_escalation action.
+   *
+   * Validates that:
+   * 1. The task is in ESCALATED state.
+   * 2. For mark_done resolution, evidence is provided (defense-in-depth
+   *    beyond DTO validation). This is a sensitive action that bypasses
+   *    normal quality checks and requires justification.
+   *
+   * @param taskId Task UUID.
+   * @param resolutionType The type of escalation resolution being performed.
+   * @param evidence Evidence of external completion (required for mark_done).
+   * @throws BadRequestException if the task is not in ESCALATED state,
+   *   or if mark_done is requested without evidence.
+   */
+  guardResolveEscalation(
+    taskId: string,
+    resolutionType: EscalationResolutionType,
+    evidence?: string,
+  ): void {
+    const taskRepo = createTaskRepository(this.conn.db);
+    const task = taskRepo.findById(taskId);
+
+    if (!task) {
+      // Let the service handle the not-found case with NotFoundException.
+      return;
+    }
+
+    if (task.status !== TaskStatus.ESCALATED) {
+      throw new BadRequestException(
+        `Cannot resolve escalation for task "${taskId}" in state "${task.status}". ` +
+          `Task must be in ESCALATED state.`,
+      );
+    }
+
+    if (resolutionType === "mark_done" && (!evidence || evidence.trim().length === 0)) {
+      throw new BadRequestException(
+        `resolve_escalation with "mark_done" requires non-empty evidence ` +
+          `explaining how the task was completed externally. This is a sensitive ` +
+          `action that bypasses normal quality checks and will be logged with ` +
+          `elevated audit severity.`,
       );
     }
   }

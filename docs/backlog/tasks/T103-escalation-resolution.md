@@ -5,7 +5,7 @@
 | **ID**                    | T103                                                                      |
 | **Epic**                  | [E021: Operator Actions & Overrides](../epics/E021-operator-actions.md)   |
 | **Type**                  | feature                                                                   |
-| **Status**                | pending                                                                   |
+| **Status**                | done                                                                      |
 | **Priority**              | P1                                                                        |
 | **Owner**                 | backend-engineer                                                          |
 | **AI Executable**         | Yes                                                                       |

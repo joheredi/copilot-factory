@@ -246,3 +246,69 @@ export class CancelActionDto {
   reason!: string;
   acknowledgeInProgressWork?: boolean;
 }
+
+// ─── Resolve Escalation ─────────────────────────────────────────────────────
+
+/** Valid escalation resolution types. */
+const escalationResolutionTypes = ["retry", "cancel", "mark_done"] as const;
+
+/** Zod type for escalation resolution types. */
+export type EscalationResolutionType = (typeof escalationResolutionTypes)[number];
+
+const resolveEscalationActionSchema = z
+  .object({
+    ...baseActionWithReasonFields,
+    /**
+     * Resolution type:
+     * - `retry`: Move task back to ASSIGNED for a new development attempt.
+     * - `cancel`: Abandon the task (move to CANCELLED).
+     * - `mark_done`: Mark the task as externally completed (move to DONE).
+     */
+    resolutionType: z.enum(escalationResolutionTypes),
+    /**
+     * Optional pool ID to reassign the task to on retry.
+     * Only used when resolutionType is "retry".
+     */
+    poolId: z.string().min(1).optional(),
+    /**
+     * Evidence or description of external completion.
+     * Required when resolutionType is "mark_done".
+     */
+    evidence: z.string().min(1).optional(),
+  })
+  .refine(
+    (data) => data.resolutionType !== "mark_done" || (data.evidence && data.evidence.length > 0),
+    {
+      message:
+        'evidence is required when resolutionType is "mark_done". ' +
+        "Provide a description of how the task was completed externally.",
+      path: ["evidence"],
+    },
+  );
+
+/**
+ * DTO for the resolve_escalation action.
+ *
+ * Provides a unified endpoint for resolving escalated tasks with one of
+ * three resolution types: retry (→ ASSIGNED), cancel (→ CANCELLED),
+ * or mark_done (→ DONE). Only valid when the task is in ESCALATED state.
+ *
+ * - **retry**: Clears the escalation context and optionally reassigns
+ *   the task to a different worker pool. A new lease will be acquired.
+ * - **cancel**: Preserves the escalation context in the audit trail
+ *   and moves the task to CANCELLED terminal state.
+ * - **mark_done**: Requires evidence of external completion. This is
+ *   a sensitive action that bypasses normal quality checks and is
+ *   logged with elevated audit severity.
+ *
+ * @see {@link file://docs/prd/002-data-model.md} §2.7 Escalation
+ * @see {@link file://docs/backlog/tasks/T103-escalation-resolution.md}
+ */
+export class ResolveEscalationDto {
+  static schema = resolveEscalationActionSchema;
+  actorId!: string;
+  reason!: string;
+  resolutionType!: EscalationResolutionType;
+  poolId?: string;
+  evidence?: string;
+}

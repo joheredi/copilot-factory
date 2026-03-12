@@ -663,4 +663,227 @@ describe("OperatorActionsService", () => {
       expect(priorityEvent!.actorId).toBe("operator-2");
     });
   });
+
+  // ─── Resolve Escalation ─────────────────────────────────────────────────
+
+  describe("resolveEscalation", () => {
+    // --- Retry resolution ---
+
+    /**
+     * Validates that retry resolution moves ESCALATED → ASSIGNED.
+     * This is the primary path for operators retrying a task after
+     * investigating the escalation reason. The task becomes available
+     * for worker assignment with a new lease.
+     */
+    it("should move ESCALATED to ASSIGNED on retry", () => {
+      const taskId = createTaskInState(conn, "ESCALATED");
+
+      const result = service.resolveEscalation(taskId, {
+        actorId: "operator-1",
+        reason: "Root cause identified, retrying",
+        resolutionType: "retry",
+      });
+
+      expect(result.task.status).toBe("ASSIGNED");
+      expect(result.auditEvent.actorType).toBe("operator");
+      expect(result.auditEvent.actorId).toBe("operator-1");
+    });
+
+    /**
+     * Validates that retry audit metadata captures resolution context.
+     * The audit trail must clearly show this was an escalation resolution
+     * (not just a resume), so operators reviewing history can distinguish
+     * between the two.
+     */
+    it("should record resolve_escalation action in audit metadata on retry", () => {
+      const taskId = createTaskInState(conn, "ESCALATED");
+
+      service.resolveEscalation(taskId, {
+        actorId: "operator-1",
+        reason: "Fixed configuration issue",
+        resolutionType: "retry",
+      });
+
+      const auditRepo = createAuditEventRepository(conn.db);
+      const events = auditRepo.findByEntity("task", taskId);
+      const transitionEvent = events.find((e) => e.eventType.includes("transition"));
+      expect(transitionEvent).toBeDefined();
+      const metadata =
+        typeof transitionEvent!.metadataJson === "string"
+          ? JSON.parse(transitionEvent!.metadataJson)
+          : transitionEvent!.metadataJson;
+      expect(metadata.action).toBe("resolve_escalation");
+      expect(metadata.resolutionType).toBe("retry");
+      expect(metadata.reason).toBe("Fixed configuration issue");
+    });
+
+    /**
+     * Validates that retry with poolId records pool reassignment.
+     * When an operator retries and changes the pool, both the state
+     * transition and the pool reassignment must be recorded as audit events.
+     */
+    it("should record pool reassignment on retry with poolId", () => {
+      const taskId = createTaskInState(conn, "ESCALATED");
+
+      const result = service.resolveEscalation(taskId, {
+        actorId: "operator-1",
+        reason: "Needs different worker type",
+        resolutionType: "retry",
+        poolId: "specialized-pool",
+      });
+
+      expect(result.task.status).toBe("ASSIGNED");
+
+      const auditRepo = createAuditEventRepository(conn.db);
+      const events = auditRepo.findByEntity("task", taskId);
+      const poolEvent = events.find((e) => e.eventType === "task.operator.reassign_pool");
+      expect(poolEvent).toBeDefined();
+    });
+
+    // --- Cancel resolution ---
+
+    /**
+     * Validates that cancel resolution moves ESCALATED → CANCELLED.
+     * This is for tasks that operators decide to abandon after
+     * reviewing the escalation. The escalation context is preserved
+     * in the audit trail for future reference.
+     */
+    it("should move ESCALATED to CANCELLED on cancel", () => {
+      const taskId = createTaskInState(conn, "ESCALATED");
+
+      const result = service.resolveEscalation(taskId, {
+        actorId: "operator-1",
+        reason: "Task no longer relevant after priority change",
+        resolutionType: "cancel",
+      });
+
+      expect(result.task.status).toBe("CANCELLED");
+      expect(result.auditEvent.actorType).toBe("operator");
+    });
+
+    /**
+     * Validates that cancel audit metadata includes resolution context.
+     */
+    it("should record resolve_escalation action in audit metadata on cancel", () => {
+      const taskId = createTaskInState(conn, "ESCALATED");
+
+      service.resolveEscalation(taskId, {
+        actorId: "operator-1",
+        reason: "Duplicate of another task",
+        resolutionType: "cancel",
+      });
+
+      const auditRepo = createAuditEventRepository(conn.db);
+      const events = auditRepo.findByEntity("task", taskId);
+      const transitionEvent = events.find((e) => e.eventType.includes("transition"));
+      expect(transitionEvent).toBeDefined();
+      const metadata =
+        typeof transitionEvent!.metadataJson === "string"
+          ? JSON.parse(transitionEvent!.metadataJson)
+          : transitionEvent!.metadataJson;
+      expect(metadata.action).toBe("resolve_escalation");
+      expect(metadata.resolutionType).toBe("cancel");
+    });
+
+    // --- Mark done resolution ---
+
+    /**
+     * Validates that mark_done resolution moves ESCALATED → DONE.
+     * This is the most sensitive resolution type — it bypasses all
+     * normal quality gates (review, merge, validation). The audit trail
+     * must capture both the reason and evidence of external completion.
+     */
+    it("should move ESCALATED to DONE on mark_done with evidence", () => {
+      const taskId = createTaskInState(conn, "ESCALATED");
+
+      const result = service.resolveEscalation(taskId, {
+        actorId: "operator-1",
+        reason: "Completed via manual hotfix",
+        resolutionType: "mark_done",
+        evidence: "Hotfix PR #456 merged, verified in production",
+      });
+
+      expect(result.task.status).toBe("DONE");
+      expect(result.auditEvent.actorType).toBe("operator");
+    });
+
+    /**
+     * Validates that mark_done audit metadata includes evidence and
+     * elevated audit severity. This is critical for compliance — auditors
+     * need to see exactly what evidence was provided for tasks that
+     * bypassed the normal quality pipeline.
+     */
+    it("should record evidence and elevated severity in audit metadata on mark_done", () => {
+      const taskId = createTaskInState(conn, "ESCALATED");
+
+      service.resolveEscalation(taskId, {
+        actorId: "operator-1",
+        reason: "Completed via manual hotfix",
+        resolutionType: "mark_done",
+        evidence: "Hotfix PR #456 merged, verified in production",
+      });
+
+      const auditRepo = createAuditEventRepository(conn.db);
+      const events = auditRepo.findByEntity("task", taskId);
+      const transitionEvent = events.find((e) => e.eventType.includes("transition"));
+      expect(transitionEvent).toBeDefined();
+      const metadata =
+        typeof transitionEvent!.metadataJson === "string"
+          ? JSON.parse(transitionEvent!.metadataJson)
+          : transitionEvent!.metadataJson;
+      expect(metadata.action).toBe("resolve_escalation");
+      expect(metadata.resolutionType).toBe("mark_done");
+      expect(metadata.evidence).toBe("Hotfix PR #456 merged, verified in production");
+      expect(metadata.auditSeverity).toBe("elevated");
+    });
+
+    // --- Error cases ---
+
+    /**
+     * Validates that resolve_escalation rejects non-ESCALATED tasks.
+     * The guard must prevent operators from applying resolution logic
+     * to tasks in other states.
+     */
+    it("should reject resolve_escalation for non-ESCALATED task", () => {
+      const taskId = createTaskInState(conn, "READY");
+
+      expect(() =>
+        service.resolveEscalation(taskId, {
+          actorId: "operator-1",
+          reason: "Trying to resolve",
+          resolutionType: "retry",
+        }),
+      ).toThrow(/ESCALATED/i);
+    });
+
+    /**
+     * Validates that mark_done is rejected when evidence is missing.
+     * The guard enforces this requirement as defense-in-depth beyond
+     * the DTO schema validation.
+     */
+    it("should reject mark_done without evidence", () => {
+      const taskId = createTaskInState(conn, "ESCALATED");
+
+      expect(() =>
+        service.resolveEscalation(taskId, {
+          actorId: "operator-1",
+          reason: "Completed externally",
+          resolutionType: "mark_done",
+        }),
+      ).toThrow(/evidence/i);
+    });
+
+    /**
+     * Validates that resolve_escalation throws for non-existent tasks.
+     */
+    it("should throw NotFoundException for unknown task", () => {
+      expect(() =>
+        service.resolveEscalation("nonexistent-id", {
+          actorId: "operator-1",
+          reason: "reason",
+          resolutionType: "retry",
+        }),
+      ).toThrow(/not found/i);
+    });
+  });
 });

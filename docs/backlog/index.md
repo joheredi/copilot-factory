@@ -223,7 +223,7 @@ See [phase documents](phases/) for details.
 | [T100](tasks/T100-ui-audit-explorer.md)             | Build audit explorer view                                                             | E020 | P2       | feature    | pending |
 | [T101](tasks/T101-api-operator-actions.md)          | Implement operator action API endpoints                                               | E021 | P1       | feature    | done    |
 | [T102](tasks/T102-operator-guards.md)               | Implement state transition guards for manual actions                                  | E021 | P1       | feature    | done    |
-| [T103](tasks/T103-escalation-resolution.md)         | Implement escalation resolution flow                                                  | E021 | P1       | feature    | pending |
+| [T103](tasks/T103-escalation-resolution.md)         | Implement escalation resolution flow                                                  | E021 | P1       | feature    | done    |
 | [T104](tasks/T104-ui-operator-task.md)              | Integrate operator controls into task detail UI                                       | E021 | P2       | feature    | pending |
 | [T105](tasks/T105-ui-operator-pool-merge.md)        | Integrate operator controls into pool and merge queue UI                              | E021 | P2       | feature    | pending |
 | [T106](tasks/T106-test-harness.md)                  | Create test harness with fake runner and workspace                                    | E022 | P0       | test       | done    |
