@@ -448,3 +448,30 @@ T110 - Integration test: lease timeout and crash recovery (Epic E022: Integratio
 - T136 (infrastructure adapter wiring) is the next ready P0 task in E009 — it wires WorkspaceManager, PacketMounter, and CopilotCliAdapter
 - T137 (wire dispatch into AutomationService) depends on both T135 and T136 being done
 - The heartbeat forwarder adapter will be instantiated in T137 when wiring the AutomationService
+
+## T136: Wire workspace, runtime, and packet infrastructure adapters — DONE
+
+**What was done:**
+
+- Added `@factory/infrastructure` as a dependency of `apps/control-plane`
+- Created `apps/control-plane/src/automation/infrastructure-adapters.ts` — factory functions that bridge infrastructure classes to application-layer port interfaces
+- Created `apps/control-plane/src/automation/infrastructure-adapters.test.ts` — 17 unit tests
+
+**Adapter bridges created:**
+
+1. **`createWorkspaceProviderAdapter(manager)`** → `WorkspaceProviderPort` — maps positional `(taskId, repoPath, attempt?)` to `CreateWorkspaceOptions` and `(taskId, repoPath, options?)` to `CleanupWorkspaceOptions`
+2. **`createPacketMounterAdapter(mounter)`** → `PacketMounterPort` — delegates to `WorkspacePacketMounter`, discards `MountPacketsResult` (port returns `void`)
+3. **`createRuntimeAdapterBridge(adapter)`** → `RuntimeAdapterPort` — bridges `CopilotCliAdapter` with `SupervisorRunContext` → `RunContext` type cast for nominal type differences (`Record<string, unknown>` ↔ `TaskPacket`/`PolicySnapshot`)
+4. **`createInfrastructureAdapters(config, deps?)`** — top-level factory that instantiates `FileSystem`, `GitOperations`, `ProcessSpawner`, creates all three infrastructure classes, and wraps them in adapter bridges
+5. **`resolveInfrastructureConfig()`** — reads `WORKSPACES_ROOT` env var with `./data/workspaces` default
+
+**Key design decisions:**
+
+- Factory function pattern (not NestJS providers) — matches existing `application-adapters.ts` and `heartbeat-forwarder-adapter.ts` patterns
+- `InfrastructureAdapterDependencies` interface allows test injection of fake filesystem/git/process spawner
+- Type bridge uses `as unknown as RunContext` cast — safe because at runtime the objects are valid `TaskPacket`/`PolicySnapshot` instances; the port just carries them as `Record<string, unknown>`
+
+**What the next loop should know:**
+
+- T137 (wire dispatch into AutomationService) is now unblocked — it needs to call `createInfrastructureAdapters()` and pass the resulting ports into `createWorkerSupervisorService()`
+- T112 (import schemas, E023) is also P0-ready and independent of E009

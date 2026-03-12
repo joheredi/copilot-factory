@@ -5,7 +5,7 @@
 | **ID**                    | T136                                                                |
 | **Epic**                  | [E009: Worker Runtime & Execution](../epics/E009-worker-runtime.md) |
 | **Type**                  | infrastructure                                                      |
-| **Status**                | pending                                                             |
+| **Status**                | done                                                                |
 | **Priority**              | P0                                                                  |
 | **Owner**                 | backend-engineer                                                    |
 | **AI Executable**         | Yes                                                                 |
@@ -71,12 +71,12 @@ The implementing agent should read these files before starting:
 
 ## Acceptance Criteria
 
-- [ ] WorkspaceManager instantiated with correct configuration
-- [ ] WorkspacePacketMounter instantiated with filesystem
-- [ ] CopilotCliAdapter instantiated with process spawner
-- [ ] All adapters satisfy their respective port interfaces
-- [ ] Configuration is externalized (env vars or config module)
-- [ ] Build succeeds with all imports resolved
+- [x] WorkspaceManager instantiated with correct configuration
+- [x] WorkspacePacketMounter instantiated with filesystem
+- [x] CopilotCliAdapter instantiated with process spawner
+- [x] All adapters satisfy their respective port interfaces
+- [x] Configuration is externalized (env vars or config module)
+- [x] Build succeeds with all imports resolved
 
 ## Definition of Done
 

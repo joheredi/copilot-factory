@@ -62,6 +62,9 @@ importers:
       '@factory/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@factory/infrastructure':
+        specifier: workspace:*
+        version: link:../../packages/infrastructure
       '@factory/observability':
         specifier: workspace:*
         version: link:../../packages/observability
