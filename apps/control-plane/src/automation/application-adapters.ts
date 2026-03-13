@@ -8,24 +8,34 @@
  * @module @factory/control-plane/automation
  */
 
-import type {
-  JobQueueTransactionRepositories,
-  JobQueueUnitOfWork,
-  LeaseUnitOfWork,
-  LeaseTransactionRepositories,
-  ReadinessTransactionRepositories,
-  ReadinessUnitOfWork,
-  SchedulerTickTransactionRepositories,
-  SchedulerTickUnitOfWork,
-  SchedulerTransactionRepositories,
-  SchedulerUnitOfWork,
-  QueuedJob,
-  WorkerDispatchUnitOfWork,
-  WorkerDispatchTransactionRepositories,
-  WorkerSpawnContext,
-  SupervisorWorkspacePaths,
-  SupervisorTimeoutSettings,
-  SupervisorOutputSchemaExpectation,
+import {
+  VersionConflictError,
+  type JobQueueTransactionRepositories,
+  type JobQueueUnitOfWork,
+  type LeaseUnitOfWork,
+  type LeaseTransactionRepositories,
+  type ReadinessTransactionRepositories,
+  type ReadinessUnitOfWork,
+  type SchedulerTickTransactionRepositories,
+  type SchedulerTickUnitOfWork,
+  type SchedulerTransactionRepositories,
+  type SchedulerUnitOfWork,
+  type QueuedJob,
+  type WorkerDispatchUnitOfWork,
+  type WorkerDispatchTransactionRepositories,
+  type WorkerSpawnContext,
+  type SupervisorWorkspacePaths,
+  type SupervisorTimeoutSettings,
+  type SupervisorOutputSchemaExpectation,
+  type WorkerSupervisorUnitOfWork,
+  type WorkerSupervisorTransactionRepositories,
+  type SupervisedWorker,
+  type WorkerEntityStatus,
+  type HeartbeatUnitOfWork,
+  type HeartbeatTransactionRepositories,
+  type HeartbeatLeaseRepositoryPort,
+  type HeartbeatableLease,
+  type StaleLeaseRecord,
 } from "@factory/application";
 import {
   JobStatus,
@@ -47,6 +57,7 @@ import { createTaskDependencyRepository } from "../infrastructure/repositories/t
 import { createTaskLeaseRepository } from "../infrastructure/repositories/task-lease.repository.js";
 import { createTaskRepository } from "../infrastructure/repositories/task.repository.js";
 import { createWorkerPoolRepository } from "../infrastructure/repositories/worker-pool.repository.js";
+import { createWorkerRepository } from "../infrastructure/repositories/worker.repository.js";
 
 const ACTIVE_LEASE_STATUSES: ReadonlySet<string> = new Set([
   WorkerLeaseStatus.LEASED,
@@ -568,6 +579,217 @@ export function createWorkerDispatchUnitOfWork(conn: DatabaseConnection): Worker
             };
           },
         },
+      });
+    },
+  };
+}
+
+// ─── Worker Supervisor UoW ──────────────────────────────────────────────────
+
+/**
+ * Creates a WorkerSupervisorUnitOfWork that manages worker entity lifecycle.
+ *
+ * Wraps the worker repository in a write transaction since the supervisor
+ * creates, reads, and updates worker records as it orchestrates ephemeral
+ * worker processes.
+ *
+ * @param conn - The database connection to bind to.
+ * @returns A WorkerSupervisorUnitOfWork for the worker supervisor service.
+ *
+ * @see {@link file://docs/backlog/tasks/T137-wire-dispatch-automation.md}
+ */
+export function createWorkerSupervisorUnitOfWork(
+  conn: DatabaseConnection,
+): WorkerSupervisorUnitOfWork {
+  return {
+    runInTransaction<T>(fn: (repos: WorkerSupervisorTransactionRepositories) => T): T {
+      return conn.writeTransaction((db) => {
+        const workerRepo = createWorkerRepository(db);
+
+        return fn({
+          worker: {
+            create(data) {
+              const row = workerRepo.create({
+                workerId: data.workerId,
+                poolId: data.poolId,
+                name: data.name,
+                status: data.status,
+                currentTaskId: data.currentTaskId,
+              });
+              return mapWorkerRow(row);
+            },
+
+            findById(workerId) {
+              const row = workerRepo.findById(workerId);
+              if (!row) return undefined;
+              return mapWorkerRow(row);
+            },
+
+            update(workerId, data) {
+              const row = workerRepo.update(workerId, {
+                ...(data.status !== undefined && { status: data.status }),
+                ...(data.currentRunId !== undefined && { currentRunId: data.currentRunId }),
+                ...(data.currentTaskId !== undefined && { currentTaskId: data.currentTaskId }),
+                ...(data.lastHeartbeatAt !== undefined && {
+                  lastHeartbeatAt: data.lastHeartbeatAt,
+                }),
+              });
+              if (!row) {
+                throw new VersionConflictError("Worker", workerId, "exists");
+              }
+              return mapWorkerRow(row);
+            },
+          },
+        });
+      });
+    },
+  };
+}
+
+/**
+ * Map a raw worker table row to the SupervisedWorker shape expected by the port.
+ *
+ * @param row - Raw worker row from the database.
+ * @returns A SupervisedWorker with correctly typed fields.
+ */
+function mapWorkerRow(row: {
+  workerId: string;
+  poolId: string;
+  name: string;
+  status: string;
+  currentTaskId: string | null;
+  currentRunId: string | null;
+  lastHeartbeatAt: Date | null;
+}): SupervisedWorker {
+  return {
+    workerId: row.workerId,
+    poolId: row.poolId,
+    name: row.name,
+    status: row.status as WorkerEntityStatus,
+    currentTaskId: row.currentTaskId,
+    currentRunId: row.currentRunId,
+    lastHeartbeatAt: row.lastHeartbeatAt,
+  };
+}
+
+// ─── Heartbeat UoW ──────────────────────────────────────────────────────────
+
+/**
+ * Creates a HeartbeatUnitOfWork for atomic heartbeat and staleness operations.
+ *
+ * Uses `conn.writeTransaction` for atomicity since heartbeat processing
+ * updates lease records and creates audit events. The `findStaleLeases`
+ * query uses raw SQLite because it requires a UNION + COALESCE pattern
+ * that is simpler in raw SQL than Drizzle's query builder.
+ *
+ * @param conn - The database connection to bind to.
+ * @returns A HeartbeatUnitOfWork for the heartbeat service.
+ *
+ * @see {@link file://apps/control-plane/src/integration/lease-recovery.integration.test.ts}
+ *   Reference implementation used as the template for this adapter.
+ * @see {@link file://docs/backlog/tasks/T137-wire-dispatch-automation.md}
+ */
+export function createHeartbeatUnitOfWork(conn: DatabaseConnection): HeartbeatUnitOfWork {
+  return {
+    runInTransaction<T>(fn: (repos: HeartbeatTransactionRepositories) => T): T {
+      return conn.writeTransaction((db) => {
+        const leaseRepo = createTaskLeaseRepository(db);
+        const auditEventPort = createAuditEventPortAdapter(db);
+        // Raw SQLite handle for the UNION-based staleness query
+        const rawSqlite = conn.sqlite;
+
+        const leasePort: HeartbeatLeaseRepositoryPort = {
+          findById(leaseId: string): HeartbeatableLease | undefined {
+            const lease = leaseRepo.findById(leaseId);
+            if (!lease) return undefined;
+            return {
+              leaseId: lease.leaseId,
+              taskId: lease.taskId,
+              workerId: lease.workerId,
+              status: lease.status as WorkerLeaseStatus,
+              heartbeatAt: lease.heartbeatAt,
+              expiresAt: lease.expiresAt,
+              leasedAt: lease.leasedAt,
+            };
+          },
+
+          updateHeartbeat(
+            leaseId: string,
+            expectedStatus: WorkerLeaseStatus,
+            newStatus: WorkerLeaseStatus,
+            heartbeatAt: Date,
+            newExpiresAt?: Date,
+          ): HeartbeatableLease {
+            const current = leaseRepo.findById(leaseId);
+            if (!current || current.status !== expectedStatus) {
+              throw new VersionConflictError("TaskLease", leaseId, expectedStatus);
+            }
+            const updateData: Record<string, unknown> = {
+              status: newStatus,
+              heartbeatAt,
+            };
+            if (newExpiresAt !== undefined) {
+              updateData["expiresAt"] = newExpiresAt;
+            }
+            const updated = leaseRepo.update(leaseId, updateData);
+            if (!updated) {
+              throw new VersionConflictError("TaskLease", leaseId, expectedStatus);
+            }
+            return {
+              leaseId: updated.leaseId,
+              taskId: updated.taskId,
+              workerId: updated.workerId,
+              status: updated.status as WorkerLeaseStatus,
+              heartbeatAt: updated.heartbeatAt,
+              expiresAt: updated.expiresAt,
+              leasedAt: updated.leasedAt,
+            };
+          },
+
+          findStaleLeases(heartbeatDeadline: Date, ttlDeadline: Date): readonly StaleLeaseRecord[] {
+            const heartbeatDeadlineSec = Math.floor(heartbeatDeadline.getTime() / 1000);
+            const ttlDeadlineSec = Math.floor(ttlDeadline.getTime() / 1000);
+
+            // Query for heartbeat-stale OR TTL-expired leases using UNION to deduplicate.
+            // Uses raw SQLite because the query involves UNION and COALESCE patterns
+            // that are simpler to express in raw SQL than Drizzle's query builder.
+            const rows = rawSqlite
+              .prepare(
+                `SELECT lease_id, task_id, worker_id, pool_id, status, heartbeat_at, expires_at, leased_at
+                 FROM task_lease
+                 WHERE status IN ('STARTING', 'RUNNING', 'HEARTBEATING')
+                   AND COALESCE(heartbeat_at, leased_at) < ?
+                 UNION
+                 SELECT lease_id, task_id, worker_id, pool_id, status, heartbeat_at, expires_at, leased_at
+                 FROM task_lease
+                 WHERE status IN ('LEASED', 'STARTING', 'RUNNING', 'HEARTBEATING')
+                   AND expires_at < ?`,
+              )
+              .all(heartbeatDeadlineSec, ttlDeadlineSec) as Array<{
+              lease_id: string;
+              task_id: string;
+              worker_id: string;
+              pool_id: string;
+              status: string;
+              heartbeat_at: number | null;
+              expires_at: number;
+              leased_at: number;
+            }>;
+
+            return rows.map((r) => ({
+              leaseId: r.lease_id,
+              taskId: r.task_id,
+              workerId: r.worker_id,
+              poolId: r.pool_id,
+              status: r.status as WorkerLeaseStatus,
+              heartbeatAt: r.heartbeat_at != null ? new Date(r.heartbeat_at * 1000) : null,
+              expiresAt: new Date(r.expires_at * 1000),
+              leasedAt: new Date(r.leased_at * 1000),
+            }));
+          },
+        };
+
+        return fn({ lease: leasePort, auditEvent: auditEventPort });
       });
     },
   };

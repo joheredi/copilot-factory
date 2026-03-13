@@ -157,4 +157,28 @@ describe("AutomationService", () => {
     const taskRepo = createTaskRepository(conn.db);
     expect(taskRepo.findById(dependentTaskId)?.status).toBe(TaskStatus.BLOCKED);
   });
+
+  /**
+   * Validates that processWorkerDispatches() is a method on the service and
+   * can be called without error when no dispatch jobs exist. This confirms
+   * the full dispatch chain (heartbeat → heartbeat forwarder → infra adapters →
+   * supervisor → dispatch) was wired in the constructor without throwing.
+   *
+   * The dispatch returns a "skipped" result when there are no WORKER_DISPATCH
+   * jobs in the queue, which is the expected behavior here since we haven't
+   * run the scheduler tick to create one.
+   */
+  it("processWorkerDispatches does not throw when no dispatch jobs exist", async () => {
+    conn = createTestDatabase({ migrationsFolder: MIGRATIONS_FOLDER });
+    seedProjectAndRepository(conn);
+    seedDeveloperPool(conn);
+
+    const service = new AutomationService(conn, createEmitter());
+
+    // Should not throw — fire-and-forget dispatch with no pending jobs
+    service.processWorkerDispatches();
+
+    // Give the async dispatch a moment to settle
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  });
 });

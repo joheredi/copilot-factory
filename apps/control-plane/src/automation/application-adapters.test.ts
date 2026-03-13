@@ -13,10 +13,15 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { resolve } from "node:path";
 
-import { TaskStatus } from "@factory/domain";
+import { TaskStatus, WorkerLeaseStatus } from "@factory/domain";
+import { VersionConflictError } from "@factory/application";
 import { createTestDatabase, type TestDatabaseConnection } from "@factory/testing";
 
-import { createWorkerDispatchUnitOfWork } from "./application-adapters.js";
+import {
+  createWorkerDispatchUnitOfWork,
+  createWorkerSupervisorUnitOfWork,
+  createHeartbeatUnitOfWork,
+} from "./application-adapters.js";
 
 const MIGRATIONS_FOLDER = resolve(import.meta.dirname, "../../drizzle");
 
@@ -339,5 +344,396 @@ describe("createWorkerDispatchUnitOfWork", () => {
     expect(packet.definitionOfDone).toEqual(["DoD1"]);
     expect(packet.suggestedFileScope).toEqual(["src/**/*.ts", "lib/**"]);
     expect(packet.requiredCapabilities).toEqual(["typescript"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Worker Supervisor UoW tests
+// ---------------------------------------------------------------------------
+
+/**
+ * Seed helpers for worker supervisor tests. Workers have a FK to worker_pool.
+ */
+function seedWorkerPool(conn: TestDatabaseConnection): string {
+  const poolId = `pool-${crypto.randomUUID().slice(0, 8)}`;
+  conn.sqlite
+    .prepare(
+      `INSERT INTO worker_pool (worker_pool_id, name, pool_type, max_concurrency, enabled, capabilities, default_timeout_sec)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(poolId, "test-pool", "developer", 2, 1, JSON.stringify(["typescript"]), 600);
+  return poolId;
+}
+
+describe("createWorkerSupervisorUnitOfWork", () => {
+  let conn: TestDatabaseConnection;
+
+  afterEach(() => {
+    conn?.close();
+  });
+
+  /**
+   * Validates the create path: the supervisor creates a worker record when
+   * spawning a new ephemeral worker process. The returned SupervisedWorker
+   * must have all fields set correctly, especially the status cast to the
+   * domain-level WorkerEntityStatus enum.
+   */
+  it("creates a worker and returns a SupervisedWorker", () => {
+    conn = createTestDatabase({ migrationsFolder: MIGRATIONS_FOLDER });
+    const poolId = seedWorkerPool(conn);
+    const { repositoryId } = seedProjectAndRepository(conn);
+    const taskId = seedTask(conn, repositoryId, { status: "ASSIGNED" });
+
+    const uow = createWorkerSupervisorUnitOfWork(conn);
+    const result = uow.runInTransaction((repos) =>
+      repos.worker.create({
+        workerId: "w-001",
+        poolId,
+        name: "test-worker-001",
+        status: "provisioning",
+        currentTaskId: taskId,
+      }),
+    );
+
+    expect(result).toMatchObject({
+      workerId: "w-001",
+      poolId,
+      name: "test-worker-001",
+      status: "provisioning",
+      currentTaskId: taskId,
+    });
+  });
+
+  /**
+   * Validates findById returns the correct worker when it exists.
+   * This is critical for the supervisor's spawn lifecycle where it
+   * reads back the worker to check its status.
+   */
+  it("finds an existing worker by ID", () => {
+    conn = createTestDatabase({ migrationsFolder: MIGRATIONS_FOLDER });
+    const poolId = seedWorkerPool(conn);
+    const { repositoryId } = seedProjectAndRepository(conn);
+    const taskId = seedTask(conn, repositoryId, { status: "ASSIGNED" });
+
+    const uow = createWorkerSupervisorUnitOfWork(conn);
+    uow.runInTransaction((repos) =>
+      repos.worker.create({
+        workerId: "w-find",
+        poolId,
+        name: "findable",
+        status: "provisioning",
+        currentTaskId: taskId,
+      }),
+    );
+
+    const found = uow.runInTransaction((repos) => repos.worker.findById("w-find"));
+    expect(found).toBeDefined();
+    expect(found!.workerId).toBe("w-find");
+    expect(found!.name).toBe("findable");
+  });
+
+  /**
+   * Validates findById returns undefined for a non-existent worker ID.
+   * The supervisor must handle this gracefully when a worker disappears.
+   */
+  it("returns undefined for non-existent worker", () => {
+    conn = createTestDatabase({ migrationsFolder: MIGRATIONS_FOLDER });
+
+    const uow = createWorkerSupervisorUnitOfWork(conn);
+    const result = uow.runInTransaction((repos) => repos.worker.findById("no-such-worker"));
+    expect(result).toBeUndefined();
+  });
+
+  /**
+   * Validates the update path: the supervisor updates worker status when
+   * the worker transitions through its lifecycle (provisioning → running →
+   * completed). The update must return the full updated entity.
+   */
+  it("updates an existing worker and returns updated entity", () => {
+    conn = createTestDatabase({ migrationsFolder: MIGRATIONS_FOLDER });
+    const poolId = seedWorkerPool(conn);
+    const { repositoryId } = seedProjectAndRepository(conn);
+    const taskId = seedTask(conn, repositoryId, { status: "ASSIGNED" });
+
+    const uow = createWorkerSupervisorUnitOfWork(conn);
+    uow.runInTransaction((repos) =>
+      repos.worker.create({
+        workerId: "w-update",
+        poolId,
+        name: "updatable",
+        status: "provisioning",
+        currentTaskId: taskId,
+      }),
+    );
+
+    const updated = uow.runInTransaction((repos) =>
+      repos.worker.update("w-update", {
+        status: "running",
+        currentRunId: "run-123",
+      }),
+    );
+
+    expect(updated.status).toBe("running");
+    expect(updated.currentRunId).toBe("run-123");
+    expect(updated.workerId).toBe("w-update");
+  });
+
+  /**
+   * Validates that updating a non-existent worker throws VersionConflictError.
+   * This prevents silent failures when the supervisor tries to update a
+   * worker that was already cleaned up.
+   */
+  it("throws VersionConflictError when updating non-existent worker", () => {
+    conn = createTestDatabase({ migrationsFolder: MIGRATIONS_FOLDER });
+
+    const uow = createWorkerSupervisorUnitOfWork(conn);
+    expect(() =>
+      uow.runInTransaction((repos) => repos.worker.update("ghost", { status: "running" })),
+    ).toThrow(VersionConflictError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Heartbeat UoW tests
+// ---------------------------------------------------------------------------
+
+/**
+ * Seed helpers for heartbeat tests. Leases require a task which requires
+ * a project/repository.
+ */
+function seedLeaseForHeartbeat(
+  conn: TestDatabaseConnection,
+  overrides?: {
+    leaseId?: string;
+    status?: string;
+    heartbeatAt?: number | null;
+    expiresAt?: number;
+    leasedAt?: number;
+  },
+): { leaseId: string; taskId: string } {
+  // Seed project & repository if not present (idempotent via IGNORE)
+  conn.sqlite
+    .prepare(
+      `INSERT OR IGNORE INTO project (project_id, name, owner) VALUES ('hb-proj', 'hb-project', 'heartbeat-test')`,
+    )
+    .run();
+  conn.sqlite
+    .prepare(
+      `INSERT OR IGNORE INTO repository (repository_id, project_id, name, remote_url, default_branch, local_checkout_strategy, status)
+       VALUES ('hb-repo', 'hb-proj', 'hb-repo', 'file:///tmp/hb', 'main', 'worktree', 'ACTIVE')`,
+    )
+    .run();
+
+  const taskId = `hb-task-${crypto.randomUUID().slice(0, 8)}`;
+  conn.sqlite
+    .prepare(
+      `INSERT INTO task (task_id, repository_id, title, task_type, priority, status, source, version,
+        required_capabilities, acceptance_criteria, definition_of_done, suggested_file_scope)
+       VALUES (?, 'hb-repo', 'heartbeat-task', 'feature', 'high', 'IN_DEVELOPMENT', 'manual', 1,
+        '["typescript"]', '["ac"]', '["dod"]', '["src/**"]')`,
+    )
+    .run(taskId);
+
+  // Seed worker pool + worker for the lease FK
+  conn.sqlite
+    .prepare(
+      `INSERT OR IGNORE INTO worker_pool (worker_pool_id, name, pool_type, max_concurrency, enabled, capabilities, default_timeout_sec)
+       VALUES ('hb-pool', 'hb-pool', 'developer', 2, 1, '["typescript"]', 600)`,
+    )
+    .run();
+  conn.sqlite
+    .prepare(
+      `INSERT OR IGNORE INTO worker (worker_id, pool_id, name, status) VALUES ('hb-worker', 'hb-pool', 'hb-worker', 'running')`,
+    )
+    .run();
+
+  const leaseId = overrides?.leaseId ?? `lease-${crypto.randomUUID().slice(0, 8)}`;
+  const now = Math.floor(Date.now() / 1000);
+  conn.sqlite
+    .prepare(
+      `INSERT INTO task_lease (lease_id, task_id, worker_id, pool_id, status, heartbeat_at, expires_at, leased_at)
+       VALUES (?, ?, 'hb-worker', 'hb-pool', ?, ?, ?, ?)`,
+    )
+    .run(
+      leaseId,
+      taskId,
+      overrides?.status ?? WorkerLeaseStatus.HEARTBEATING,
+      overrides?.heartbeatAt ?? now,
+      overrides?.expiresAt ?? now + 600,
+      overrides?.leasedAt ?? now,
+    );
+
+  return { leaseId, taskId };
+}
+
+describe("createHeartbeatUnitOfWork", () => {
+  let conn: TestDatabaseConnection;
+
+  afterEach(() => {
+    conn?.close();
+  });
+
+  /**
+   * Validates findById returns a properly mapped HeartbeatableLease
+   * with all fields including correct Date conversions from epoch seconds.
+   * The heartbeat service depends on reading back the current lease state
+   * before processing a heartbeat.
+   */
+  it("findById returns mapped HeartbeatableLease", () => {
+    conn = createTestDatabase({ migrationsFolder: MIGRATIONS_FOLDER });
+    const { leaseId } = seedLeaseForHeartbeat(conn);
+
+    const uow = createHeartbeatUnitOfWork(conn);
+    const result = uow.runInTransaction((repos) => repos.lease.findById(leaseId));
+
+    expect(result).toBeDefined();
+    expect(result!.leaseId).toBe(leaseId);
+    expect(result!.status).toBe(WorkerLeaseStatus.HEARTBEATING);
+    expect(result!.heartbeatAt).toBeInstanceOf(Date);
+    expect(result!.expiresAt).toBeInstanceOf(Date);
+    expect(result!.leasedAt).toBeInstanceOf(Date);
+  });
+
+  /**
+   * Validates findById returns undefined for non-existent leases.
+   * The heartbeat service must handle missing leases gracefully.
+   */
+  it("findById returns undefined for non-existent lease", () => {
+    conn = createTestDatabase({ migrationsFolder: MIGRATIONS_FOLDER });
+
+    const uow = createHeartbeatUnitOfWork(conn);
+    const result = uow.runInTransaction((repos) => repos.lease.findById("no-such-lease"));
+    expect(result).toBeUndefined();
+  });
+
+  /**
+   * Validates updateHeartbeat correctly updates the lease status and heartbeat
+   * timestamp, and optionally the expiresAt. This is the core heartbeat
+   * processing operation — the lease is atomically transitioned and the
+   * heartbeat time recorded.
+   */
+  it("updateHeartbeat transitions lease status and updates timestamps", () => {
+    conn = createTestDatabase({ migrationsFolder: MIGRATIONS_FOLDER });
+    const { leaseId } = seedLeaseForHeartbeat(conn, {
+      status: WorkerLeaseStatus.RUNNING,
+    });
+
+    const uow = createHeartbeatUnitOfWork(conn);
+    const newHeartbeat = new Date();
+    const newExpiry = new Date(Date.now() + 300_000);
+
+    const result = uow.runInTransaction((repos) =>
+      repos.lease.updateHeartbeat(
+        leaseId,
+        WorkerLeaseStatus.RUNNING,
+        WorkerLeaseStatus.HEARTBEATING,
+        newHeartbeat,
+        newExpiry,
+      ),
+    );
+
+    expect(result.leaseId).toBe(leaseId);
+    expect(result.status).toBe(WorkerLeaseStatus.HEARTBEATING);
+  });
+
+  /**
+   * Validates optimistic concurrency: updateHeartbeat throws VersionConflictError
+   * when the current lease status doesn't match the expected status. This
+   * prevents concurrent heartbeat processors from corrupting lease state.
+   */
+  it("updateHeartbeat throws VersionConflictError on status mismatch", () => {
+    conn = createTestDatabase({ migrationsFolder: MIGRATIONS_FOLDER });
+    const { leaseId } = seedLeaseForHeartbeat(conn, {
+      status: WorkerLeaseStatus.HEARTBEATING,
+    });
+
+    const uow = createHeartbeatUnitOfWork(conn);
+    expect(() =>
+      uow.runInTransaction((repos) =>
+        repos.lease.updateHeartbeat(
+          leaseId,
+          WorkerLeaseStatus.RUNNING, // wrong expected status
+          WorkerLeaseStatus.HEARTBEATING,
+          new Date(),
+        ),
+      ),
+    ).toThrow(VersionConflictError);
+  });
+
+  /**
+   * Validates findStaleLeases returns leases that have missed their
+   * heartbeat deadline. This drives the lease recovery mechanism —
+   * stale leases are candidates for reclaim by the reconciliation loop.
+   */
+  it("findStaleLeases returns heartbeat-stale leases", () => {
+    conn = createTestDatabase({ migrationsFolder: MIGRATIONS_FOLDER });
+
+    const pastTime = Math.floor(Date.now() / 1000) - 3600; // 1 hour ago
+    const futureTime = Math.floor(Date.now() / 1000) + 3600;
+
+    const { leaseId } = seedLeaseForHeartbeat(conn, {
+      status: WorkerLeaseStatus.HEARTBEATING,
+      heartbeatAt: pastTime,
+      expiresAt: futureTime, // not TTL-expired
+    });
+
+    const uow = createHeartbeatUnitOfWork(conn);
+    // Heartbeat deadline = now (past heartbeat should be detected)
+    // TTL deadline = far past (should not match since lease hasn't expired)
+    const heartbeatDeadline = new Date();
+    const ttlDeadline = new Date(0);
+
+    const stale = uow.runInTransaction((repos) =>
+      repos.lease.findStaleLeases(heartbeatDeadline, ttlDeadline),
+    );
+
+    expect(stale.length).toBeGreaterThanOrEqual(1);
+    const found = stale.find((s) => s.leaseId === leaseId);
+    expect(found).toBeDefined();
+    expect(found!.status).toBe(WorkerLeaseStatus.HEARTBEATING);
+  });
+
+  /**
+   * Validates findStaleLeases returns TTL-expired leases (leases past
+   * their expiresAt timestamp). Even if heartbeat is recent, an expired
+   * lease should be reclaimed.
+   */
+  it("findStaleLeases returns TTL-expired leases", () => {
+    conn = createTestDatabase({ migrationsFolder: MIGRATIONS_FOLDER });
+
+    const now = Math.floor(Date.now() / 1000);
+    const { leaseId } = seedLeaseForHeartbeat(conn, {
+      status: WorkerLeaseStatus.LEASED,
+      heartbeatAt: null,
+      expiresAt: now - 100, // expired 100s ago
+    });
+
+    const uow = createHeartbeatUnitOfWork(conn);
+    const heartbeatDeadline = new Date(0); // won't match heartbeat check
+    const ttlDeadline = new Date(); // now — expired leases should be caught
+
+    const stale = uow.runInTransaction((repos) =>
+      repos.lease.findStaleLeases(heartbeatDeadline, ttlDeadline),
+    );
+
+    const found = stale.find((s) => s.leaseId === leaseId);
+    expect(found).toBeDefined();
+    expect(found!.status).toBe(WorkerLeaseStatus.LEASED);
+  });
+
+  /**
+   * Validates that the auditEvent port is provided to the transaction.
+   * The heartbeat service creates audit events when processing heartbeats,
+   * so this port must be available in the transaction repositories.
+   */
+  it("provides auditEvent port in transaction repositories", () => {
+    conn = createTestDatabase({ migrationsFolder: MIGRATIONS_FOLDER });
+
+    const uow = createHeartbeatUnitOfWork(conn);
+    const hasAuditEvent = uow.runInTransaction((repos) => {
+      return typeof repos.auditEvent.create === "function";
+    });
+
+    expect(hasAuditEvent).toBe(true);
   });
 });

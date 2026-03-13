@@ -1,5 +1,5 @@
 /**
- * Background automation runtime for task readiness and scheduler ticks.
+ * Background automation runtime for task readiness, scheduling, and worker dispatch.
  *
  * This service is the glue between the control-plane NestJS process and the
  * application-layer orchestration services. It periodically:
@@ -7,6 +7,11 @@
  * - reconciles waiting tasks from `BACKLOG` / `BLOCKED` into `READY` / `BLOCKED`
  * - seeds the recurring scheduler tick job on startup
  * - processes scheduler ticks so eligible `READY` tasks become `ASSIGNED`
+ * - dispatches `WORKER_DISPATCH` jobs to spawn ephemeral worker processes
+ *
+ * Worker dispatch is fire-and-forget: each dispatch runs asynchronously and
+ * does not block the synchronous `runCycle()`. Active dispatches are tracked
+ * so the service can await in-flight work during shutdown.
  *
  * @module @factory/control-plane/automation
  */
@@ -25,10 +30,15 @@ import {
   createSchedulerService,
   createSchedulerTickService,
   createTransitionService,
+  createWorkerDispatchService,
+  createWorkerSupervisorService,
+  createHeartbeatService,
   type DomainEventEmitter,
   type InitializeTickResult,
   type ProcessTickResult,
+  type ProcessDispatchResult,
   type ReadinessResult,
+  type WorkerDispatchService,
 } from "@factory/application";
 import { TaskStatus, type TransitionContext } from "@factory/domain";
 import { createLogger } from "@factory/observability";
@@ -45,7 +55,15 @@ import {
   createReadinessUnitOfWork,
   createSchedulerTickUnitOfWork,
   createSchedulerUnitOfWork,
+  createWorkerDispatchUnitOfWork,
+  createWorkerSupervisorUnitOfWork,
+  createHeartbeatUnitOfWork,
 } from "./application-adapters.js";
+import { createHeartbeatForwarderAdapter } from "./heartbeat-forwarder-adapter.js";
+import {
+  createInfrastructureAdapters,
+  resolveInfrastructureConfig,
+} from "./infrastructure-adapters.js";
 
 export interface ReadinessReconciliationResult {
   readonly evaluatedCount: number;
@@ -67,7 +85,14 @@ export class AutomationService implements OnModuleInit, OnModuleDestroy {
   private readonly transitionService;
   private readonly readinessService;
   private readonly schedulerTickService;
+  private readonly workerDispatchService: WorkerDispatchService;
   private timer: ReturnType<typeof setInterval> | null = null;
+
+  /**
+   * Tracks in-flight dispatch promises so we can await them during shutdown
+   * and report concurrency in logs.
+   */
+  private readonly activeDispatches: Set<Promise<ProcessDispatchResult>> = new Set();
 
   constructor(
     @Inject(DATABASE_CONNECTION) private readonly conn: DatabaseConnection,
@@ -98,6 +123,39 @@ export class AutomationService implements OnModuleInit, OnModuleDestroy {
         tickIntervalMs: AutomationService.SCHEDULER_TICK_INTERVAL_MS,
       },
     );
+
+    // ── Worker dispatch chain ──────────────────────────────────────────────
+    // HeartbeatService → HeartbeatForwarder → InfraAdapters → SupervisorService → DispatchService
+    const clock = () => new Date();
+
+    const heartbeatService = createHeartbeatService(
+      createHeartbeatUnitOfWork(conn),
+      eventEmitter,
+      clock,
+    );
+
+    const heartbeatForwarder = createHeartbeatForwarderAdapter({ heartbeatService });
+
+    const infraConfig = resolveInfrastructureConfig();
+    const { workspaceProvider, packetMounter, runtimeAdapter } =
+      createInfrastructureAdapters(infraConfig);
+
+    const workerSupervisorService = createWorkerSupervisorService({
+      unitOfWork: createWorkerSupervisorUnitOfWork(conn),
+      eventEmitter,
+      workspaceProvider,
+      packetMounter,
+      runtimeAdapter,
+      heartbeatForwarder,
+      clock,
+    });
+
+    this.workerDispatchService = createWorkerDispatchService({
+      unitOfWork: createWorkerDispatchUnitOfWork(conn),
+      jobQueueService,
+      workerSupervisorService,
+      clock,
+    });
   }
 
   onModuleInit(): void {
@@ -114,6 +172,15 @@ export class AutomationService implements OnModuleInit, OnModuleDestroy {
 
   onModuleDestroy(): void {
     this.stopPolling();
+
+    // Best-effort drain: log if there are in-flight dispatches but do not
+    // block module teardown indefinitely — NestJS shutdown hooks are sync.
+    if (this.activeDispatches.size > 0) {
+      this.logger.info("Automation runtime stopping with active dispatches", {
+        activeDispatchCount: this.activeDispatches.size,
+      });
+    }
+
     this.logger.info("Automation runtime stopped");
   }
 
@@ -182,10 +249,55 @@ export class AutomationService implements OnModuleInit, OnModuleDestroy {
     return this.schedulerTickService.processTick();
   }
 
+  /**
+   * Fire-and-forget dispatch: dequeues a WORKER_DISPATCH job and spawns a
+   * worker process via the supervisor. The returned promise is tracked in
+   * `activeDispatches` so we can log concurrency and drain on shutdown.
+   *
+   * Errors are caught and logged — they never propagate to `runCycle()`.
+   */
+  processWorkerDispatches(): void {
+    const promise = this.workerDispatchService.processDispatch();
+
+    this.activeDispatches.add(promise);
+
+    promise
+      .then((result) => {
+        if (result.processed) {
+          if (result.dispatched) {
+            this.logger.info("Worker dispatch succeeded", {
+              jobId: result.jobId,
+              taskId: result.taskId,
+              workerId: result.workerId,
+            });
+          } else {
+            this.logger.warn("Worker dispatch failed", {
+              jobId: result.jobId,
+              taskId: result.taskId,
+              reason: result.reason,
+              error: result.error,
+            });
+          }
+        }
+      })
+      .catch((error: unknown) => {
+        this.logger.error("Worker dispatch unexpected error", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      })
+      .finally(() => {
+        this.activeDispatches.delete(promise);
+      });
+  }
+
   private runCycle(): void {
     try {
       const readiness = this.reconcileTaskReadiness();
       const tickResult = this.processSchedulerTick();
+
+      // Fire-and-forget: dispatches run asynchronously and do not block
+      // the synchronous automation cycle.
+      this.processWorkerDispatches();
 
       if (
         readiness.transitionedToReady > 0 ||
@@ -198,6 +310,7 @@ export class AutomationService implements OnModuleInit, OnModuleDestroy {
           transitionedToBlocked: readiness.transitionedToBlocked,
           schedulerProcessed: tickResult.processed,
           assignments: tickResult.processed ? tickResult.summary.assignmentCount : 0,
+          activeDispatches: this.activeDispatches.size,
         });
       }
     } catch (error: unknown) {

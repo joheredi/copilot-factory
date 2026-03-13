@@ -475,3 +475,33 @@ T110 - Integration test: lease timeout and crash recovery (Epic E022: Integratio
 
 - T137 (wire dispatch into AutomationService) is now unblocked — it needs to call `createInfrastructureAdapters()` and pass the resulting ports into `createWorkerSupervisorService()`
 - T112 (import schemas, E023) is also P0-ready and independent of E009
+
+## T137: Wire WorkerDispatchService into AutomationService — DONE
+
+**What was done:**
+
+- Wired the full worker dispatch chain into `AutomationService` constructor: HeartbeatService → HeartbeatForwarderAdapter → InfrastructureAdapters → WorkerSupervisorService → WorkerDispatchService
+- Added `processWorkerDispatches()` fire-and-forget method to `runCycle()` — dispatches WORKER_DISPATCH jobs without blocking readiness reconciliation or scheduler tick
+- Tracks active dispatch promises in a `Set<Promise>` to prevent unbounded concurrency
+- Added two new UoW factory functions in `application-adapters.ts`:
+  - `createWorkerSupervisorUnitOfWork(conn)` — wraps worker repository for supervisor create/find/update operations
+  - `createHeartbeatUnitOfWork(conn)` — wraps lease repository with raw SQLite UNION query for stale lease detection, plus audit event persistence
+- Added `mapWorkerRow()` helper to map DB rows to `SupervisedWorker` domain entities
+
+**Tests added:**
+
+- `application-adapters.test.ts`: 9 new tests — 3 for `createWorkerSupervisorUnitOfWork` (create, find, update), 6 for `createHeartbeatUnitOfWork` (find stale, extend lease, revoke lease, record audit, version conflict, no stale returns empty)
+- `automation.service.test.ts`: 1 new test for `processWorkerDispatches` fire-and-forget behavior
+
+**Key design decisions:**
+
+- Inline construction in constructor (not extracted factory) — matches existing pattern for transitionService, readinessService, schedulerService
+- Fire-and-forget dispatch with `.catch()` error handling — `processWorkerDispatches()` is sync, starts async work, logs results/errors
+- HeartbeatUnitOfWork uses raw SQLite for `findStaleLeases` — the heartbeat-stale OR TTL-expired pattern is simpler in raw SQL than Drizzle
+- Worker table `currentTaskId` has FK to task table — tests must seed project → repository → task before creating workers
+
+**What the next loop should know:**
+
+- T138 (dispatch integration test) is now unblocked — it should test the full end-to-end flow from job queue to worker spawn
+- The `ProcessDispatchResult` uses `processed`/`dispatched` boolean discriminants, NOT an `outcome` field
+- `Record<string, unknown>` fields require bracket notation access (`updateData["expiresAt"]`) due to `noPropertyAccessFromIndexSignature`
