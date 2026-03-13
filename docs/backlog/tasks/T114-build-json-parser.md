@@ -5,7 +5,7 @@
 | **ID**                    | T114                                                                              |
 | **Epic**                  | [E023: Task Import Pipeline](../epics/E023-task-import.md)                        |
 | **Type**                  | feature                                                                           |
-| **Status**                | pending                                                                           |
+| **Status**                | done                                                                              |
 | **Priority**              | P1                                                                                |
 | **Owner**                 | backend-engineer                                                                  |
 | **AI Executable**         | Yes                                                                               |
@@ -60,12 +60,12 @@ The implementing agent should read these files before starting:
 
 ## Acceptance Criteria
 
-- [ ] Parses this repo's `docs/backlog/backlog.json` successfully
-- [ ] Parses a flat `tasks.json` array format
-- [ ] Auto-detects format without user input
-- [ ] Maps all backlog.json fields to ImportedTask schema
-- [ ] Generates warnings for malformed or invalid entries
-- [ ] Returns a valid `ImportManifest`
+- [x] Parses this repo's `docs/backlog/backlog.json` successfully
+- [x] Parses a flat `tasks.json` array format
+- [x] Auto-detects format without user input
+- [x] Maps all backlog.json fields to ImportedTask schema
+- [x] Generates warnings for malformed or invalid entries
+- [x] Returns a valid `ImportManifest`
 
 ## Definition of Done
 

@@ -395,3 +395,36 @@ T121 - Build CLI entry point command (Epic E024: CLI Package & Single-Command St
 - T114 (parser integration tests) is ready (P1)
 - T124-T131 (web-UI CRUD dialogs) are ready (P1)
 - T150 (dashboard project selector) is ready (P1)
+
+## T114 — Build JSON/backlog.json task parser
+
+### Task
+
+Build a deterministic parser for JSON task files (backlog.json and flat array formats) that produces ImportManifest.
+
+### What was done
+
+- Created `packages/infrastructure/src/import/json-task-parser.ts` (~330 lines)
+  - `parseJsonTasks(sourcePath, fs)` — main entry point, reads file and auto-detects format
+  - `detectJsonFormat(data)` — returns "backlog" | "flat" | "unknown"
+  - `mapBacklogTask(raw, source)` — maps backlog.json fields to ImportedTask
+  - `mapFlatTask(raw, index, source)` — validates flat-format entries
+  - `parseBacklogJsonData(data, sourcePath)` — processes backlog.json root object
+  - `parseFlatJsonData(data, sourcePath)` — processes flat array
+  - `buildManifest(tasks, warnings, sourcePath, rootData)` — assembles ImportManifest
+- Created `packages/infrastructure/src/import/json-task-parser.test.ts` (~470 lines, 30 tests)
+- Updated barrel exports in `packages/infrastructure/src/import/index.ts`
+
+### Patterns used
+
+- Pure functional approach matching markdown parser pattern
+- FileSystem dependency injection (same interface as markdown parser)
+- Reuses `mapTaskType` and `mapPriority` from markdown-task-parser.ts
+- Zod safeParse for validation; invalid entries produce warnings, valid ones kept
+- `Record<string, unknown>` with bracket notation for index signature access (required by `noPropertyAccessFromIndexSignature`)
+
+### Notes for next loops
+
+- T115 (import discovery endpoint) and T123 (import format docs) are now unblocked
+- The parser handles the real 111-task backlog.json from this repo
+- `createFakeFs()` helper from testing package works for mock file reads in tests
