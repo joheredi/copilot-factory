@@ -21,6 +21,7 @@ import { OperatorActionsModule } from "./operator-actions/operator-actions.modul
 import { PolicyModule } from "./policy/policy.module.js";
 import { ProjectsModule } from "./projects/projects.module.js";
 import { ReviewModule } from "./review/review.module.js";
+import { StaticServeModule } from "./static-serve/static-serve.module.js";
 import { TasksModule } from "./tasks/tasks.module.js";
 import { ValidationModule } from "./validation/validation.module.js";
 import { WorkersModule } from "./workers/workers.module.js";
@@ -41,6 +42,7 @@ import { WorkersModule } from "./workers/workers.module.js";
  * - PolicyModule: policy set management
  * - EventsModule: WebSocket gateway for real-time event delivery (§7.7)
  * - OperatorActionsModule: operator action endpoints (§6.2)
+ * - StaticServeModule: optional web-ui static file serving (T120)
  */
 @Module({
   imports: [
@@ -58,6 +60,7 @@ import { WorkersModule } from "./workers/workers.module.js";
     AuditModule,
     PolicyModule,
     OperatorActionsModule,
+    StaticServeModule,
   ],
 })
 export class AppModule {}

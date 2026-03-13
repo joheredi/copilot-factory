@@ -5,7 +5,7 @@
 | **ID**                    | T120                                                                       |
 | **Epic**                  | [E024: CLI Package & Single-Command Startup](../epics/E024-cli-package.md) |
 | **Type**                  | feature                                                                    |
-| **Status**                | pending                                                                    |
+| **Status**                | done                                                                       |
 | **Priority**              | P0                                                                         |
 | **Owner**                 | backend-engineer                                                           |
 | **AI Executable**         | Yes                                                                        |

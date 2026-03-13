@@ -303,3 +303,28 @@ T140 - Create paths module for centralized data directory resolution (Epic E026:
 
 - T141 (programmatic Drizzle migrations) and T146 (start static serving) are now unblocked
 - T141 depends on this paths module to resolve `getDbPath()` and `getMigrationsDir()`
+
+## T120: Serve web-ui static files from control-plane — DONE
+
+### What was done
+
+- Created `apps/control-plane/src/static-serve/` module with:
+  - `configure-static-serving.ts`: Core function `configureStaticServing(app, distPath)` and lower-level `registerStaticFileServing(fastifyInstance, distPath)` for Fastify plugin registration + SPA fallback wildcard route
+  - `static-serve.module.ts`: `StaticServeModule` NestJS module with env-var-based activation (`SERVE_STATIC=true`, `WEB_UI_DIST=<path>`). Uses `OnApplicationBootstrap` lifecycle hook for correct timing.
+  - `index.ts`: Re-exports
+  - `configure-static-serving.test.ts`: 12 tests covering validation, static file serving, SPA fallback, API route precedence, and edge cases
+- Added `StaticServeModule` to `AppModule` imports
+
+### Key patterns
+
+- `@fastify/static` with `wildcard: false` — prevents plugin from registering its own `GET /*` route
+- Custom `GET /*` wildcard route checks filesystem for actual files, falls back to `index.html` for SPA routing
+- Fastify routing priority: exact routes > parametric > wildcard ensures NestJS API routes always win
+- Module is always imported but is a no-op when `SERVE_STATIC !== 'true'`
+- `configureStaticServing()` exported for CLI entry point (T121) to call programmatically
+- Pre-reads `index.html` into memory to avoid filesystem reads on every SPA navigation
+- Fastify version type mismatch between NestJS adapter and direct dependency requires `as unknown as FastifyInstance` cast
+
+### For next loop
+
+- T121 (CLI entry point) is now unblocked — it can call `configureStaticServing(app, distPath)` directly
