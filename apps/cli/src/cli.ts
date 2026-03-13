@@ -9,6 +9,7 @@
  *
  * Supports subcommands:
  * - `factory` (default) — boots the full stack (migrations, API server, web UI)
+ * - `factory start` — explicit alias for the default startup behavior
  * - `factory init` — registers the current project with the factory
  *
  * @see docs/backlog/tasks/T121-cli-entry-point.md — CLI entry point spec
@@ -17,21 +18,50 @@
  * @module @copilot/factory
  */
 
-import { buildProgram, resolveOptions, startServer } from "./startup.js";
+import { buildProgram, addServerOptions, resolveOptions, startServer } from "./startup.js";
 import { setupShutdownHandlers, childPids } from "./shutdown.js";
 import { runInit } from "./commands/init.js";
+
+/**
+ * Starts the full server stack and installs shutdown handlers.
+ *
+ * Shared between the default (no-subcommand) path and the explicit
+ * `factory start` subcommand so both behave identically.
+ *
+ * @param cmd - The Commander `Command` whose options to resolve.
+ */
+async function runStart(cmd: import("commander").Command): Promise<void> {
+  const options = resolveOptions(cmd);
+  const { shutdown } = await startServer(options);
+
+  setupShutdownHandlers({
+    shutdown,
+    dbPath: options.dbPath,
+    childPids,
+  });
+}
 
 /**
  * CLI entry point — parses arguments, dispatches subcommands or starts
  * the server.
  *
- * When invoked without a subcommand, starts the control-plane server
- * with two-phase SIGINT/SIGTERM shutdown handlers. When `factory init`
- * is used, runs the interactive project registration flow instead.
+ * When invoked without a subcommand (or with `factory start`), starts the
+ * control-plane server with two-phase SIGINT/SIGTERM shutdown handlers.
+ * When `factory init` is used, runs the interactive project registration
+ * flow instead.
  */
 async function main(): Promise<void> {
   const program = buildProgram();
   let subcommandRan = false;
+
+  const startCmd = program
+    .command("start")
+    .description("Start the control plane, operator UI, and all factory services");
+  addServerOptions(startCmd);
+  startCmd.action(async () => {
+    subcommandRan = true;
+    await runStart(startCmd);
+  });
 
   program
     .command("init")
@@ -44,14 +74,7 @@ async function main(): Promise<void> {
   await program.parseAsync(process.argv);
 
   if (!subcommandRan) {
-    const options = resolveOptions(program);
-    const { shutdown } = await startServer(options);
-
-    setupShutdownHandlers({
-      shutdown,
-      dbPath: options.dbPath,
-      childPids,
-    });
+    await runStart(program);
   }
 }
 

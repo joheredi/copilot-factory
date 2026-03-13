@@ -23,6 +23,7 @@ import { join } from "node:path";
 
 import {
   buildProgram,
+  addServerOptions,
   resolveOptions,
   getWebUiDistPath,
   getMigrationsPath,
@@ -193,6 +194,80 @@ describe("resolveOptions", () => {
     program.parse(["--port", "70000"], { from: "user" });
 
     expect(() => resolveOptions(program)).toThrow("Invalid port number");
+  });
+});
+
+describe("addServerOptions", () => {
+  /**
+   * Validates that `factory start --port 5000 --no-open` correctly parses
+   * options on the subcommand, not the root. This is the core of the
+   * `factory start` feature — options must be resolvable from the
+   * subcommand's own Command instance.
+   */
+  it("adds server options to a subcommand that resolveOptions can read", async () => {
+    const program = buildProgram();
+    const startCmd = program.command("start");
+    addServerOptions(startCmd);
+
+    let actionCalled = false;
+    startCmd.action(() => {
+      actionCalled = true;
+    });
+
+    await program.parseAsync(["start", "--port", "5000", "--no-open", "--verbose"], {
+      from: "user",
+    });
+    expect(actionCalled).toBe(true);
+
+    const options = resolveOptions(startCmd);
+
+    expect(options.port).toBe(5000);
+    expect(options.open).toBe(false);
+    expect(options.verbose).toBe(true);
+    expect(options.ui).toBe(true);
+  });
+
+  /**
+   * Validates that defaults work on the subcommand the same way they do
+   * on the root program — `factory start` with no flags should behave
+   * identically to bare `factory`.
+   */
+  it("applies default values on the subcommand", async () => {
+    const program = buildProgram();
+    const startCmd = program.command("start");
+    addServerOptions(startCmd);
+    startCmd.action(() => {});
+
+    await program.parseAsync(["start"], { from: "user" });
+    const options = resolveOptions(startCmd);
+
+    expect(options.port).toBe(4100);
+    expect(options.open).toBe(true);
+    expect(options.ui).toBe(true);
+    expect(options.verbose).toBe(false);
+  });
+
+  /**
+   * Validates that all options can be combined on the subcommand without
+   * conflicts, mirroring the root-level "handles all options combined" test.
+   */
+  it("handles all options combined on the subcommand", async () => {
+    const program = buildProgram();
+    const startCmd = program.command("start");
+    addServerOptions(startCmd);
+    startCmd.action(() => {});
+
+    await program.parseAsync(
+      ["start", "--port", "3000", "--db-path", "/data/my.db", "--no-open", "--no-ui", "--verbose"],
+      { from: "user" },
+    );
+    const options = resolveOptions(startCmd);
+
+    expect(options.port).toBe(3000);
+    expect(options.dbPath).toBe("/data/my.db");
+    expect(options.open).toBe(false);
+    expect(options.ui).toBe(false);
+    expect(options.verbose).toBe(true);
   });
 });
 

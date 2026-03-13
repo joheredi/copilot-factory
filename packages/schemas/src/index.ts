@@ -149,6 +149,7 @@ export {
   ParseWarningSeveritySchema,
   ParseWarningSchema,
   ImportedTaskSchema,
+  ImportedTaskStatusSchema,
   ImportManifestSchema,
 } from "./import/index.js";
 
@@ -156,5 +157,6 @@ export type {
   ParseWarningSeverity,
   ParseWarning,
   ImportedTask,
+  ImportedTaskStatus,
   ImportManifest,
 } from "./import/index.js";

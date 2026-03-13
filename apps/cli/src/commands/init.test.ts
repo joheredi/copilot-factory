@@ -598,13 +598,13 @@ describe("runInit", () => {
       expect(tasks[0]!["title"]).toBe("Task One");
       expect(tasks[0]!["task_type"]).toBe("feature");
       expect(tasks[0]!["priority"]).toBe("high");
-      expect(tasks[0]!["status"]).toBe("pending");
+      expect(tasks[0]!["status"]).toBe("BACKLOG");
       expect(tasks[0]!["source"]).toBe("markdown");
       expect(tasks[0]!["external_ref"]).toBe("T001");
 
       expect(tasks[1]!["title"]).toBe("Task Two");
       expect(tasks[1]!["task_type"]).toBe("bug");
-      expect(tasks[1]!["status"]).toBe("pending");
+      expect(tasks[1]!["status"]).toBe("BACKLOG");
     } finally {
       db.close();
     }

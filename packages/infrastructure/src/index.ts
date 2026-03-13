@@ -120,12 +120,26 @@ export {
 
 // ─── Task Import ─────────────────────────────────────────────────────────────
 export type { ParseTaskFileResult, ParseIndexResult } from "./import/index.js";
+export type { TaskClassifier } from "./import/index.js";
 export type { ParseJsonTaskResult, JsonFormat } from "./import/index.js";
+
+export type {
+  TaskClassificationInput,
+  TaskClassificationResult,
+  AiClassifierDeps,
+} from "./import/index.js";
+
+export {
+  classifyImportedTasks,
+  parseClassificationResponse,
+  getGitHubToken,
+} from "./import/index.js";
 
 export {
   discoverMarkdownTasks,
   parseTaskFile,
   parseMetadataTable,
+  parseBoldMetadata,
   extractSection,
   extractCheckboxItems,
   extractDependencyRefs,

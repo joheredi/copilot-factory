@@ -83,6 +83,7 @@ export interface DiscoveredTask {
   description?: string;
   externalRef?: string;
   source?: string;
+  status?: string;
   acceptanceCriteria?: string[];
   definitionOfDone?: string;
   estimatedSize?: string;
@@ -598,7 +599,7 @@ async function importTasks(
   log: (...args: unknown[]) => void,
 ): Promise<number> {
   try {
-    const discoverFn = deps.discoverTasks ?? (await loadDefaultDiscoverer());
+    const discoverFn = deps.discoverTasks ?? (await loadDefaultDiscoverer(log));
     const result = await discoverFn(inputPath);
 
     if (result.warnings.length > 0) {
@@ -621,7 +622,7 @@ async function importTasks(
          created_at, updated_at
        ) VALUES (
          ?, ?, ?, ?, ?,
-         ?, ?, 'pending', ?,
+         ?, ?, ?, ?,
          ?, ?,
          ?, ?, ?,
          unixepoch(), unixepoch()
@@ -639,6 +640,7 @@ async function importTasks(
           task.description ?? null,
           task.taskType,
           task.priority ?? "medium",
+          task.status ?? "BACKLOG",
           task.source ?? "import",
           task.acceptanceCriteria ? JSON.stringify(task.acceptanceCriteria) : null,
           task.definitionOfDone ? JSON.stringify(task.definitionOfDone) : null,
@@ -671,11 +673,20 @@ async function importTasks(
  * @returns A discovery function matching the {@link InitDeps.discoverTasks} signature.
  * @internal
  */
-async function loadDefaultDiscoverer(): Promise<(inputPath: string) => Promise<DiscoveryResult>> {
-  const { discoverMarkdownTasks, parseJsonTasks, createNodeFileSystem } =
+async function loadDefaultDiscoverer(
+  log: (...args: unknown[]) => void,
+): Promise<(inputPath: string) => Promise<DiscoveryResult>> {
+  const { discoverMarkdownTasks, parseJsonTasks, classifyImportedTasks, createNodeFileSystem } =
     await import("@factory/infrastructure");
   const { resolve: pathResolve, join: pathJoin } = await import("node:path");
   const fs = createNodeFileSystem();
+
+  const classify: Parameters<typeof discoverMarkdownTasks>[2] = (inputs) =>
+    classifyImportedTasks(inputs, {
+      onProgress: (done, total) => {
+        log(`  🤖 Classifying tasks... ${done}/${total}`);
+      },
+    });
 
   return async (inputPath: string): Promise<DiscoveryResult> => {
     const resolvedPath = pathResolve(inputPath);
@@ -691,7 +702,7 @@ async function loadDefaultDiscoverer(): Promise<(inputPath: string) => Promise<D
     if (hasBacklogJson) {
       return parseJsonTasks(backlogJsonPath, fs);
     }
-    return discoverMarkdownTasks(resolvedPath, fs);
+    return discoverMarkdownTasks(resolvedPath, fs, classify);
   };
 }
 

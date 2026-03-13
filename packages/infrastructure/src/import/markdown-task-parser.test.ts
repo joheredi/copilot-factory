@@ -24,6 +24,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import {
   parseMetadataTable,
+  parseBoldMetadata,
   extractSection,
   extractCheckboxItems,
   extractDependencyRefs,
@@ -225,6 +226,164 @@ describe("parseMetadataTable", () => {
     const md = `| Field | Value |\n| --- | --- |\n| **AI Executable** | Yes |`;
     const result = parseMetadataTable(md);
     expect(result.get("ai executable")).toBe("Yes");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// parseBoldMetadata
+// ---------------------------------------------------------------------------
+
+describe("parseBoldMetadata", () => {
+  it("extracts **Key:** value pairs", () => {
+    const content = `# M12-005: LLM Provider
+
+**Status:** done
+**Priority:** high
+**Tag:** 🤖 agent
+
+## Description
+
+Some description.
+`;
+    const result = parseBoldMetadata(content);
+    expect(result.get("status")).toBe("done");
+    expect(result.get("priority")).toBe("high");
+    expect(result.get("tag")).toBe("🤖 agent");
+  });
+
+  it("handles backtick-wrapped values", () => {
+    const content = `# Task
+
+**Status:** \`done\`
+**Milestone:** \`M12 — Production Readiness\`
+
+## Why
+`;
+    const result = parseBoldMetadata(content);
+    expect(result.get("status")).toBe("done");
+    expect(result.get("milestone")).toBe("M12 — Production Readiness");
+  });
+
+  it("stops at first H2 heading", () => {
+    const content = `# Task
+
+**Status:** done
+
+## Description
+
+**Priority:** high
+`;
+    const result = parseBoldMetadata(content);
+    expect(result.get("status")).toBe("done");
+    // Priority is below ## so should NOT be captured
+    expect(result.has("priority")).toBe(false);
+  });
+
+  it("skips table rows", () => {
+    const content = `# Task
+
+| Field | Value |
+| ----- | ----- |
+| **Status** | done |
+
+**Priority:** high
+
+## Description
+`;
+    const result = parseBoldMetadata(content);
+    // Table rows are skipped — only bold key-value outside tables
+    expect(result.get("priority")).toBe("high");
+    expect(result.has("status")).toBe(false);
+  });
+
+  it("returns empty map when no bold metadata exists", () => {
+    const content = `# Task
+
+## Description
+
+Just a description.
+`;
+    const result = parseBoldMetadata(content);
+    expect(result.size).toBe(0);
+  });
+
+  it("handles dependencies with complex values", () => {
+    const content = `# Task
+
+**Dependencies:** M12-006 (Azure OpenAI provisioning — 👤 human), M8 (migration platform)
+
+## Description
+`;
+    const result = parseBoldMetadata(content);
+    expect(result.get("dependencies")).toBe(
+      "M12-006 (Azure OpenAI provisioning — 👤 human), M8 (migration platform)",
+    );
+  });
+
+  it("normalizes keys to lowercase", () => {
+    const content = `# Task
+
+**Status:** done
+**PRIORITY:** high
+**Milestone:** M12
+
+## Why
+`;
+    const result = parseBoldMetadata(content);
+    expect(result.get("status")).toBe("done");
+    expect(result.get("priority")).toBe("high");
+    expect(result.get("milestone")).toBe("M12");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// parseTaskFile with bold metadata
+// ---------------------------------------------------------------------------
+
+describe("parseTaskFile — bold metadata format", () => {
+  it("extracts status and priority from bold key-value format", () => {
+    const content = `# M12-005: LLM Provider — Azure OpenAI Integration
+
+**Status:** \`done\`
+**Milestone:** M12 — Production Readiness
+**Dependencies:** M12-006, M8
+**Priority:** high
+**Tag:** 🤖 agent
+
+## Why
+
+The AI-assisted migration pipeline needs a real provider.
+
+## Description
+
+Implement a concrete AzureOpenAiMigrationProvider.
+`;
+    const result = parseTaskFile(content, "M12-005-llm-provider.md");
+    expect(result.task).not.toBeNull();
+    expect(result.task!.title).toContain("LLM Provider");
+    expect(result.task!.priority).toBe("high");
+    // Status should be in metadata for the classifier to pick up
+    expect(result.task!.metadata?.["status"]).toBe("done");
+  });
+
+  it("table metadata takes precedence over bold metadata", () => {
+    const content = `# T001: Test Task
+
+**Status:** done
+**Priority:** low
+
+| Field        | Value     |
+| ------------ | --------- |
+| **Priority** | P0        |
+
+## Description
+
+Test.
+`;
+    const result = parseTaskFile(content, "T001-test.md");
+    expect(result.task).not.toBeNull();
+    // Table says P0 → critical, bold says low — table should win
+    expect(result.task!.priority).toBe("critical");
   });
 });
 

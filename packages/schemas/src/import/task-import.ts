@@ -69,6 +69,23 @@ export const ParseWarningSchema = z.object({
 /** Inferred TypeScript type for {@link ParseWarningSchema}. */
 export type ParseWarning = z.infer<typeof ParseWarningSchema>;
 
+/**
+ * Valid status values for imported tasks.
+ *
+ * Only three statuses are meaningful at import time:
+ * - `BACKLOG` — task has not been started (default)
+ * - `DONE` — task was completed/merged/closed in the source system
+ * - `CANCELLED` — task was explicitly cancelled/abandoned
+ *
+ * Mid-flight statuses (IN_DEVELOPMENT, IN_REVIEW, etc.) are not supported
+ * at import because they require active leases, review cycles, and other
+ * runtime state that doesn't exist yet.
+ */
+export const ImportedTaskStatusSchema = z.enum(["BACKLOG", "DONE", "CANCELLED"]);
+
+/** Inferred TypeScript type for {@link ImportedTaskStatusSchema}. */
+export type ImportedTaskStatus = z.infer<typeof ImportedTaskStatusSchema>;
+
 // ─── ImportedTask ────────────────────────────────────────────────────────────
 
 /**
@@ -141,6 +158,12 @@ export const ImportedTaskSchema = z.object({
 
   /** Filename this task was extracted from (e.g., "T042-implement-supervisor.md"). */
   source: z.string().min(1).optional(),
+
+  /**
+   * Import-time status. Defaults to "BACKLOG" when not specified.
+   * Only BACKLOG, DONE, and CANCELLED are valid at import time.
+   */
+  status: ImportedTaskStatusSchema.optional().default("BACKLOG"),
 
   /**
    * Arbitrary extra fields from the source format that don't map to known

@@ -46,6 +46,7 @@ const fullTask: ImportedTask = {
   suggestedFileScope: ["src/auth/**/*.ts"],
   externalRef: "T042",
   source: "T042-implement-auth.md",
+  status: "BACKLOG",
   metadata: { epic: "E009", owner: "backend-engineer" },
 };
 

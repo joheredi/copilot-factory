@@ -8,6 +8,7 @@ export {
   discoverMarkdownTasks,
   parseTaskFile,
   parseMetadataTable,
+  parseBoldMetadata,
   extractSection,
   extractCheckboxItems,
   extractDependencyRefs,
@@ -22,6 +23,7 @@ export {
 } from "./markdown-task-parser.js";
 
 export type { ParseTaskFileResult, ParseIndexResult } from "./markdown-task-parser.js";
+export type { TaskClassifier } from "./markdown-task-parser.js";
 
 export {
   parseJsonTasks,
@@ -33,3 +35,16 @@ export {
 } from "./json-task-parser.js";
 
 export type { ParseJsonTaskResult, JsonFormat } from "./json-task-parser.js";
+
+// ─── AI classifier ───────────────────────────────────────────────────────────
+export type {
+  TaskClassificationInput,
+  TaskClassificationResult,
+  AiClassifierDeps,
+} from "./ai-task-classifier.js";
+
+export {
+  classifyImportedTasks,
+  parseClassificationResponse,
+  getGitHubToken,
+} from "./ai-task-classifier.js";

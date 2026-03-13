@@ -19,11 +19,20 @@
 import type { ImportManifest, ImportedTask, ParseWarning } from "@factory/schemas";
 import { ImportManifestSchema, ImportedTaskSchema } from "@factory/schemas";
 import type { FileSystem } from "../workspace/types.js";
+import type { TaskClassificationInput, TaskClassificationResult } from "./ai-task-classifier.js";
 import * as path from "node:path";
 
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
+
+/**
+ * Optional classifier function that infers taskType and status from task content.
+ * When provided, overrides deterministic parsing results with AI-powered classification.
+ */
+export type TaskClassifier = (
+  inputs: TaskClassificationInput[],
+) => Promise<{ results: TaskClassificationResult[]; warnings: ParseWarning[] }>;
 
 /**
  * Discover and parse all markdown task files under {@link sourcePath}.
@@ -36,11 +45,13 @@ import * as path from "node:path";
  *   optionally `index.md`).
  * @param fs - Filesystem abstraction for reading files and listing
  *   directories. Inject a fake in tests.
+ * @param classify - Optional AI classifier for taskType and status inference.
  * @returns A validated import manifest with parsed tasks and any warnings.
  */
 export async function discoverMarkdownTasks(
   sourcePath: string,
   fs: FileSystem,
+  classify?: TaskClassifier,
 ): Promise<ImportManifest> {
   const warnings: ParseWarning[] = [];
   const tasks: ImportedTask[] = [];
@@ -83,10 +94,34 @@ export async function discoverMarkdownTasks(
   // Apply ordering from index.md if available.
   const orderedTasks = ordering ? applyOrdering(tasks, ordering) : tasks;
 
+  // Run AI classification if a classifier is provided.
+  let classifiedTasks = orderedTasks;
+  if (classify && orderedTasks.length > 0) {
+    const inputs: TaskClassificationInput[] = orderedTasks.map((t) => ({
+      title: t.title,
+      description: t.description,
+      acceptanceCriteria: t.acceptanceCriteria,
+      rawType: t.metadata?.["rawType"] as string | undefined,
+      rawStatus: t.metadata?.["status"] as string | undefined,
+    }));
+    const classResult = await classify(inputs);
+    warnings.push(...classResult.warnings);
+
+    classifiedTasks = orderedTasks.map((task, i) => {
+      const classification = classResult.results[i];
+      if (!classification) return task;
+      return {
+        ...task,
+        taskType: classification.taskType,
+        status: classification.status,
+      };
+    });
+  }
+
   const manifest: ImportManifest = ImportManifestSchema.parse({
     sourcePath,
     formatVersion: "1.0",
-    tasks: orderedTasks,
+    tasks: classifiedTasks,
     warnings,
     discoveredProjectName,
   });
@@ -122,7 +157,11 @@ export interface ParseTaskFileResult {
  */
 export function parseTaskFile(content: string, filename: string): ParseTaskFileResult {
   const warnings: ParseWarning[] = [];
-  const metadata = parseMetadataTable(content);
+
+  // Extract metadata from both sources; table takes precedence over bold.
+  const tableMetadata = parseMetadataTable(content);
+  const boldMetadata = parseBoldMetadata(content);
+  const metadata = new Map<string, string>([...boldMetadata, ...tableMetadata]);
 
   // --- Title ---
   const title = extractTitle(content, metadata);
@@ -137,7 +176,7 @@ export function parseTaskFile(content: string, filename: string): ParseTaskFileR
   }
 
   // --- Task type ---
-  const rawType = metadata.get("type");
+  const rawType = metadata.get("type") ?? metadata.get("tag");
   const taskType = rawType ? mapTaskType(rawType) : undefined;
   if (rawType && !taskType) {
     warnings.push({
@@ -151,7 +190,7 @@ export function parseTaskFile(content: string, filename: string): ParseTaskFileR
     warnings.push({
       file: filename,
       field: "taskType",
-      message: 'No Type field in metadata table. Defaulting to "chore".',
+      message: 'No Type or Tag field in metadata. Defaulting to "chore".',
       severity: "warning",
     });
   }
@@ -203,10 +242,15 @@ export function parseTaskFile(content: string, filename: string): ParseTaskFileR
   const extras: Record<string, unknown> = {};
   const status = metadata.get("status");
   if (status) extras["status"] = status;
+  if (rawType) extras["rawType"] = rawType;
   const owner = metadata.get("owner");
   if (owner) extras["owner"] = owner;
   const epic = metadata.get("epic");
   if (epic) extras["epic"] = epic;
+  const milestone = metadata.get("milestone");
+  if (milestone) extras["milestone"] = milestone;
+  const tag = metadata.get("tag");
+  if (tag) extras["tag"] = tag;
   const aiExecutable = metadata.get("ai executable");
   if (aiExecutable) extras["aiExecutable"] = aiExecutable;
   const humanReview = metadata.get("human review required");
@@ -315,9 +359,56 @@ export function parseMetadataTable(content: string): Map<string, string> {
   return result;
 }
 
-// ---------------------------------------------------------------------------
-// Section extraction
-// ---------------------------------------------------------------------------
+/**
+ * Parse bold key-value metadata from markdown content.
+ *
+ * Extracts `**Key:** value` pairs that appear before the first H2 heading.
+ * Also handles backtick-wrapped values (`**Key:** \`value\``) and
+ * colon-separated variants (`**Key**: value`).
+ *
+ * This covers markdown backlogs that use bold front-matter instead of
+ * metadata tables:
+ * ```markdown
+ * **Status:** `done`
+ * **Priority:** high
+ * **Dependencies:** M12-006, M8
+ * ```
+ *
+ * @param content - Full markdown content.
+ * @returns Map of lowercase field name → raw value string.
+ */
+export function parseBoldMetadata(content: string): Map<string, string> {
+  const result = new Map<string, string>();
+  const lines = content.split("\n");
+
+  // Bold key-value patterns:
+  // 1. **Key:** value  (colon inside bold)
+  // 2. **Key**: value  (colon outside bold)
+  const boldPatternInside = /^\*\*([^*]+?):\*\*\s*(.+)/;
+  const boldPatternOutside = /^\*\*([^*]+?)\*\*:\s*(.+)/;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Stop at the first H2 heading — metadata should be in the front matter
+    if (/^##\s/.test(trimmed)) break;
+
+    // Skip table rows — those are handled by parseMetadataTable
+    if (trimmed.startsWith("|")) continue;
+
+    const match = trimmed.match(boldPatternInside) ?? trimmed.match(boldPatternOutside);
+    if (match) {
+      const key = match[1]!.trim().toLowerCase();
+      // Strip backticks and surrounding whitespace from value
+      const rawValue = match[2]!.trim().replace(/^`|`$/g, "");
+      if (key && rawValue) {
+        result.set(key, rawValue);
+      }
+    }
+  }
+
+  return result;
+}
 
 /**
  * Extract the text content under a given H2 heading (`## Heading`).

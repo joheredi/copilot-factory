@@ -11,6 +11,7 @@ export {
   ParseWarningSeveritySchema,
   ParseWarningSchema,
   ImportedTaskSchema,
+  ImportedTaskStatusSchema,
   ImportManifestSchema,
 } from "./task-import.js";
 
@@ -18,5 +19,6 @@ export type {
   ParseWarningSeverity,
   ParseWarning,
   ImportedTask,
+  ImportedTaskStatus,
   ImportManifest,
 } from "./task-import.js";

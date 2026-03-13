@@ -19,8 +19,10 @@ import type { ImportManifest } from "@factory/schemas";
 import {
   discoverMarkdownTasks,
   parseJsonTasks,
+  classifyImportedTasks,
   createNodeFileSystem,
   type FileSystem,
+  type TaskClassifier,
 } from "@factory/infrastructure";
 import { randomUUID } from "node:crypto";
 
@@ -95,6 +97,7 @@ export interface ExecuteResponse {
 export class ImportService {
   private readonly fs: FileSystem;
   private readonly conn: DatabaseConnection | null;
+  private readonly classify: TaskClassifier;
 
   /**
    * @param conn Database connection for write operations (execute).
@@ -103,13 +106,16 @@ export class ImportService {
    *   usage and for tests that only exercise the discover path.
    * @param fileSystem Optional injected filesystem for testability.
    *   Defaults to the real Node.js filesystem.
+   * @param classifier Optional AI task classifier for type/status inference.
+   *   Defaults to the built-in {@link classifyImportedTasks}.
    */
   constructor(
     @Optional() @Inject(DATABASE_CONNECTION) conn?: DatabaseConnection,
-    fileSystem?: FileSystem,
+    @Optional() @Inject("FILE_SYSTEM") fileSystem?: FileSystem,
   ) {
     this.conn = conn ?? null;
     this.fs = fileSystem ?? createNodeFileSystem();
+    this.classify = classifyImportedTasks;
   }
 
   /**
@@ -144,7 +150,7 @@ export class ImportService {
       manifest = await parseJsonTasks(backlogJsonPath, this.fs);
       format = "json";
     } else {
-      manifest = await discoverMarkdownTasks(resolvedPath, this.fs);
+      manifest = await discoverMarkdownTasks(resolvedPath, this.fs, this.classify);
       format = "markdown";
     }
 
@@ -253,7 +259,7 @@ export class ImportService {
           taskType: importedTask.taskType,
           priority: importedTask.priority ?? "medium",
           source: "automated",
-          status: "BACKLOG",
+          status: importedTask.status ?? "BACKLOG",
           externalRef: importedTask.externalRef ?? null,
           acceptanceCriteria: importedTask.acceptanceCriteria ?? null,
           definitionOfDone: importedTask.definitionOfDone ?? null,

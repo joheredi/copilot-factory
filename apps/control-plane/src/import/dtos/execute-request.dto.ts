@@ -35,6 +35,9 @@ const riskLevelValues = ["high", "medium", "low"] as const;
 /** Valid estimated sizes matching the domain enum. */
 const estimatedSizeValues = ["xs", "s", "m", "l", "xl"] as const;
 
+/** Valid import-time status values. */
+const importStatusValues = ["BACKLOG", "DONE", "CANCELLED"] as const;
+
 /**
  * Zod 4 schema for an imported task within the execute request.
  * Mirrors {@link @factory/schemas!ImportedTaskSchema} field-for-field
@@ -53,6 +56,7 @@ const importedTaskForExecuteSchema = z.object({
   suggestedFileScope: z.array(z.string().min(1)).optional(),
   externalRef: z.string().min(1).optional(),
   source: z.string().min(1).optional(),
+  status: z.enum(importStatusValues).optional().default("BACKLOG"),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 

@@ -56,6 +56,25 @@ export interface CliOptions {
 }
 
 /**
+ * Adds the shared server options to any Commander command.
+ *
+ * Both the root program and the `start` subcommand need the same
+ * set of server options (--port, --db-path, --no-open, --no-ui, --verbose).
+ * This helper avoids duplicating the option definitions.
+ *
+ * @param cmd - A Commander `Command` to add server options to.
+ * @returns The same command, for chaining.
+ */
+export function addServerOptions(cmd: Command): Command {
+  return cmd
+    .option("-p, --port <port>", "HTTP port for the control-plane server", String(DEFAULT_PORT))
+    .option("--db-path <path>", "path to SQLite database file", "")
+    .option("--no-open", "do not open the browser on startup")
+    .option("--no-ui", "API-only mode — do not serve the web UI")
+    .option("--verbose", "enable verbose debug-level logging during startup", false);
+}
+
+/**
  * Builds the Commander program with all CLI options.
  *
  * Separated from execution to enable unit testing of argument parsing
@@ -70,11 +89,10 @@ export function buildProgram(): Command {
     .name("factory")
     .description("Autonomous Software Factory — single-command startup")
     .version(VERSION)
-    .option("-p, --port <port>", "HTTP port for the control-plane server", String(DEFAULT_PORT))
-    .option("--db-path <path>", "path to SQLite database file", "")
-    .option("--no-open", "do not open the browser on startup")
-    .option("--no-ui", "API-only mode — do not serve the web UI")
-    .option("--verbose", "enable verbose debug-level logging during startup", false);
+    .enablePositionalOptions()
+    .passThroughOptions();
+
+  addServerOptions(program);
 
   return program;
 }

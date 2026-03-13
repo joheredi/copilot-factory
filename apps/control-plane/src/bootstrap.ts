@@ -67,6 +67,10 @@ export async function createApp(): Promise<NestFastifyApplication> {
   app.useGlobalPipes(new ZodValidationPipe());
   app.useGlobalFilters(new GlobalExceptionFilter());
 
+  // Global route prefix — all NestJS controllers are served under /api/*
+  // so the web-UI SPA (served at /) and API endpoints don't collide.
+  app.setGlobalPrefix("api");
+
   // OpenAPI/Swagger documentation
   const swaggerConfig = new DocumentBuilder()
     .setTitle("Factory Control Plane API")
