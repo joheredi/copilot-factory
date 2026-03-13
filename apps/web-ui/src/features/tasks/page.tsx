@@ -16,11 +16,12 @@
  * @see T094 — Build task board with status filtering and pagination
  */
 
-import { Filter } from "lucide-react";
+import { Filter, Plus } from "lucide-react";
 import { useState } from "react";
 import { useTasks } from "../../api/hooks/use-tasks.js";
 import { Button } from "../../components/ui/button.js";
 import { Card, CardContent } from "../../components/ui/card.js";
+import { CreateTaskDialog } from "./components/CreateTaskDialog.js";
 import { PaginationControls } from "./components/pagination-controls.js";
 import { TaskFilters } from "./components/task-filters.js";
 import { TaskTable } from "./components/task-table.js";
@@ -29,6 +30,7 @@ import { useTaskFilters } from "./hooks/use-task-filters.js";
 export default function TasksPage() {
   const [filterState, filterActions] = useTaskFilters();
   const [showFilters, setShowFilters] = useState(true);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   const { data, isLoading, isError } = useTasks(filterState.params);
 
@@ -43,17 +45,31 @@ export default function TasksPage() {
           <h1 className="text-3xl font-bold tracking-tight">Task Board</h1>
           <p className="text-muted-foreground">View and manage tasks across all projects</p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-2"
-          onClick={() => setShowFilters((v) => !v)}
-          data-testid="toggle-filters"
-        >
-          <Filter className="h-4 w-4" />
-          {showFilters ? "Hide Filters" : "Show Filters"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            className="gap-2"
+            onClick={() => setShowCreateDialog(true)}
+            data-testid="create-task-button"
+          >
+            <Plus className="h-4 w-4" />
+            Create Task
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => setShowFilters((v) => !v)}
+            data-testid="toggle-filters"
+          >
+            <Filter className="h-4 w-4" />
+            {showFilters ? "Hide Filters" : "Show Filters"}
+          </Button>
+        </div>
       </div>
+
+      {/* Create Task dialog */}
+      <CreateTaskDialog open={showCreateDialog} onOpenChange={setShowCreateDialog} />
 
       {/* Error state */}
       {isError && (

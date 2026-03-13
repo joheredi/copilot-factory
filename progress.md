@@ -428,3 +428,11 @@ Build a deterministic parser for JSON task files (backlog.json and flat array fo
 - T115 (import discovery endpoint) and T123 (import format docs) are now unblocked
 - The parser handles the real 111-task backlog.json from this repo
 - `createFakeFs()` helper from testing package works for mock file reads in tests
+
+## T124: Add Create Task Dialog to Tasks Page
+
+- Created `CreateTaskDialog.tsx` — full dialog component with form validation, cascading project→repository selection, all task fields (title, description, type, priority, risk level, estimated size, acceptance criteria)
+- Updated `page.tsx` — added "Create Task" button with Plus icon in the header, wired to open the dialog
+- Created `CreateTaskDialog.test.tsx` — 16 tests covering rendering, validation, submission flow, error display, cascading selects, and form reset
+- Pattern: native `<select>` elements styled like Input (no shadcn Select component exists), useState for form management, `useCreateTask` mutation hook
+- Key learning: In tests with cascading selects, must wait for options to actually populate (not just for the select to be enabled) before selecting a value
