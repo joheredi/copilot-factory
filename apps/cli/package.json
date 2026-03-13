@@ -28,6 +28,7 @@
   },
   "dependencies": {
     "@factory/control-plane": "workspace:*",
+    "@factory/infrastructure": "workspace:*",
     "@factory/observability": "workspace:*",
     "better-sqlite3": "^12.6.2",
     "commander": "^14.0.3",

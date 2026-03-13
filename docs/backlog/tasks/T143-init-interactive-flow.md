@@ -5,7 +5,7 @@
 | **ID**                    | T143                                                             |
 | **Epic**                  | [E026: CLI Init & Project Onboarding](../epics/E026-cli-init.md) |
 | **Type**                  | feature                                                          |
-| **Status**                | pending                                                          |
+| **Status**                | done                                                             |
 | **Priority**              | P0                                                               |
 | **Owner**                 | platform-engineer                                                |
 | **AI Executable**         | Yes                                                              |

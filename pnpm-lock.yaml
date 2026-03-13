@@ -50,6 +50,9 @@ importers:
       '@factory/control-plane':
         specifier: workspace:*
         version: link:../control-plane
+      '@factory/infrastructure':
+        specifier: workspace:*
+        version: link:../../packages/infrastructure
       '@factory/observability':
         specifier: workspace:*
         version: link:../../packages/observability

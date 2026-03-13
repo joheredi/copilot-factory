@@ -1,5 +1,41 @@
 # Progress Log
 
+## T143: Build init interactive flow and registration — DONE
+
+**What was done:**
+
+- Created `apps/cli/src/commands/init.ts` with the full `factory init` interactive flow
+- Modified `apps/cli/src/cli.ts` to support subcommands (`factory init` + default server start)
+- Added `@factory/infrastructure` as a CLI dependency for task import parsers
+
+**Init command flow:**
+
+1. Auto-detects project metadata via `detectAll()` (name, git remote, branch, owner)
+2. Displays detected values with ✓ prefix, prompts for missing ones via readline
+3. Ensures factory home directory and runs Drizzle migrations
+4. Creates Project and Repository records using raw better-sqlite3 SQL (follows queryProjectCount pattern)
+5. Optional task import: discovers tasks via infrastructure parsers, inserts into task table
+6. Writes `.copilot-factory.json` marker file to project root
+7. Prints summary with next steps
+
+**Key design decisions:**
+
+- Used raw better-sqlite3 for DB operations (not Drizzle repositories) because repositories aren't exported from @factory/control-plane main entry. Follows existing `queryProjectCount` pattern in startup.ts.
+- Used `ON CONFLICT (name) DO NOTHING` for project insert for basic idempotency. Full idempotent re-run is deferred to T144.
+- Dynamic import of `@factory/infrastructure` for task discovery to keep init lightweight.
+- CLI restructured with Commander subcommand + `subcommandRan` flag to support both `factory` (default=start) and `factory init`.
+
+**Tests added (18 new tests):**
+
+- 12 tests for `runInit`: all-detected happy path, missing values prompting, re-init idempotency, empty name/owner validation, no-git-remote handling, task import, import skip, import failure, marker file format, summary output, Ctrl+C handling, SSH remote URL
+- 6 tests for `extractRepoName`: HTTPS with/without .git, SSH with/without .git, unrecognizable URL
+
+**Patterns for next loops:**
+
+- Init command deps injection pattern: `InitDeps` interface with all injectable functions
+- Task import uses `discoverMarkdownTasks`/`parseJsonTasks` from @factory/infrastructure
+- CLI subcommands: add `.command("name").action()` to program, use `subcommandRan` flag
+
 ## T137: Wire WorkerDispatchService into AutomationService — DONE
 
 **What was done:**
