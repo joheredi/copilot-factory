@@ -14,12 +14,13 @@
  */
 
 import { useState } from "react";
-import { Filter } from "lucide-react";
+import { Filter, Plus } from "lucide-react";
 import { usePools } from "../../api/hooks/use-pools.js";
 import { Button } from "../../components/ui/button.js";
 import { Card, CardContent } from "../../components/ui/card.js";
 import type { PoolListParams, PoolType } from "../../api/types.js";
 import { PoolCard } from "./components/pool-card.js";
+import { CreatePoolDialog } from "./components/CreatePoolDialog.js";
 
 /** All pool types available for filtering. */
 const POOL_TYPES: { label: string; value: PoolType }[] = [
@@ -34,6 +35,7 @@ export default function PoolsPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [poolTypeFilter, setPoolTypeFilter] = useState<string | undefined>(undefined);
   const [enabledFilter, setEnabledFilter] = useState<boolean | undefined>(undefined);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   const params: PoolListParams = {
     limit: 100,
@@ -57,23 +59,36 @@ export default function PoolsPage() {
           <h1 className="text-3xl font-bold tracking-tight">Worker Pools</h1>
           <p className="text-muted-foreground">Monitor worker capacity and health across pools</p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-2"
-          onClick={() => setShowFilters((v) => !v)}
-          data-testid="toggle-filters"
-        >
-          <Filter className="h-4 w-4" />
-          {showFilters ? "Hide Filters" : "Filters"}
-          {activeFilterCount > 0 && (
-            <span className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-              {activeFilterCount}
-            </span>
-          )}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            className="gap-2"
+            onClick={() => setCreateDialogOpen(true)}
+            data-testid="create-pool-button"
+          >
+            <Plus className="h-4 w-4" />
+            Create Pool
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => setShowFilters((v) => !v)}
+            data-testid="toggle-filters"
+          >
+            <Filter className="h-4 w-4" />
+            {showFilters ? "Hide Filters" : "Filters"}
+            {activeFilterCount > 0 && (
+              <span className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                {activeFilterCount}
+              </span>
+            )}
+          </Button>
+        </div>
       </div>
 
+      {/* Create Pool dialog */}
+      <CreatePoolDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
       {/* Error state */}
       {isError && (
         <div

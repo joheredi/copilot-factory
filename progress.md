@@ -1,5 +1,34 @@
 # Progress Log
 
+## T127 — Add Create Worker Pool dialog to Pools page
+
+### Task
+
+T127 - Add Create Worker Pool dialog to Pools page (Epic E025: Web UI Creation & Editing Forms)
+
+### What was done
+
+- Created `CreatePoolDialog` component at `apps/web-ui/src/features/pools/components/CreatePoolDialog.tsx`
+- Fields: name (required), poolType (required, shadcn Select: developer/reviewer/lead-reviewer/merge-assist/planner), provider (optional), model (optional), maxConcurrency (number, default 3), defaultTimeoutSec (number, default 3600)
+- Wired to existing `useCreatePool` hook; cache invalidation on success via hook's `onSuccess`
+- Added "Create Pool" button with Plus icon to PoolsPage header
+- 11 comprehensive tests covering rendering, defaults, validation, submission with required and optional fields, error handling, cancel, form reset, and whitespace-only name rejection
+- Added jsdom polyfills for Radix UI Select (`scrollIntoView`, pointer capture methods) to test file
+
+### Patterns used
+
+- Same dialog pattern as `CreateProjectDialog` and `CreateRepositoryDialog`: `{ open, onOpenChange }` props
+- shadcn `Select` component for poolType (same pattern as CreateRepositoryDialog's checkout strategy)
+- useState-based form state with `INITIAL_FORM_STATE` constant
+- `useCallback` for all handlers, `updateField` generic helper that clears errors on change
+- `data-testid` attributes on all interactive elements
+- fetch-spy + QueryClientProvider + WebSocketProvider test harness
+
+### Notes for next iteration
+
+- Remaining E025 tasks (T128–T131) are all P2 and follow the same dialog pattern
+- T128 (Create Agent Profile dialog) may need `poolId` as a prop, similar to how CreateRepositoryDialog receives `projectId`
+
 ## T126 — Add Create Repository dialog to Project detail
 
 ### Task
