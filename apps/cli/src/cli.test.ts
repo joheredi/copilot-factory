@@ -21,7 +21,13 @@
 import { describe, expect, it } from "vitest";
 import { join } from "node:path";
 
-import { buildProgram, resolveOptions, getWebUiDistPath, getMigrationsPath } from "./startup.js";
+import {
+  buildProgram,
+  resolveOptions,
+  getWebUiDistPath,
+  getMigrationsPath,
+  queryProjectCount,
+} from "./startup.js";
 
 describe("buildProgram", () => {
   /**
@@ -52,6 +58,7 @@ describe("resolveOptions", () => {
     expect(options.dbPath).toBeTruthy();
     expect(options.open).toBe(true);
     expect(options.ui).toBe(true);
+    expect(options.verbose).toBe(false);
   });
 
   /**
@@ -126,15 +133,30 @@ describe("resolveOptions", () => {
    */
   it("handles all options combined", () => {
     const program = buildProgram();
-    program.parse(["--port", "3000", "--db-path", "/data/my.db", "--no-open", "--no-ui"], {
-      from: "user",
-    });
+    program.parse(
+      ["--port", "3000", "--db-path", "/data/my.db", "--no-open", "--no-ui", "--verbose"],
+      { from: "user" },
+    );
     const options = resolveOptions(program);
 
     expect(options.port).toBe(3000);
     expect(options.dbPath).toBe("/data/my.db");
     expect(options.open).toBe(false);
     expect(options.ui).toBe(false);
+    expect(options.verbose).toBe(true);
+  });
+
+  /**
+   * Validates that --verbose enables verbose debug-level logging.
+   * Without this test, the verbose flag could silently stop working
+   * when Commander configuration changes.
+   */
+  it("parses --verbose flag", () => {
+    const program = buildProgram();
+    program.parse(["--verbose"], { from: "user" });
+    const options = resolveOptions(program);
+
+    expect(options.verbose).toBe(true);
   });
 
   /**
@@ -215,5 +237,77 @@ describe("getMigrationsPath", () => {
   it("returns an absolute path", () => {
     const migrationsPath = getMigrationsPath();
     expect(migrationsPath).toMatch(/^\//);
+  });
+});
+
+describe("queryProjectCount", () => {
+  /**
+   * Validates that querying a non-existent database returns 0 instead of
+   * throwing. This is the cold-start case where the database hasn't been
+   * created yet (e.g., first run before migrations). The banner should
+   * display "0 registered" rather than crashing.
+   */
+  it("returns 0 when database does not exist", () => {
+    const count = queryProjectCount("/tmp/nonexistent-factory-db-" + Date.now() + ".db");
+    expect(count).toBe(0);
+  });
+
+  /**
+   * Validates that querying a database without the project table returns 0.
+   * This covers the case where migrations haven't run yet but the database
+   * file exists (e.g., from a previous partial startup).
+   */
+  it("returns 0 when project table does not exist", async () => {
+    const { default: Database } = await import("better-sqlite3");
+    const dbPath = `/tmp/factory-test-no-table-${Date.now()}.db`;
+    const db = new Database(dbPath);
+    db.exec("CREATE TABLE other (id TEXT)");
+    db.close();
+
+    const count = queryProjectCount(dbPath);
+    expect(count).toBe(0);
+
+    // Cleanup
+    const { unlinkSync } = await import("node:fs");
+    try {
+      unlinkSync(dbPath);
+    } catch {
+      /* ignore */
+    }
+  });
+
+  /**
+   * Validates that the project count is correctly read from a database
+   * that has the project table with rows. This is the normal operating
+   * case after init has been run and projects have been registered.
+   */
+  it("returns correct count when projects exist", async () => {
+    const { default: Database } = await import("better-sqlite3");
+    const dbPath = `/tmp/factory-test-projects-${Date.now()}.db`;
+    const db = new Database(dbPath);
+    db.exec(`
+      CREATE TABLE project (
+        project_id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        owner TEXT NOT NULL
+      )
+    `);
+    db.exec(`
+      INSERT INTO project (project_id, name, owner) VALUES
+        ('p1', 'Project A', 'alice'),
+        ('p2', 'Project B', 'bob')
+    `);
+    db.close();
+
+    const count = queryProjectCount(dbPath);
+    expect(count).toBe(2);
+
+    // Cleanup
+    const { unlinkSync } = await import("node:fs");
+    try {
+      unlinkSync(dbPath);
+    } catch {
+      /* ignore */
+    }
   });
 });

@@ -142,7 +142,7 @@ See [index-archive.md](index-archive.md) for the 21 completed epics: E001–E008
 
 | ID                                               | Title                                      | Priority | Type          | Status  |
 | ------------------------------------------------ | ------------------------------------------ | -------- | ------------- | ------- |
-| [T145](tasks/T145-start-command.md)              | Build factory start command                | P0       | feature       | pending |
+| [T145](tasks/T145-start-command.md)              | Build factory start command                | P0       | feature       | done    |
 | [T146](tasks/T146-start-static-serving.md)       | Serve web-ui static files from same server | P0       | feature       | done    |
 | [T147](tasks/T147-two-phase-shutdown.md)         | Implement two-phase Ctrl+C shutdown        | P0       | feature       | pending |
 | [T148](tasks/T148-startup-recovery-log.md)       | Log recovery status on startup             | P1       | feature       | pending |

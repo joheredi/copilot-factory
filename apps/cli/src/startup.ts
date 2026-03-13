@@ -11,6 +11,7 @@
  * - {@link startServer} — Full startup sequence (injectable deps)
  * - {@link getWebUiDistPath} — Web-UI dist path resolution
  * - {@link getMigrationsPath} — Drizzle migrations path resolution
+ * - {@link queryProjectCount} — Project count from database
  *
  * @see docs/backlog/tasks/T121-cli-entry-point.md — task specification
  * @see docs/prd/007-technical-architecture.md §7.1 — stack rationale
@@ -20,6 +21,7 @@
 import { join } from "node:path";
 import { existsSync } from "node:fs";
 
+import Database from "better-sqlite3";
 import { Command } from "commander";
 import { initTracing } from "@factory/observability";
 import type { TracingHandle } from "@factory/observability";
@@ -49,6 +51,8 @@ export interface CliOptions {
   open: boolean;
   /** When false, skip static web-UI serving (API-only mode). */
   ui: boolean;
+  /** When true, enable verbose debug-level logging during startup. */
+  verbose: boolean;
 }
 
 /**
@@ -69,7 +73,8 @@ export function buildProgram(): Command {
     .option("-p, --port <port>", "HTTP port for the control-plane server", String(DEFAULT_PORT))
     .option("--db-path <path>", "path to SQLite database file", "")
     .option("--no-open", "do not open the browser on startup")
-    .option("--no-ui", "API-only mode — do not serve the web UI");
+    .option("--no-ui", "API-only mode — do not serve the web UI")
+    .option("--verbose", "enable verbose debug-level logging during startup", false);
 
   return program;
 }
@@ -86,7 +91,13 @@ export function buildProgram(): Command {
  * @throws {Error} If the port number is outside the valid TCP range.
  */
 export function resolveOptions(program: Command): CliOptions {
-  const opts = program.opts<{ port: string; dbPath: string; open: boolean; ui: boolean }>();
+  const opts = program.opts<{
+    port: string;
+    dbPath: string;
+    open: boolean;
+    ui: boolean;
+    verbose: boolean;
+  }>();
 
   const port = Number(opts.port);
   if (Number.isNaN(port) || port < 1 || port > 65535) {
@@ -100,6 +111,7 @@ export function resolveOptions(program: Command): CliOptions {
     dbPath,
     open: opts.open,
     ui: opts.ui,
+    verbose: opts.verbose,
   };
 }
 
@@ -130,23 +142,67 @@ export function getMigrationsPath(): string {
 }
 
 /**
- * Prints a startup banner with key configuration details.
+ * Queries the project count from the SQLite database.
  *
- * Displayed immediately before the server starts listening so the operator
- * knows where to reach the API and UI.
+ * Opens a short-lived read-only connection to count rows in the project
+ * table. WAL mode on the main connection ensures this concurrent read
+ * does not conflict with the NestJS server's writes.
+ *
+ * @param dbPath - Absolute path to the SQLite database file.
+ * @returns Number of registered projects, or 0 on any error.
+ */
+export function queryProjectCount(dbPath: string): number {
+  try {
+    const db = new Database(dbPath, { readonly: true });
+    try {
+      const row = db.prepare("SELECT COUNT(*) AS cnt FROM project").get() as
+        | { cnt: number }
+        | undefined;
+      return row?.cnt ?? 0;
+    } finally {
+      db.close();
+    }
+  } catch {
+    // Table may not exist yet or DB may be empty — return 0
+    return 0;
+  }
+}
+
+/**
+ * Prints a startup banner with box-drawing characters.
+ *
+ * Displayed immediately after the server starts listening so the operator
+ * knows where to reach the API and UI, how many projects are registered,
+ * and where the data directory lives.
  *
  * @param options - Resolved CLI options for display.
+ * @param projectCount - Number of registered projects.
  */
-function printBanner(options: CliOptions): void {
+function printBanner(options: CliOptions, projectCount: number): void {
+  const dashboardUrl = `http://localhost:${options.port}`;
+  const apiDocsUrl = `${dashboardUrl}/api/docs`;
+  const dataDir = options.dbPath.replace(/\/[^/]+$/, "/");
+
+  const lines = [
+    `  Autonomous Software Factory v${VERSION}`,
+    ``,
+    `  Dashboard:  ${dashboardUrl}`,
+    `  API docs:   ${apiDocsUrl}`,
+    `  Data:       ${dataDir}`,
+    `  Projects:   ${projectCount} registered`,
+    ``,
+    `  Press Ctrl+C to stop`,
+  ];
+
+  const maxLen = Math.max(...lines.map((l) => l.length));
+  const pad = (s: string): string => s + " ".repeat(maxLen - s.length);
+
   console.log();
-  console.log(`  🏭 Autonomous Software Factory v${VERSION}`);
-  console.log();
-  console.log(`  ➜  API:       http://localhost:${options.port}`);
-  console.log(`  ➜  Swagger:   http://localhost:${options.port}/api/docs`);
-  if (options.ui) {
-    console.log(`  ➜  Web UI:    http://localhost:${options.port}`);
+  console.log(`  ┌${"─".repeat(maxLen + 2)}┐`);
+  for (const line of lines) {
+    console.log(`  │ ${pad(line)} │`);
   }
-  console.log(`  ➜  Database:  ${options.dbPath}`);
+  console.log(`  └${"─".repeat(maxLen + 2)}┘`);
   console.log();
 }
 
@@ -176,9 +232,11 @@ export async function startServer(
 ): Promise<{ shutdown: () => Promise<void> }> {
   // Step 1: Ensure ~/.factory/ directory structure exists
   ensureFactoryHome();
+  if (options.verbose) console.log("  [verbose] Factory home directory ensured");
 
   // Step 2: Run database migrations
   const migrationsPath = deps.migrationsPath ?? getMigrationsPath();
+  if (options.verbose) console.log(`  [verbose] Migrations path: ${migrationsPath}`);
   console.log("  ⏳ Running database migrations...");
   const migrationResult = await runMigrations(options.dbPath, migrationsPath);
   if (migrationResult.applied > 0) {
@@ -189,21 +247,25 @@ export async function startServer(
 
   // Step 3: Set DATABASE_PATH env var for the control-plane NestJS modules
   process.env["DATABASE_PATH"] = options.dbPath;
+  if (options.verbose) console.log(`  [verbose] DATABASE_PATH=${options.dbPath}`);
 
   // Step 4: Initialize tracing (console-only for CLI, no OTLP exporter)
   const tracingHandle: TracingHandle = initTracing({
     serviceName: "factory-cli",
     serviceVersion: VERSION,
     enableOtlpExporter: false,
-    enableConsoleExporter: process.env["NODE_ENV"] === "development",
+    enableConsoleExporter: options.verbose || process.env["NODE_ENV"] === "development",
   });
+  if (options.verbose) console.log("  [verbose] Tracing initialized");
 
   // Step 5: Create NestJS application
+  if (options.verbose) console.log("  [verbose] Creating NestJS application...");
   const app = await createApp();
 
   // Step 6: Configure static web-UI serving if enabled
   if (options.ui) {
     const distPath = deps.webUiDistPath ?? getWebUiDistPath();
+    if (options.verbose) console.log(`  [verbose] Web UI dist path: ${distPath}`);
     if (existsSync(distPath)) {
       await configureStaticServing(app, distPath);
     } else {
@@ -214,6 +276,7 @@ export async function startServer(
   }
 
   // Step 7: Start listening
+  if (options.verbose) console.log(`  [verbose] Binding to 0.0.0.0:${options.port}...`);
   try {
     await app.listen(options.port, "0.0.0.0");
   } catch (err: unknown) {
@@ -226,8 +289,9 @@ export async function startServer(
     throw err;
   }
 
-  // Step 8: Print banner and open browser
-  printBanner(options);
+  // Step 8: Query project count and print banner
+  const projectCount = queryProjectCount(options.dbPath);
+  printBanner(options, projectCount);
 
   if (options.open) {
     const url = `http://localhost:${options.port}`;
