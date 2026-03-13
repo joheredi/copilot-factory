@@ -115,6 +115,15 @@ export const queryKeys = {
       [...queryKeys.mergeQueue.all, "list", params ?? {}] as const,
   },
 
+  /** Prompt template query keys. */
+  promptTemplates: {
+    all: ["promptTemplates"] as const,
+    lists: (params?: { role?: string }) =>
+      [...queryKeys.promptTemplates.all, "list", params ?? {}] as const,
+    details: () => [...queryKeys.promptTemplates.all, "detail"] as const,
+    detail: (id: string) => [...queryKeys.promptTemplates.details(), id] as const,
+  },
+
   /** Factory state (running/paused) query keys. */
   factoryState: {
     all: ["factoryState"] as const,

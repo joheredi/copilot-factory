@@ -83,6 +83,11 @@ function setupFetchRoutes(overrides?: { createResponse?: Response }) {
         : Promise.resolve(fakeResponse(makeCreatedProfile(), 201));
     }
 
+    // Mock prompt templates list endpoint (returns empty for tests)
+    if (url.includes("/prompt-templates")) {
+      return Promise.resolve(fakeResponse([]));
+    }
+
     return Promise.resolve(fakeResponse({}, 404));
   });
 }
@@ -178,9 +183,8 @@ describe("CreateProfileDialog", () => {
     setupFetchRoutes();
     renderDialog();
 
-    fireEvent.change(screen.getByTestId("create-profile-promptTemplateId"), {
-      target: { value: "tmpl-001" },
-    });
+    // Note: promptTemplateId is now a Select dropdown (not a text input),
+    // so we only test the text input policy fields here.
     fireEvent.change(screen.getByTestId("create-profile-toolPolicyId"), {
       target: { value: "tp-002" },
     });
@@ -199,7 +203,6 @@ describe("CreateProfileDialog", () => {
     });
     const body = JSON.parse(postCall![1]!.body as string);
     expect(body).toEqual({
-      promptTemplateId: "tmpl-001",
       toolPolicyId: "tp-002",
       budgetPolicyId: "bp-003",
     });
@@ -214,8 +217,8 @@ describe("CreateProfileDialog", () => {
     setupFetchRoutes();
     renderDialog();
 
+    // Text-input policy fields (promptTemplateId is a Select, tested separately)
     const fieldValues: Record<string, string> = {
-      promptTemplateId: "tmpl-001",
       toolPolicyId: "tp-002",
       commandPolicyId: "cp-003",
       fileScopePolicyId: "fs-004",
@@ -352,9 +355,9 @@ describe("CreateProfileDialog", () => {
       expect(screen.getByTestId("create-profile-error")).toBeInTheDocument();
     });
 
-    // Type in a field to clear error
-    fireEvent.change(screen.getByTestId("create-profile-promptTemplateId"), {
-      target: { value: "tmpl-retry" },
+    // Type in a text input field to clear error
+    fireEvent.change(screen.getByTestId("create-profile-toolPolicyId"), {
+      target: { value: "tp-retry" },
     });
 
     expect(screen.queryByTestId("create-profile-error")).not.toBeInTheDocument();

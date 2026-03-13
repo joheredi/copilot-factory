@@ -345,6 +345,7 @@ export default function PoolDetailPage() {
       {/* Create Agent Profile dialog */}
       <CreateProfileDialog
         poolId={pool.id}
+        poolType={pool.poolType}
         open={profileDialogOpen}
         onOpenChange={setProfileDialogOpen}
       />

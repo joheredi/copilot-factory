@@ -518,6 +518,46 @@ export interface EffectiveConfig {
 // Task Import Pipeline
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Prompt Templates
+// ---------------------------------------------------------------------------
+
+export interface PromptTemplate {
+  readonly id: string;
+  readonly name: string;
+  readonly version: string;
+  readonly role: string;
+  readonly templateText: string;
+  readonly inputSchema: unknown | null;
+  readonly outputSchema: unknown | null;
+  readonly stopConditions: unknown | null;
+  readonly createdAt: string;
+}
+
+export interface CreatePromptTemplateInput {
+  readonly name: string;
+  readonly version: string;
+  readonly role: string;
+  readonly templateText: string;
+  readonly inputSchema?: unknown;
+  readonly outputSchema?: unknown;
+  readonly stopConditions?: unknown;
+}
+
+export interface UpdatePromptTemplateInput {
+  readonly name?: string;
+  readonly version?: string;
+  readonly role?: string;
+  readonly templateText?: string;
+  readonly inputSchema?: unknown | null;
+  readonly outputSchema?: unknown | null;
+  readonly stopConditions?: unknown | null;
+}
+
+// ---------------------------------------------------------------------------
+// Task Import Pipeline
+// ---------------------------------------------------------------------------
+
 /** Severity level for warnings produced during task import parsing. */
 export type ParseWarningSeverity = "info" | "warning" | "error";
 

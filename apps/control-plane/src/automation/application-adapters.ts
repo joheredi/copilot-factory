@@ -482,21 +482,23 @@ function buildTaskPacket(task: {
   branchName: string | null;
 }): Record<string, unknown> {
   return {
-    taskId: task.taskId,
-    repositoryId: task.repositoryId,
-    externalRef: task.externalRef,
-    title: task.title,
-    description: task.description,
-    taskType: task.taskType,
-    priority: task.priority,
-    severity: task.severity,
-    status: task.status,
-    source: task.source,
-    acceptanceCriteria: toStringArray(task.acceptanceCriteria),
-    definitionOfDone: toStringArray(task.definitionOfDone),
-    requiredCapabilities: toStringArray(task.requiredCapabilities),
-    suggestedFileScope: toStringArray(task.suggestedFileScope),
-    branchName: task.branchName,
+    task_id: task.taskId,
+    repository_id: task.repositoryId,
+    task: {
+      title: task.title,
+      description: task.description ?? "",
+      task_type: task.taskType,
+      priority: task.priority ?? "medium",
+      severity: task.severity ?? null,
+      status: task.status,
+      source: task.source ?? null,
+      external_ref: task.externalRef ?? null,
+      acceptance_criteria: toStringArray(task.acceptanceCriteria),
+      definition_of_done: toStringArray(task.definitionOfDone),
+      required_capabilities: toStringArray(task.requiredCapabilities),
+      suggested_file_scope: toStringArray(task.suggestedFileScope),
+      branch_name: task.branchName ?? null,
+    },
   };
 }
 

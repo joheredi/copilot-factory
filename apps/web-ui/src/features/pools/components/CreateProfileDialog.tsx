@@ -14,9 +14,17 @@
 
 import { useCallback, useState } from "react";
 import { useCreateAgentProfile } from "../../../api/hooks/use-pools.js";
+import { usePromptTemplates } from "../../../api/hooks/use-prompt-templates.js";
 import { Button } from "../../../components/ui/button.js";
 import { Input } from "../../../components/ui/input.js";
 import { Label } from "../../../components/ui/label.js";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../../components/ui/select.js";
 import {
   Dialog,
   DialogContent,
@@ -35,6 +43,8 @@ import type { CreateAgentProfileInput } from "../../../api/types.js";
 interface CreateProfileDialogProps {
   /** ID of the pool this profile will belong to. */
   readonly poolId: string;
+  /** Pool type used to filter prompt templates by matching role. */
+  readonly poolType?: string;
   /** Whether the dialog is open. */
   readonly open: boolean;
   /** Callback when the dialog open state changes (close via cancel or backdrop). */
@@ -78,11 +88,6 @@ const PROFILE_FIELDS: {
   label: string;
   placeholder: string;
 }[] = [
-  {
-    key: "promptTemplateId",
-    label: "Prompt Template ID",
-    placeholder: "UUID of the prompt template",
-  },
   {
     key: "toolPolicyId",
     label: "Tool Policy ID",
@@ -133,11 +138,18 @@ const PROFILE_FIELDS: {
  * profile list cache is automatically invalidated by the underlying
  * useCreateAgentProfile mutation hook.
  */
-export function CreateProfileDialog({ poolId, open, onOpenChange }: CreateProfileDialogProps) {
+export function CreateProfileDialog({
+  poolId,
+  poolType,
+  open,
+  onOpenChange,
+}: CreateProfileDialogProps) {
   const [form, setForm] = useState<FormState>(INITIAL_FORM_STATE);
   const [error, setError] = useState<string | null>(null);
 
   const createProfile = useCreateAgentProfile(poolId);
+  const { data: templates } = usePromptTemplates(poolType);
+  const templateList = templates ?? [];
 
   /** Updates a single form field and clears any existing error. */
   const updateField = useCallback(<K extends keyof FormState>(field: K, value: FormState[K]) => {
@@ -201,6 +213,34 @@ export function CreateProfileDialog({ poolId, open, onOpenChange }: CreateProfil
         </DialogHeader>
 
         <div className="max-h-[60vh] space-y-4 overflow-y-auto py-2">
+          {/* Prompt Template picker */}
+          <div className="space-y-2">
+            <Label htmlFor="profile-promptTemplateId">Prompt Template</Label>
+            <Select
+              value={form.promptTemplateId || "__none__"}
+              onValueChange={(v) => {
+                updateField("promptTemplateId", v === "__none__" ? "" : v);
+              }}
+              disabled={createProfile.isPending}
+            >
+              <SelectTrigger
+                id="profile-promptTemplateId"
+                data-testid="create-profile-promptTemplateId"
+              >
+                <SelectValue placeholder="Select a prompt template" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">None</SelectItem>
+                {templateList.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.name} (v{t.version})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Remaining policy ID fields */}
           {PROFILE_FIELDS.map(({ key, label, placeholder }) => (
             <div key={key} className="space-y-2">
               <Label htmlFor={`profile-${key}`}>{label}</Label>

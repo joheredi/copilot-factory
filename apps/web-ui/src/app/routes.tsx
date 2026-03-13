@@ -19,6 +19,8 @@ const ReviewsPage = lazy(() => import("../features/reviews/page.js"));
 const MergeQueuePage = lazy(() => import("../features/merge-queue/page.js"));
 const ConfigPage = lazy(() => import("../features/config/page.js"));
 const AuditPage = lazy(() => import("../features/audit/page.js"));
+const PromptsPage = lazy(() => import("../features/prompts/PromptsPage.js"));
+const PromptDetailPage = lazy(() => import("../features/prompts/PromptDetailPage.js"));
 const NotFoundPage = lazy(() => import("../features/not-found/page.js"));
 
 /**
@@ -105,6 +107,22 @@ const routes: RouteObject[] = [
         element: (
           <Suspense fallback={<PageSkeleton />}>
             <AuditPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "prompts",
+        element: (
+          <Suspense fallback={<PageSkeleton />}>
+            <PromptsPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "prompts/:id",
+        element: (
+          <Suspense fallback={<PageSkeleton />}>
+            <PromptDetailPage />
           </Suspense>
         ),
       },

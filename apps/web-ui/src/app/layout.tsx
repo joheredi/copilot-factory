@@ -9,6 +9,7 @@ import {
   GitMerge,
   Settings,
   ScrollText,
+  FileText,
   Factory,
   Menu,
   X,
@@ -39,6 +40,7 @@ const navItems: NavItem[] = [
   { label: "Reviews", href: "/reviews", icon: MessageSquare },
   { label: "Merge Queue", href: "/merge-queue", icon: GitMerge },
   { label: "Config", href: "/config", icon: Settings },
+  { label: "Prompts", href: "/prompts", icon: FileText },
   { label: "Audit Log", href: "/audit", icon: ScrollText },
 ];
 
