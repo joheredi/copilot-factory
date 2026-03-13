@@ -5,7 +5,7 @@
 | **ID**                    | T139                                                                |
 | **Epic**                  | [E009: Worker Runtime & Execution](../epics/E009-worker-runtime.md) |
 | **Type**                  | refactor                                                            |
-| **Status**                | pending                                                             |
+| **Status**                | done                                                                |
 | **Priority**              | P1                                                                  |
 | **Owner**                 | backend-engineer                                                    |
 | **AI Executable**         | Yes                                                                 |

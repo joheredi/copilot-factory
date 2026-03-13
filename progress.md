@@ -1,5 +1,28 @@
 # Progress Log
 
+## T139: Update worker-runner package to re-export dispatch types — DONE
+
+**What was done:**
+
+- Added `@factory/application` as a dependency of `@factory/worker-runner`
+- Updated `apps/worker-runner/src/index.ts` to re-export dispatch and supervisor types
+- Added tsconfig reference to `../../packages/application`
+- Added 3 unit tests verifying value exports are accessible
+- Fixed stale backlog index (many tasks showed `pending` but were actually `done`)
+- E009 (Worker Runtime & Execution) is now fully complete (13/13 tasks done)
+
+**Key patterns:**
+
+- Re-exports are organized into Dispatch and Supervisor sections
+- Both value exports (factory functions, constants) and type exports are included
+- Port interfaces (WorkspaceProviderPort, RuntimeAdapterPort, etc.) are also re-exported for consumers
+
+**Next loop notes:**
+
+- No P0 tasks remain. All remaining tasks are P1 or P2.
+- Ready P1 tasks: T144 (idempotent init), T148 (recovery log), T117 (import hooks), T125-T127 (UI dialogs), T150 (dashboard filter)
+- E009 is fully done and should be moved to the archive
+
 ## T116: Create POST /import/execute endpoint — DONE
 
 **What was done:**

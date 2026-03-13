@@ -36,7 +36,7 @@ The Autonomous Software Factory is a local-first orchestration platform for soft
 
 ### Progress
 
-21 of 27 epics are complete (E001–E008, E010–E022). See [index-archive.md](index-archive.md) for details.
+22 of 27 epics are complete (E001–E010, E010–E022). See [index-archive.md](index-archive.md) for details.
 
 ### Active Workstreams
 
@@ -60,12 +60,12 @@ The Autonomous Software Factory is a local-first orchestration platform for soft
 
 | ID                                      | Title                                | Dependencies                 | Total Tasks | Done | Pending |
 | --------------------------------------- | ------------------------------------ | ---------------------------- | ----------- | ---- | ------- |
-| [E009](epics/E009-worker-runtime.md)    | Worker Runtime & Execution           | E004, E005, E006, E008, E010 | 13          | 7    | 6       |
-| [E023](epics/E023-task-import.md)       | Task Import Pipeline                 | E001, E002, E017, E019, E020 | 8           | 0    | 8       |
+| [E009](epics/E009-worker-runtime.md)    | Worker Runtime & Execution           | E004, E005, E006, E008, E010 | 13          | 13   | 0       |
+| [E023](epics/E023-task-import.md)       | Task Import Pipeline                 | E001, E002, E017, E019, E020 | 8           | 5    | 3       |
 | [E024](epics/E024-cli-package.md)       | CLI Package & Single-Command Startup | E001, E017, E019             | 4           | 0    | 4       |
-| [E025](epics/E025-web-ui-forms.md)      | Web UI Creation & Editing Forms      | E019, E020, E021             | 8           | 0    | 8       |
-| [E026](epics/E026-cli-init.md)          | CLI Init & Project Onboarding        | E001, E002, E023             | 5           | 0    | 5       |
-| [E027](epics/E027-factory-lifecycle.md) | Factory Lifecycle & Recovery         | E024, E026                   | 7           | 0    | 7       |
+| [E025](epics/E025-web-ui-forms.md)      | Web UI Creation & Editing Forms      | E019, E020, E021             | 8           | 1    | 7       |
+| [E026](epics/E026-cli-init.md)          | CLI Init & Project Onboarding        | E001, E002, E023             | 5           | 4    | 1       |
+| [E027](epics/E027-factory-lifecycle.md) | Factory Lifecycle & Recovery         | E024, E026                   | 7           | 3    | 4       |
 
 ### Completed Epics (archived)
 
@@ -77,29 +77,29 @@ See [index-archive.md](index-archive.md) for the 21 completed epics: E001–E008
 
 ### E009: Worker Runtime & Execution
 
-| ID                                                  | Title                                                       | Priority | Type           | Status  |
-| --------------------------------------------------- | ----------------------------------------------------------- | -------- | -------------- | ------- |
-| [T043](tasks/T043-worker-runtime-interface.md)      | Define worker runtime interface                             | P0       | foundation     | done    |
-| [T044](tasks/T044-worker-supervisor.md)             | Implement Worker Supervisor                                 | P0       | feature        | done    |
-| [T045](tasks/T045-copilot-cli-adapter.md)           | Implement Copilot CLI execution adapter                     | P0       | feature        | done    |
-| [T046](tasks/T046-output-capture-validation.md)     | Implement structured output capture and validation          | P0       | feature        | done    |
-| [T047](tasks/T047-command-wrapper.md)               | Implement policy-aware command wrapper                      | P0       | security       | done    |
-| [T132](tasks/T132-worker-dispatch-service.md)       | Implement WorkerDispatchService in application layer        | P0       | feature        | done    |
-| [T133](tasks/T133-worker-dispatch-tests.md)         | Unit tests for WorkerDispatchService                        | P0       | feature        | done    |
-| [T134](tasks/T134-worker-dispatch-adapter.md)       | Wire WorkerDispatch unit-of-work adapter in control-plane   | P0       | infrastructure | done    |
-| [T135](tasks/T135-heartbeat-forwarder-adapter.md)   | Implement HeartbeatForwarderPort adapter                    | P0       | infrastructure | done    |
-| [T136](tasks/T136-infrastructure-adapter-wiring.md) | Wire workspace, runtime, and packet infrastructure adapters | P0       | infrastructure | pending |
-| [T137](tasks/T137-wire-dispatch-automation.md)      | Integrate WorkerDispatchService into AutomationService      | P0       | feature        | pending |
-| [T138](tasks/T138-dispatch-integration-test.md)     | End-to-end dispatch integration test                        | P0       | feature        | done    |
-| [T139](tasks/T139-worker-runner-exports.md)         | Update worker-runner package to re-export dispatch types    | P1       | refactor       | pending |
+| ID                                                  | Title                                                       | Priority | Type           | Status |
+| --------------------------------------------------- | ----------------------------------------------------------- | -------- | -------------- | ------ |
+| [T043](tasks/T043-worker-runtime-interface.md)      | Define worker runtime interface                             | P0       | foundation     | done   |
+| [T044](tasks/T044-worker-supervisor.md)             | Implement Worker Supervisor                                 | P0       | feature        | done   |
+| [T045](tasks/T045-copilot-cli-adapter.md)           | Implement Copilot CLI execution adapter                     | P0       | feature        | done   |
+| [T046](tasks/T046-output-capture-validation.md)     | Implement structured output capture and validation          | P0       | feature        | done   |
+| [T047](tasks/T047-command-wrapper.md)               | Implement policy-aware command wrapper                      | P0       | security       | done   |
+| [T132](tasks/T132-worker-dispatch-service.md)       | Implement WorkerDispatchService in application layer        | P0       | feature        | done   |
+| [T133](tasks/T133-worker-dispatch-tests.md)         | Unit tests for WorkerDispatchService                        | P0       | feature        | done   |
+| [T134](tasks/T134-worker-dispatch-adapter.md)       | Wire WorkerDispatch unit-of-work adapter in control-plane   | P0       | infrastructure | done   |
+| [T135](tasks/T135-heartbeat-forwarder-adapter.md)   | Implement HeartbeatForwarderPort adapter                    | P0       | infrastructure | done   |
+| [T136](tasks/T136-infrastructure-adapter-wiring.md) | Wire workspace, runtime, and packet infrastructure adapters | P0       | infrastructure | done   |
+| [T137](tasks/T137-wire-dispatch-automation.md)      | Integrate WorkerDispatchService into AutomationService      | P0       | feature        | done   |
+| [T138](tasks/T138-dispatch-integration-test.md)     | End-to-end dispatch integration test                        | P0       | feature        | done   |
+| [T139](tasks/T139-worker-runner-exports.md)         | Update worker-runner package to re-export dispatch types    | P1       | refactor       | done   |
 
 ### E023: Task Import Pipeline
 
 | ID                                              | Title                                     | Priority | Type          | Status  |
 | ----------------------------------------------- | ----------------------------------------- | -------- | ------------- | ------- |
-| [T112](tasks/T112-define-import-schema.md)      | Define task import Zod schemas            | P0       | foundation    | pending |
-| [T113](tasks/T113-build-markdown-parser.md)     | Build deterministic markdown task parser  | P0       | feature       | pending |
-| [T114](tasks/T114-build-json-parser.md)         | Build JSON/backlog.json task parser       | P1       | feature       | pending |
+| [T112](tasks/T112-define-import-schema.md)      | Define task import Zod schemas            | P0       | foundation    | done    |
+| [T113](tasks/T113-build-markdown-parser.md)     | Build deterministic markdown task parser  | P0       | feature       | done    |
+| [T114](tasks/T114-build-json-parser.md)         | Build JSON/backlog.json task parser       | P1       | feature       | done    |
 | [T115](tasks/T115-import-discovery-endpoint.md) | Create POST /import/discover endpoint     | P0       | feature       | done    |
 | [T116](tasks/T116-import-execute-endpoint.md)   | Create POST /import/execute endpoint      | P0       | feature       | done    |
 | [T117](tasks/T117-import-api-hooks.md)          | Create TanStack Query import hooks        | P1       | feature       | pending |
@@ -119,7 +119,7 @@ See [index-archive.md](index-archive.md) for the 21 completed epics: E001–E008
 
 | ID                                             | Title                                            | Priority | Type    | Status  |
 | ---------------------------------------------- | ------------------------------------------------ | -------- | ------- | ------- |
-| [T124](tasks/T124-create-task-dialog.md)       | Add Create Task dialog to Tasks page             | P1       | feature | pending |
+| [T124](tasks/T124-create-task-dialog.md)       | Add Create Task dialog to Tasks page             | P1       | feature | done    |
 | [T125](tasks/T125-create-project-dialog.md)    | Add Create Project dialog                        | P1       | feature | pending |
 | [T126](tasks/T126-create-repository-dialog.md) | Add Create Repository dialog to Project detail   | P1       | feature | pending |
 | [T127](tasks/T127-create-pool-dialog.md)       | Add Create Worker Pool dialog to Pools page      | P1       | feature | pending |
@@ -132,10 +132,10 @@ See [index-archive.md](index-archive.md) for the 21 completed epics: E001–E008
 
 | ID                                            | Title                                        | Priority | Type       | Status  |
 | --------------------------------------------- | -------------------------------------------- | -------- | ---------- | ------- |
-| [T140](tasks/T140-global-data-dir.md)         | Establish ~/.copilot-factory/ convention     | P0       | foundation | pending |
-| [T141](tasks/T141-programmatic-migrations.md) | Run Drizzle migrations from code             | P0       | foundation | pending |
-| [T142](tasks/T142-init-project-detection.md)  | Auto-detect project metadata in init command | P0       | feature    | pending |
-| [T143](tasks/T143-init-interactive-flow.md)   | Build init interactive flow and registration | P0       | feature    | pending |
+| [T140](tasks/T140-global-data-dir.md)         | Establish ~/.copilot-factory/ convention     | P0       | foundation | done    |
+| [T141](tasks/T141-programmatic-migrations.md) | Run Drizzle migrations from code             | P0       | foundation | done    |
+| [T142](tasks/T142-init-project-detection.md)  | Auto-detect project metadata in init command | P0       | feature    | done    |
+| [T143](tasks/T143-init-interactive-flow.md)   | Build init interactive flow and registration | P0       | feature    | done    |
 | [T144](tasks/T144-init-idempotent.md)         | Make init safe to re-run                     | P1       | feature    | pending |
 
 ### E027: Factory Lifecycle & Recovery
@@ -185,9 +185,9 @@ E027 (Factory Lifecycle) — depends on T140/T141 (from E026)
 
 Pending tasks whose dependencies are all satisfied (can start immediately):
 
-- [T142](tasks/T142-init-project-detection.md): Auto-detect project metadata (E026)
-- [T145](tasks/T145-start-command.md): Build factory start command (E027)
-- [T124](tasks/T124-create-task-dialog.md): Add Create Task dialog to Tasks page (E025)
+- [T144](tasks/T144-init-idempotent.md): Make init safe to re-run (E026)
+- [T148](tasks/T148-startup-recovery-log.md): Log recovery status on startup (E027)
+- [T117](tasks/T117-import-api-hooks.md): Create TanStack Query import hooks (E023)
 - [T125](tasks/T125-create-project-dialog.md): Add Create Project dialog (E025)
 - [T126](tasks/T126-create-repository-dialog.md): Add Create Repository dialog to Project detail (E025)
 - [T127](tasks/T127-create-pool-dialog.md): Add Create Worker Pool dialog to Pools page (E025)
@@ -196,16 +196,17 @@ Pending tasks whose dependencies are all satisfied (can start immediately):
 - [T130](tasks/T130-batch-task-import-ui.md): Add Batch Task Import UI to Tasks page (E025)
 - [T131](tasks/T131-reassign-pool-action.md): Add Reassign Pool operator action to Task detail (E025)
 - [T150](tasks/T150-dashboard-project-selector.md): Add multi-project filter to dashboard (E027)
+- [T122](tasks/T122-cli-readme.md): Write CLI and import documentation (E024)
 - [T123](tasks/T123-import-format-docs.md): Write task format reference documentation (E023)
-- [T117](tasks/T117-import-api-hooks.md): Create TanStack Query import hooks (E023)
 
-### High-Priority (P0) Pending Tasks
+### High-Priority (P1) Pending Tasks
 
-- [T142](tasks/T142-init-project-detection.md): Auto-detect project metadata (E026)
-- [T143](tasks/T143-init-interactive-flow.md): Build init interactive flow (E026)
-- [T145](tasks/T145-start-command.md): Build factory start command (E027)
-- [T147](tasks/T147-two-phase-shutdown.md): Implement two-phase shutdown (E027)
+- [T144](tasks/T144-init-idempotent.md): Make init safe to re-run (E026)
 - [T148](tasks/T148-startup-recovery-log.md): Log recovery status on startup (E027)
+- [T117](tasks/T117-import-api-hooks.md): Create TanStack Query import hooks (E023)
+- [T125](tasks/T125-create-project-dialog.md): Add Create Project dialog (E025)
+- [T126](tasks/T126-create-repository-dialog.md): Add Create Repository dialog (E025)
+- [T127](tasks/T127-create-pool-dialog.md): Add Create Worker Pool dialog (E025)
 - [T150](tasks/T150-dashboard-project-selector.md): Multi-project dashboard filter (E027)
 
 ---
