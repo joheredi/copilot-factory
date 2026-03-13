@@ -21,6 +21,7 @@
   "scripts": {
     "build": "tsc --build",
     "dev": "tsx src/cli.ts",
+    "test": "vitest run",
     "clean": "rm -rf dist tsconfig.tsbuildinfo",
     "lint": "eslint .",
     "format": "prettier --write ."

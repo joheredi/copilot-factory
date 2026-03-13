@@ -277,3 +277,29 @@ T110 - Integration test: lease timeout and crash recovery (Epic E022: Integratio
 - Verifies: dispatch job completion, worker entity creation (terminal status), heartbeat forwarding (lease STARTING → RUNNING → COMPLETING), task state transitions through guard-protected states, workspace creation, and packet mounting.
 - **Discovered gap:** The dispatch pipeline does not automatically transition the lease from LEASED → STARTING. Heartbeat forwarding requires the lease to be in STARTING state. The test manually transitions the lease (mirroring the full-lifecycle integration test pattern).
 - All 4,134 tests pass. Build clean.
+
+## T140 — Establish ~/.copilot-factory/ global data directory convention
+
+### Task
+
+T140 - Create paths module for centralized data directory resolution (Epic E026: CLI Init & Project Onboarding)
+
+### What was done
+
+- Created `apps/cli/src/paths.ts` with 6 exported helpers: `getFactoryHome()`, `getDbPath()`, `getWorkspacesRoot()`, `getArtifactsRoot()`, `getMigrationsDir()`, `ensureFactoryHome()`
+- Created `apps/cli/src/paths.test.ts` with 10 unit tests covering default resolution, FACTORY_HOME override, empty string fallback, all path helpers, idempotent directory creation, and nested directory creation
+- Created `apps/cli/vitest.config.ts` for test infrastructure
+- Added `test` script to `apps/cli/package.json`
+
+### Patterns used
+
+- Pure functions composing on `getFactoryHome()` for all path resolution
+- `os.homedir()` for cross-platform home directory resolution
+- `FACTORY_HOME` env var override for testing and non-standard setups
+- Temp directories in tests to avoid touching real `~/.copilot-factory/`
+- Consistent with existing infrastructure patterns (recursive mkdirSync, existsSync checks)
+
+### For next loop
+
+- T141 (programmatic Drizzle migrations) and T146 (start static serving) are now unblocked
+- T141 depends on this paths module to resolve `getDbPath()` and `getMigrationsDir()`
