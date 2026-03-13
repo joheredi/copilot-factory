@@ -5,7 +5,7 @@
 | **ID**                    | T141                                                                      |
 | **Epic**                  | [E026: CLI Init & Project Onboarding](../epics/E026-cli-init.md)          |
 | **Type**                  | foundation                                                                |
-| **Status**                | pending                                                                   |
+| **Status**                | done                                                                      |
 | **Priority**              | P0                                                                        |
 | **Owner**                 | backend-engineer                                                          |
 | **AI Executable**         | Yes                                                                       |
@@ -92,12 +92,12 @@ The implementing agent should read these files before starting:
 
 ## Acceptance Criteria
 
-- [ ] `runMigrations()` creates the DB file if it doesn't exist
-- [ ] `runMigrations()` applies all pending migrations on first run
-- [ ] `runMigrations()` is a no-op when already up to date
-- [ ] Migrations folder is resolved correctly from the CLI package
-- [ ] Errors (corrupt DB, missing migrations) are thrown with clear messages
-- [ ] Unit tests pass with a temp DB
+- [x] `runMigrations()` creates the DB file if it doesn't exist
+- [x] `runMigrations()` applies all pending migrations on first run
+- [x] `runMigrations()` is a no-op when already up to date
+- [x] Migrations folder is resolved correctly from the CLI package
+- [x] Errors (corrupt DB, missing migrations) are thrown with clear messages
+- [x] Unit tests pass with a temp DB
 
 ## Definition of Done
 

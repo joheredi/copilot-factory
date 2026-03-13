@@ -328,3 +328,34 @@ T140 - Create paths module for centralized data directory resolution (Epic E026:
 ### For next loop
 
 - T121 (CLI entry point) is now unblocked — it can call `configureStaticServing(app, distPath)` directly
+
+## T141 — Run Drizzle migrations from code
+
+### Task
+
+T141 - Run Drizzle migrations from code (Epic E026: CLI Init & Project Onboarding)
+
+### What was done
+
+- Created `apps/cli/src/migrate.ts` with `runMigrations(dbPath, migrationsFolder)` function
+- Uses Drizzle ORM's built-in `migrate()` from `drizzle-orm/better-sqlite3/migrator`
+- Counts applied migrations by querying `__drizzle_migrations` table before/after migration run
+- Configures SQLite with WAL mode, busy_timeout=5000, foreign_keys=ON (matching control-plane connection.ts)
+- Creates parent directories for DB file automatically
+- Custom `MigrationError` class wraps errors with dbPath and migrationsFolder context
+- Validates migrations folder exists before opening the database
+- Always closes the database connection in a `finally` block
+- Added `better-sqlite3` and `drizzle-orm` as dependencies of `apps/cli/package.json`
+- Created 10 unit tests covering first-run, idempotency, parent dir creation, WAL mode, table verification, error cases
+
+### Patterns
+
+- Tests use real control-plane migration files from `apps/control-plane/drizzle/` (resolved via `import.meta.dirname`) to catch schema compatibility issues
+- Temporary directories with `mkdtempSync` for test isolation, cleaned up in `afterEach`
+- Database table names are singular snake_case (e.g., `project`, `task`, `repository`) — not plural
+
+### For next loop
+
+- T142 (auto-detect project metadata) and T145 (factory start command) are now unblocked
+- T146 (static serving) is also ready (depends on T140 which is done)
+- When integrating into `factory init`/`factory start`, call `runMigrations(getDbPath(), getMigrationsDir())`
