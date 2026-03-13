@@ -5,7 +5,7 @@
 | **ID**                    | T123                                                                         |
 | **Epic**                  | [E023: Task Import Pipeline](../epics/E023-task-import.md)                   |
 | **Type**                  | documentation                                                                |
-| **Status**                | pending                                                                      |
+| **Status**                | done                                                                         |
 | **Priority**              | P2                                                                           |
 | **Owner**                 | technical-writer                                                             |
 | **AI Executable**         | Yes                                                                          |

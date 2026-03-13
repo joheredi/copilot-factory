@@ -61,7 +61,7 @@ The Autonomous Software Factory is a local-first orchestration platform for soft
 | ID                                      | Title                                | Dependencies                 | Total Tasks | Done | Pending |
 | --------------------------------------- | ------------------------------------ | ---------------------------- | ----------- | ---- | ------- |
 | [E009](epics/E009-worker-runtime.md)    | Worker Runtime & Execution           | E004, E005, E006, E008, E010 | 13          | 13   | 0       |
-| [E023](epics/E023-task-import.md)       | Task Import Pipeline                 | E001, E002, E017, E019, E020 | 8           | 7    | 1       |
+| [E023](epics/E023-task-import.md)       | Task Import Pipeline                 | E001, E002, E017, E019, E020 | 8           | 8    | 0       |
 | [E024](epics/E024-cli-package.md)       | CLI Package & Single-Command Startup | E001, E017, E019             | 4           | 0    | 4       |
 | [E025](epics/E025-web-ui-forms.md)      | Web UI Creation & Editing Forms      | E019, E020, E021             | 8           | 8    | 0       |
 | [E026](epics/E026-cli-init.md)          | CLI Init & Project Onboarding        | E001, E002, E023             | 5           | 5    | 0       |
@@ -95,16 +95,16 @@ See [index-archive.md](index-archive.md) for the 21 completed epics: E001–E008
 
 ### E023: Task Import Pipeline
 
-| ID                                              | Title                                     | Priority | Type          | Status  |
-| ----------------------------------------------- | ----------------------------------------- | -------- | ------------- | ------- |
-| [T112](tasks/T112-define-import-schema.md)      | Define task import Zod schemas            | P0       | foundation    | done    |
-| [T113](tasks/T113-build-markdown-parser.md)     | Build deterministic markdown task parser  | P0       | feature       | done    |
-| [T114](tasks/T114-build-json-parser.md)         | Build JSON/backlog.json task parser       | P1       | feature       | done    |
-| [T115](tasks/T115-import-discovery-endpoint.md) | Create POST /import/discover endpoint     | P0       | feature       | done    |
-| [T116](tasks/T116-import-execute-endpoint.md)   | Create POST /import/execute endpoint      | P0       | feature       | done    |
-| [T117](tasks/T117-import-api-hooks.md)          | Create TanStack Query import hooks        | P1       | feature       | done    |
-| [T118](tasks/T118-import-dialog-component.md)   | Build Import Tasks multi-step dialog      | P1       | feature       | done    |
-| [T123](tasks/T123-import-format-docs.md)        | Write task format reference documentation | P2       | documentation | pending |
+| ID                                              | Title                                     | Priority | Type          | Status |
+| ----------------------------------------------- | ----------------------------------------- | -------- | ------------- | ------ |
+| [T112](tasks/T112-define-import-schema.md)      | Define task import Zod schemas            | P0       | foundation    | done   |
+| [T113](tasks/T113-build-markdown-parser.md)     | Build deterministic markdown task parser  | P0       | feature       | done   |
+| [T114](tasks/T114-build-json-parser.md)         | Build JSON/backlog.json task parser       | P1       | feature       | done   |
+| [T115](tasks/T115-import-discovery-endpoint.md) | Create POST /import/discover endpoint     | P0       | feature       | done   |
+| [T116](tasks/T116-import-execute-endpoint.md)   | Create POST /import/execute endpoint      | P0       | feature       | done   |
+| [T117](tasks/T117-import-api-hooks.md)          | Create TanStack Query import hooks        | P1       | feature       | done   |
+| [T118](tasks/T118-import-dialog-component.md)   | Build Import Tasks multi-step dialog      | P1       | feature       | done   |
+| [T123](tasks/T123-import-format-docs.md)        | Write task format reference documentation | P2       | documentation | done   |
 
 ### E024: CLI Package & Single-Command Startup
 
@@ -187,7 +187,6 @@ Pending tasks whose dependencies are all satisfied (can start immediately):
 
 - [T151](tasks/T151-cli-hero-docs.md): Document the CLI hero experience (E027)
 - [T122](tasks/T122-cli-readme.md): Write CLI and import documentation (E024)
-- [T123](tasks/T123-import-format-docs.md): Write task format reference documentation (E023)
 
 ### High-Priority (P1) Pending Tasks
 

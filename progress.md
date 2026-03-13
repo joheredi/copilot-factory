@@ -1,5 +1,29 @@
 # Progress Log
 
+## T123 — Write task format reference documentation (2026-03-13)
+
+### What was done
+
+- Created `docs/TASK_FORMAT.md` — comprehensive reference for the two import formats
+  - Section 1: Overview — supported formats, when to use each, import pipeline flow diagram
+  - Section 2: Markdown Format — metadata table fields (required/optional), headed sections, checkbox syntax, filename-based external ref extraction
+  - Section 3: JSON Format — backlog.json (structured with epics/tasks arrays) and flat tasks.json (simple array) sub-formats, field tables for both, format detection logic
+  - Section 4: Field Mapping Table — three-column mapping (Markdown → JSON → System field), type mapping table (22 input values → 7 canonical types), priority mapping table (P0–P3 shortcodes + full names)
+  - Section 5: Complete Examples — full markdown task file, backlog.json entry, flat tasks.json entry, all using the same fictional task (T042) for consistency
+  - Section 6: AI Prompt Template — ready-to-paste prompt for Copilot/ChatGPT/Claude that instructs the AI to convert arbitrary tasks into factory-compatible markdown format
+  - Section 7: Troubleshooting — 7 common parse warnings with cause/fix explanations (missing title, unknown type, unmapped priority, circular deps, duplicate externalRef, unknown fields, empty criteria)
+
+### Patterns
+
+- All field mappings verified against the actual parser implementations (`markdown-task-parser.ts`, `json-task-parser.ts`) and Zod schemas (`task-import.ts`, `shared.ts`)
+- Type/priority mapping tables sourced from `TASK_TYPE_MAP` and `PRIORITY_MAP` constants in the markdown parser
+- Examples use realistic data consistent with the project's own backlog format
+
+### Notes for next loop
+
+- 2 pending tasks remain (both P2 documentation): T122 (CLI and import docs), T151 (CLI hero experience docs)
+- Both update `README.md` and `docs/user-guide.md` — consider doing T151 first as it's more comprehensive, then T122 can layer on top
+
 ## T130 — Add Batch Task Import UI to Tasks page (2026-03-13)
 
 ### What was done
