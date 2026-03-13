@@ -488,3 +488,37 @@ Build a deterministic parser for JSON task files (backlog.json and flat array fo
 - T145 (Build factory start command) is now unblocked (deps T141+T146 both done) — high priority P0
 - T142 (Auto-detect project metadata) is ready (dep T141 done) — P0
 - T115 (Import discovery endpoint) is ready (deps T113+T114 done) — P0
+
+## T142 — Auto-detect project metadata
+
+### Task
+
+T142 - Auto-detect project metadata in init command (Epic E026: CLI Init & Project Onboarding)
+
+### What was done
+
+- Created `apps/cli/src/detect.ts` with five detection functions:
+  - `detectProjectName(cwd)` — reads `package.json` name field, falls back to `path.basename(cwd)`
+  - `detectGitRemoteUrl(cwd)` — runs `git remote get-url origin`
+  - `detectDefaultBranch(cwd)` — parses `git symbolic-ref refs/remotes/origin/HEAD`, defaults to `"main"`
+  - `detectOwner(cwd)` — runs `git config user.name`, falls back to `os.userInfo().username`
+  - `detectAll(cwd)` — aggregates all four into a `ProjectMetadata` interface
+- Created `apps/cli/src/detect.test.ts` with 21 tests covering:
+  - Package.json name detection, scoped names, missing/invalid/empty package.json
+  - Git remote URL detection (HTTPS and SSH), no-git, no-origin scenarios
+  - Default branch detection with symbolic ref, fallback to "main"
+  - Owner detection from git config with OS username fallback
+  - `detectAll` aggregation, partial metadata, subdirectory detection
+
+### Patterns
+
+- Used `execSync` with `{ cwd, stdio: 'pipe' }` and try/catch for git commands
+- All functions return `null` on failure (never throw)
+- Tests use real temp directories with `mkdtempSync` and `git init` — no mocks
+- Matches existing CLI patterns: JSDoc, node: prefix imports, explicit vitest imports
+
+### For next loop
+
+- T143 (Build init interactive flow) is now unblocked — depends on T142 (done)
+- T145 (Build factory start command) remains ready — P0
+- T115 (Import discovery endpoint) remains ready — P0
