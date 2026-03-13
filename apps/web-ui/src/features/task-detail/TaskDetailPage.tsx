@@ -19,7 +19,8 @@
  * @see T104 — Integrate operator controls into task detail UI
  */
 
-import { ArrowLeft } from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft, Pencil } from "lucide-react";
 import { useParams, Link } from "react-router-dom";
 import { useTask } from "../../api/hooks/use-tasks.js";
 import { Button } from "../../components/ui/button.js";
@@ -32,6 +33,7 @@ import { TaskPacketsTab } from "./components/TaskPacketsTab.js";
 import { TaskArtifactsTab } from "./components/TaskArtifactsTab.js";
 import { TaskDependenciesTab } from "./components/TaskDependenciesTab.js";
 import { TaskActionBar } from "./components/operator-actions/TaskActionBar.js";
+import { EditTaskDialog } from "./components/EditTaskDialog.js";
 import type { TaskPriority } from "../../api/types.js";
 
 /**
@@ -44,6 +46,7 @@ import type { TaskPriority } from "../../api/types.js";
 export default function TaskDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: detail, isLoading, isError } = useTask(id);
+  const [editOpen, setEditOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -103,7 +106,20 @@ export default function TaskDetailPage() {
               <TaskPriorityBadge priority={task.priority as TaskPriority} />
             </div>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => setEditOpen(true)}
+            data-testid="edit-task-button"
+          >
+            <Pencil className="h-4 w-4" />
+            Edit
+          </Button>
         </div>
+
+        {/* Edit Task dialog */}
+        <EditTaskDialog open={editOpen} onOpenChange={setEditOpen} task={task} />
 
         {/* Operator action controls — shows only valid actions for current state */}
         <TaskActionBar task={task} />

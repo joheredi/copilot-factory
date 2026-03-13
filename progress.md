@@ -1,5 +1,37 @@
 # Progress Log
 
+## T129 — Add Edit Task form to Task detail page
+
+### Task
+
+T129 - Add Edit Task form to Task detail page (Epic E025: Web UI Creation & Editing Forms)
+
+### What was done
+
+- Created `EditTaskDialog` component at `apps/web-ui/src/features/task-detail/components/EditTaskDialog.tsx`
+- Editable fields: title, description, priority, riskLevel, estimatedSize, externalRef, severity, acceptanceCriteria, definitionOfDone, requiredCapabilities, suggestedFileScope
+- Pre-populates form from current task data; array fields joined with newlines for textarea editing
+- Only sends changed fields in the update payload (compares form state vs original task)
+- Includes `version` field for optimistic concurrency control
+- Handles 409 Conflict with clear user-friendly message ("modified by another user")
+- Added "Edit" button with Pencil icon to TaskDetailPage header
+- 15 comprehensive tests covering pre-population of all fields, null handling, validation, submission with version, dialog close on success, 409 conflict handling, generic error handling, cancel, and saving state feedback
+- 2 integration tests added to TaskDetailPage.test.tsx for edit button rendering and dialog opening
+
+### Patterns used
+
+- Same dialog pattern as `CreateTaskDialog`: `{ open, onOpenChange }` props
+- `taskToFormState()` helper converts Task to form strings; `buildUpdateInput()` diffs form vs original
+- Array fields (acceptanceCriteria, definitionOfDone, etc.) stored as newline-separated strings in form state
+- `useEffect` re-populates form when dialog opens or task data changes
+- Follows existing selectClasses pattern for native selects matching Input component styling
+
+### Notes for next loop
+
+- All remaining E025 tasks (T128, T130, T131) are independent P2 UI features with no deps
+- Documentation tasks (T122, T123, T151) are also ready
+- The `useUpdateTask` hook uses `apiPut` (PUT method), not PATCH
+
 ## T127 — Add Create Worker Pool dialog to Pools page
 
 ### Task

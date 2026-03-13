@@ -527,4 +527,36 @@ describe("TaskDetailPage", () => {
     const overview = await screen.findByTestId("task-overview-tab");
     expect(overview).toHaveTextContent("src/auth/");
   });
+
+  /**
+   * Validates that the Edit button appears on the task detail page.
+   * This is the entry point for operators to modify task metadata.
+   *
+   * @see T129 — Add Edit Task form to Task detail page
+   */
+  it("renders edit button in header", async () => {
+    setupResponses();
+    renderTaskDetail();
+    const editButton = await screen.findByTestId("edit-task-button");
+    expect(editButton).toBeInTheDocument();
+    expect(editButton).toHaveTextContent("Edit");
+  });
+
+  /**
+   * Validates that clicking the Edit button opens the EditTaskDialog.
+   * The dialog should appear with the "Edit Task" title visible.
+   *
+   * @see T129 — Add Edit Task form to Task detail page
+   */
+  it("opens edit dialog when edit button is clicked", async () => {
+    setupResponses();
+    renderTaskDetail();
+
+    const editButton = await screen.findByTestId("edit-task-button");
+    await userEvent.click(editButton);
+
+    const dialog = await screen.findByTestId("edit-task-dialog");
+    expect(dialog).toBeInTheDocument();
+    expect(screen.getByTestId("edit-task-dialog-title")).toHaveTextContent("Edit Task");
+  });
 });
