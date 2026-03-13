@@ -567,7 +567,7 @@ export function createWorkerDispatchUnitOfWork(conn: DatabaseConnection): Worker
             };
 
             return {
-              repoPath: repository.remoteUrl,
+              repoPath: repository.localCheckoutPath ?? repository.remoteUrl,
               workerName,
               runContext: {
                 taskPacket,

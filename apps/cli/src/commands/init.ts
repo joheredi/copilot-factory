@@ -261,6 +261,7 @@ export async function runInit(cwd: string, deps: InitDeps = {}): Promise<InitRes
         gitRemoteUrl,
         defaultBranch,
         repositoryId,
+        localCheckoutPath: cwd,
         existingMarker,
         log,
         promptFn,
@@ -347,6 +348,7 @@ interface CreateRecordsParams {
   gitRemoteUrl: string | null;
   defaultBranch: string;
   repositoryId: string | null;
+  localCheckoutPath: string;
   existingMarker: MarkerFile | null;
   log: (...args: unknown[]) => void;
   promptFn: (question: string) => Promise<string>;
@@ -382,6 +384,7 @@ function createRecords(
     gitRemoteUrl,
     defaultBranch,
     repositoryId,
+    localCheckoutPath,
     existingMarker,
     log,
   } = params;
@@ -425,11 +428,11 @@ function createRecords(
         .get(existingMarker.repositoryId) as { repository_id: string } | undefined;
 
       if (existing) {
-        // Update metadata on re-run.
+        // Update metadata on re-run (including local path).
         db.prepare(
           `UPDATE repository SET name = ?, remote_url = ?, default_branch = ?,
-           updated_at = unixepoch() WHERE repository_id = ?`,
-        ).run(repoName, gitRemoteUrl, defaultBranch, existing.repository_id);
+           local_checkout_path = ?, updated_at = unixepoch() WHERE repository_id = ?`,
+        ).run(repoName, gitRemoteUrl, defaultBranch, localCheckoutPath, existing.repository_id);
         actualRepositoryId = existing.repository_id;
         log(`  ℹ️  Repository "${repoName}" already registered, updating...`);
       } else {
@@ -441,6 +444,7 @@ function createRecords(
           repoName,
           gitRemoteUrl,
           defaultBranch,
+          localCheckoutPath,
           log,
         );
       }
@@ -452,9 +456,9 @@ function createRecords(
 
       if (existingByUrl) {
         db.prepare(
-          `UPDATE repository SET name = ?, default_branch = ?,
+          `UPDATE repository SET name = ?, default_branch = ?, local_checkout_path = ?,
            updated_at = unixepoch() WHERE repository_id = ?`,
-        ).run(repoName, defaultBranch, existingByUrl.repository_id);
+        ).run(repoName, defaultBranch, localCheckoutPath, existingByUrl.repository_id);
         actualRepositoryId = existingByUrl.repository_id;
         log(`  ℹ️  Repository "${repoName}" already registered, updating...`);
       } else {
@@ -465,6 +469,7 @@ function createRecords(
           repoName,
           gitRemoteUrl,
           defaultBranch,
+          localCheckoutPath,
           log,
         );
       }
@@ -544,16 +549,26 @@ function insertRepository(
   name: string,
   remoteUrl: string,
   defaultBranch: string,
+  localCheckoutPath: string,
   log: (...args: unknown[]) => void,
 ): string | null {
   const stmt = db.prepare(
     `INSERT INTO repository (repository_id, project_id, name, remote_url, default_branch,
-                             local_checkout_strategy, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, unixepoch(), unixepoch())`,
+                             local_checkout_strategy, local_checkout_path, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, unixepoch(), unixepoch())`,
   );
 
   try {
-    stmt.run(repositoryId, projectId, name, remoteUrl, defaultBranch, "worktree", "active");
+    stmt.run(
+      repositoryId,
+      projectId,
+      name,
+      remoteUrl,
+      defaultBranch,
+      "worktree",
+      localCheckoutPath,
+      "active",
+    );
     log(`  ✅ Created repository: ${name}`);
     return repositoryId;
   } catch (err: unknown) {

@@ -43,6 +43,13 @@
       "when": 1773200272543,
       "tag": "0005_odd_snowbird",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1773438268020,
+      "tag": "0006_funny_doctor_strange",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,1 @@
+ALTER TABLE `repository` ADD `local_checkout_path` text;

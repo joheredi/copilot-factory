@@ -84,6 +84,7 @@ function openTestDb() {
       remote_url TEXT NOT NULL,
       default_branch TEXT NOT NULL DEFAULT 'main',
       local_checkout_strategy TEXT NOT NULL,
+      local_checkout_path TEXT,
       credential_profile_id TEXT,
       status TEXT NOT NULL,
       created_at INTEGER NOT NULL DEFAULT (unixepoch()),
@@ -785,7 +786,7 @@ describe("T008 — Cross-table relationships", () => {
     // Project: 8 columns
     expect(colCount("project")).toBe(8);
     // Repository: 10 columns
-    expect(colCount("repository")).toBe(10);
+    expect(colCount("repository")).toBe(11);
     // Task: 26 columns
     expect(colCount("task")).toBe(26);
     // TaskDependency: 6 columns

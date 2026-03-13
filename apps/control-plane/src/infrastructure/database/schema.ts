@@ -169,6 +169,13 @@ export const repositories = sqliteTable(
     localCheckoutStrategy: text("local_checkout_strategy").notNull(),
 
     /**
+     * Absolute filesystem path to the local repository checkout.
+     * Used by the workspace manager for creating worktrees.
+     * Set during `factory init` from the project's working directory.
+     */
+    localCheckoutPath: text("local_checkout_path"),
+
+    /**
      * Optional reference to a credential profile for repository authentication.
      * Nullable — local repos may not require credentials.
      */

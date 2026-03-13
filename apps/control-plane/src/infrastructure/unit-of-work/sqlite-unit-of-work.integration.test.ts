@@ -94,6 +94,7 @@ function openTestDb(): {
       remote_url TEXT NOT NULL,
       default_branch TEXT NOT NULL DEFAULT 'main',
       local_checkout_strategy TEXT NOT NULL,
+      local_checkout_path TEXT,
       credential_profile_id TEXT,
       status TEXT NOT NULL,
       created_at INTEGER NOT NULL DEFAULT (unixepoch()),
