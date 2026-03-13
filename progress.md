@@ -1,5 +1,26 @@
 # Progress Log
 
+## T117: Create TanStack Query import hooks — DONE
+
+**What was done:**
+
+- Added import pipeline types to `apps/web-ui/src/api/types.ts`: `ParseWarning`, `ParseWarningSeverity`, `ImportedTask`, `DiscoverRequest`, `DiscoverResponse`, `ExecuteImportRequest`, `ExecuteImportResponse`
+- Added `import` query key section to `apps/web-ui/src/api/query-keys.ts`
+- Created `apps/web-ui/src/api/hooks/use-import.ts` with `useDiscoverTasks()` and `useExecuteImport()` mutation hooks
+- Created `apps/web-ui/src/api/hooks/use-import.test.tsx` with 9 tests covering success, error, isPending, cache invalidation, and request body validation
+- Exported hooks from `apps/web-ui/src/api/hooks/index.ts`
+
+**Key patterns:**
+
+- Follows the same `useMutation` + `apiPost` pattern as `useCreateTask` in `use-tasks.ts`
+- `useExecuteImport` invalidates both `queryKeys.tasks.all` and `queryKeys.projects.all` since importing can create new projects
+- Tests use the fetch-spy + QueryClientProvider pattern with `mutate` + `waitFor(isSuccess)` for data assertions (not `mutateAsync` alone, which has timing issues in jsdom)
+
+**Next loop notes:**
+
+- T118 (Import Tasks dialog component) is now unblocked and can use these hooks
+- The import types match the backend DTOs from `apps/control-plane/src/modules/import/`
+
 ## T125: Add Create Project dialog — DONE
 
 **What was done:**

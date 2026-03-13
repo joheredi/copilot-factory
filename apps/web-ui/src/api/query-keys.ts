@@ -114,4 +114,9 @@ export const queryKeys = {
     lists: (params?: MergeQueueListParams) =>
       [...queryKeys.mergeQueue.all, "list", params ?? {}] as const,
   },
+
+  /** Task import pipeline query keys. */
+  import: {
+    all: ["import"] as const,
+  },
 } as const;

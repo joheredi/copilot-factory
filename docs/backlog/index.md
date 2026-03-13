@@ -61,7 +61,7 @@ The Autonomous Software Factory is a local-first orchestration platform for soft
 | ID                                      | Title                                | Dependencies                 | Total Tasks | Done | Pending |
 | --------------------------------------- | ------------------------------------ | ---------------------------- | ----------- | ---- | ------- |
 | [E009](epics/E009-worker-runtime.md)    | Worker Runtime & Execution           | E004, E005, E006, E008, E010 | 13          | 13   | 0       |
-| [E023](epics/E023-task-import.md)       | Task Import Pipeline                 | E001, E002, E017, E019, E020 | 8           | 5    | 3       |
+| [E023](epics/E023-task-import.md)       | Task Import Pipeline                 | E001, E002, E017, E019, E020 | 8           | 6    | 2       |
 | [E024](epics/E024-cli-package.md)       | CLI Package & Single-Command Startup | E001, E017, E019             | 4           | 0    | 4       |
 | [E025](epics/E025-web-ui-forms.md)      | Web UI Creation & Editing Forms      | E019, E020, E021             | 8           | 1    | 7       |
 | [E026](epics/E026-cli-init.md)          | CLI Init & Project Onboarding        | E001, E002, E023             | 5           | 5    | 0       |
@@ -102,7 +102,7 @@ See [index-archive.md](index-archive.md) for the 21 completed epics: E001–E008
 | [T114](tasks/T114-build-json-parser.md)         | Build JSON/backlog.json task parser       | P1       | feature       | done    |
 | [T115](tasks/T115-import-discovery-endpoint.md) | Create POST /import/discover endpoint     | P0       | feature       | done    |
 | [T116](tasks/T116-import-execute-endpoint.md)   | Create POST /import/execute endpoint      | P0       | feature       | done    |
-| [T117](tasks/T117-import-api-hooks.md)          | Create TanStack Query import hooks        | P1       | feature       | pending |
+| [T117](tasks/T117-import-api-hooks.md)          | Create TanStack Query import hooks        | P1       | feature       | done    |
 | [T118](tasks/T118-import-dialog-component.md)   | Build Import Tasks multi-step dialog      | P1       | feature       | pending |
 | [T123](tasks/T123-import-format-docs.md)        | Write task format reference documentation | P2       | documentation | pending |
 
@@ -186,7 +186,7 @@ E027 (Factory Lifecycle) — depends on T140/T141 (from E026)
 Pending tasks whose dependencies are all satisfied (can start immediately):
 
 - [T148](tasks/T148-startup-recovery-log.md): Log recovery status on startup (E027)
-- [T117](tasks/T117-import-api-hooks.md): Create TanStack Query import hooks (E023)
+- [T118](tasks/T118-import-dialog-component.md): Build Import Tasks multi-step dialog (E023)
 - [T125](tasks/T125-create-project-dialog.md): Add Create Project dialog (E025)
 - [T126](tasks/T126-create-repository-dialog.md): Add Create Repository dialog to Project detail (E025)
 - [T127](tasks/T127-create-pool-dialog.md): Add Create Worker Pool dialog to Pools page (E025)
@@ -202,7 +202,7 @@ Pending tasks whose dependencies are all satisfied (can start immediately):
 ### High-Priority (P1) Pending Tasks
 
 - [T148](tasks/T148-startup-recovery-log.md): Log recovery status on startup (E027)
-- [T117](tasks/T117-import-api-hooks.md): Create TanStack Query import hooks (E023)
+- [T118](tasks/T118-import-dialog-component.md): Import dialog (E023, unblocked by T117)
 - [T125](tasks/T125-create-project-dialog.md): Add Create Project dialog (E025)
 - [T126](tasks/T126-create-repository-dialog.md): Add Create Repository dialog (E025)
 - [T127](tasks/T127-create-pool-dialog.md): Add Create Worker Pool dialog (E025)

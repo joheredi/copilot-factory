@@ -72,3 +72,5 @@ export {
 export { usePolicies, usePolicy, useEffectiveConfig, useUpdatePolicy } from "./use-policies";
 
 export { useMergeQueue } from "./use-merge-queue";
+
+export { useDiscoverTasks, useExecuteImport } from "./use-import";

@@ -513,3 +513,78 @@ export interface EffectiveConfig {
   readonly layers: Record<string, unknown>[];
   readonly effective: Record<string, unknown>;
 }
+
+// ---------------------------------------------------------------------------
+// Task Import Pipeline
+// ---------------------------------------------------------------------------
+
+/** Severity level for warnings produced during task import parsing. */
+export type ParseWarningSeverity = "info" | "warning" | "error";
+
+/**
+ * A warning emitted during task import discovery.
+ *
+ * Warnings indicate non-fatal issues found while parsing task files,
+ * such as missing optional fields or unrecognised metadata.
+ */
+export interface ParseWarning {
+  readonly file: string;
+  readonly field?: string;
+  readonly message: string;
+  readonly severity: ParseWarningSeverity;
+}
+
+/**
+ * A task parsed from an import source (markdown or JSON).
+ *
+ * Returned by the discovery endpoint and also used as input items
+ * for the execute endpoint.
+ */
+export interface ImportedTask {
+  readonly title: string;
+  readonly description?: string;
+  readonly taskType: TaskType;
+  readonly priority?: TaskPriority;
+  readonly riskLevel?: RiskLevel;
+  readonly estimatedSize?: TaskSize;
+  readonly acceptanceCriteria?: string[];
+  readonly definitionOfDone?: string;
+  readonly dependencies?: string[];
+  readonly suggestedFileScope?: string[];
+  readonly externalRef?: string;
+  readonly source?: string;
+  readonly metadata?: Record<string, unknown>;
+}
+
+/** Request body for `POST /import/discover`. */
+export interface DiscoverRequest {
+  readonly path: string;
+  readonly pattern?: string;
+}
+
+/** Response from `POST /import/discover`. */
+export interface DiscoverResponse {
+  readonly tasks: ImportedTask[];
+  readonly warnings: ParseWarning[];
+  readonly suggestedProjectName: string;
+  readonly suggestedRepositoryName: string;
+  readonly format: string;
+}
+
+/** Request body for `POST /import/execute`. */
+export interface ExecuteImportRequest {
+  readonly path: string;
+  readonly tasks: ImportedTask[];
+  readonly projectName: string;
+  readonly repositoryName?: string;
+  readonly repositoryUrl?: string;
+}
+
+/** Response from `POST /import/execute`. */
+export interface ExecuteImportResponse {
+  readonly projectId: string;
+  readonly repositoryId: string;
+  readonly created: number;
+  readonly skipped: number;
+  readonly errors: string[];
+}
