@@ -288,7 +288,8 @@ export function generatePrompt(context: RunContext, outputFilePath: string): str
   const { taskPacket, workspacePaths, outputSchemaExpectation, timeoutSettings } = context;
   const role = taskPacket.role;
 
-  const roleInstructions = ROLE_PROMPTS[role] ?? ROLE_PROMPTS["developer"]!;
+  // Use custom prompt template if provided, otherwise fall back to hardcoded role prompts.
+  const roleInstructions = context.customPrompt ?? ROLE_PROMPTS[role] ?? ROLE_PROMPTS["developer"]!;
 
   const sections: string[] = [
     "# Worker Assignment\n",

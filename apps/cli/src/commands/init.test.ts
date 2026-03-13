@@ -806,6 +806,7 @@ describe("runInit", () => {
     expect(result.starterConfig!.poolsCreated).toBe(3);
     expect(result.starterConfig!.profilesCreated).toBe(3);
     expect(result.starterConfig!.policySetCreated).toBe(true);
+    expect(result.starterConfig!.promptTemplatesCreated).toBe(6);
 
     // Verify database contents
     const db = new Database(env.dbPath, { readonly: true });
@@ -826,8 +827,29 @@ describe("runInit", () => {
       const leadPool = pools.find((p) => p["pool_type"] === "lead-reviewer");
       expect(leadPool!["max_concurrency"]).toBe(2);
 
-      const profiles = db.prepare("SELECT * FROM agent_profile").all();
+      const profiles = db.prepare("SELECT * FROM agent_profile").all() as Record<string, unknown>[];
       expect(profiles).toHaveLength(3);
+
+      // Verify prompt templates were created and linked to profiles
+      const templates = db.prepare("SELECT * FROM prompt_template").all() as Record<
+        string,
+        unknown
+      >[];
+      expect(templates).toHaveLength(6);
+
+      const templateRoles = templates.map((t) => t["role"]).sort();
+      expect(templateRoles).toEqual([
+        "developer",
+        "lead-reviewer",
+        "merge-assist",
+        "planner",
+        "post-merge-analysis",
+        "reviewer",
+      ]);
+
+      // Profiles for pool types with matching templates should have prompt_template_id set
+      const profilesWithPrompt = profiles.filter((p) => p["prompt_template_id"] != null);
+      expect(profilesWithPrompt).toHaveLength(3);
 
       const policies = db.prepare("SELECT * FROM policy_set").all() as Record<string, unknown>[];
       expect(policies).toHaveLength(1);
@@ -839,7 +861,7 @@ describe("runInit", () => {
     const output = logs.join("\n");
     expect(output).toContain("3 worker pool(s)");
     expect(output).toContain("3 profile(s)");
-    expect(output).toContain("3 pools, 3 profiles, default policy");
+    expect(output).toContain("3 pools, 3 profiles, 6 prompts, default policy");
   });
 
   /**

@@ -21,6 +21,7 @@ import { MergeModule } from "./merge/merge.module.js";
 import { MetricsModule } from "./metrics/metrics.module.js";
 import { OperatorActionsModule } from "./operator-actions/operator-actions.module.js";
 import { PolicyModule } from "./policy/policy.module.js";
+import { PromptTemplatesModule } from "./prompt-templates/prompt-templates.module.js";
 import { ProjectsModule } from "./projects/projects.module.js";
 import { ReviewModule } from "./review/review.module.js";
 import { StartupDiagnosticsModule } from "./startup-diagnostics/startup-diagnostics.module.js";
@@ -67,6 +68,7 @@ import { WorkspaceCleanupModule } from "./workspace-cleanup/workspace-cleanup.mo
     ValidationModule,
     AuditModule,
     PolicyModule,
+    PromptTemplatesModule,
     ImportModule,
     OperatorActionsModule,
     StartupDiagnosticsModule,

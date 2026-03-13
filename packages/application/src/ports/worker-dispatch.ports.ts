@@ -71,10 +71,11 @@ export interface WorkerDispatchContextPort {
    * Resolve all context needed to spawn a worker for the given task.
    *
    * @param taskId - The task to resolve context for.
+   * @param poolId - Optional pool ID used to resolve prompt template from agent profile.
    * @returns The resolved spawn context, or `null` if the task
    *          cannot be found or is not in a dispatchable state.
    */
-  resolveSpawnContext(taskId: string): WorkerSpawnContext | null;
+  resolveSpawnContext(taskId: string, poolId?: string): WorkerSpawnContext | null;
 }
 
 // ---------------------------------------------------------------------------

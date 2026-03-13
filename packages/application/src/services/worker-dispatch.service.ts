@@ -261,7 +261,7 @@ export function createWorkerDispatchService(
       try {
         // Step 2: Resolve task/repository context for spawn parameters
         const spawnContext = deps.unitOfWork.runInTransaction((repos) => {
-          return repos.dispatch.resolveSpawnContext(payload.taskId);
+          return repos.dispatch.resolveSpawnContext(payload.taskId, payload.poolId);
         });
 
         if (!spawnContext) {

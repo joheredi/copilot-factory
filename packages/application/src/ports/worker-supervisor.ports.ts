@@ -246,6 +246,8 @@ export interface SupervisorRunContext {
   readonly workspacePaths: SupervisorWorkspacePaths;
   readonly outputSchemaExpectation: SupervisorOutputSchemaExpectation;
   readonly timeoutSettings: SupervisorTimeoutSettings;
+  /** Custom prompt template text resolved from the agent profile. */
+  readonly customPrompt?: string;
 }
 
 /**

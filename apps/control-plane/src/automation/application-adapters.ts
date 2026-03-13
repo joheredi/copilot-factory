@@ -61,6 +61,8 @@ import { createTaskLeaseRepository } from "../infrastructure/repositories/task-l
 import { createTaskRepository } from "../infrastructure/repositories/task.repository.js";
 import { createWorkerPoolRepository } from "../infrastructure/repositories/worker-pool.repository.js";
 import { createWorkerRepository } from "../infrastructure/repositories/worker.repository.js";
+import { createAgentProfileRepository } from "../infrastructure/repositories/agent-profile.repository.js";
+import { createPromptTemplateRepository } from "../infrastructure/repositories/prompt-template.repository.js";
 
 const ACTIVE_LEASE_STATUSES: ReadonlySet<string> = new Set([
   WorkerLeaseStatus.LEASED,
@@ -531,10 +533,12 @@ export function createWorkerDispatchUnitOfWork(
     runInTransaction<T>(fn: (repos: WorkerDispatchTransactionRepositories) => T): T {
       const taskRepo = createTaskRepository(conn.db);
       const repoRepo = createRepositoryRepository(conn.db);
+      const profileRepo = createAgentProfileRepository(conn.db);
+      const promptTemplateRepo = createPromptTemplateRepository(conn.db);
 
       return fn({
         dispatch: {
-          resolveSpawnContext(taskId: string): WorkerSpawnContext | null {
+          resolveSpawnContext(taskId: string, poolId?: string): WorkerSpawnContext | null {
             const task = taskRepo.findById(taskId);
             if (!task) {
               return null;
@@ -556,10 +560,11 @@ export function createWorkerDispatchUnitOfWork(
 
             // Build absolute paths for artifacts and ensure directories exist
             const artifactRoot = join(resolvedArtifactsRoot, task.taskId);
-            const packetInputPath = join(artifactRoot, "packets", "input");
+            const packetInputDir = join(artifactRoot, "packets", "input");
+            const packetInputPath = join(packetInputDir, "task-packet.json");
             const policySnapshotPath = join(artifactRoot, "policy-snapshot.json");
 
-            mkdirSync(packetInputPath, { recursive: true });
+            mkdirSync(packetInputDir, { recursive: true });
 
             const workspacePaths: SupervisorWorkspacePaths = {
               worktreePath: `worktrees/${task.taskId}`,
@@ -582,6 +587,19 @@ export function createWorkerDispatchUnitOfWork(
               schemaVersion: OUTPUT_SCHEMA_VERSION,
             };
 
+            // Resolve custom prompt template from pool's agent profile
+            let customPrompt: string | undefined;
+            if (poolId) {
+              const profiles = profileRepo.findByPoolId(poolId);
+              const profile = profiles[0]; // Use first profile for the pool
+              if (profile?.promptTemplateId) {
+                const template = promptTemplateRepo.findById(profile.promptTemplateId);
+                if (template) {
+                  customPrompt = template.templateText;
+                }
+              }
+            }
+
             return {
               repoPath: repository.localCheckoutPath ?? repository.remoteUrl,
               workerName,
@@ -591,6 +609,7 @@ export function createWorkerDispatchUnitOfWork(
                 workspacePaths,
                 outputSchemaExpectation,
                 timeoutSettings,
+                customPrompt,
               },
             };
           },

@@ -283,7 +283,8 @@ export async function runInit(cwd: string, deps: InitDeps = {}): Promise<InitRes
         starterConfig = setupStarterConfiguration(db);
         log(
           `  ✅ Created ${starterConfig.poolsCreated} worker pool(s), ` +
-            `${starterConfig.profilesCreated} profile(s), and default policy set`,
+            `${starterConfig.profilesCreated} profile(s), ` +
+            `${starterConfig.promptTemplatesCreated} prompt template(s), and default policy set`,
         );
       }
 
@@ -310,7 +311,8 @@ export async function runInit(cwd: string, deps: InitDeps = {}): Promise<InitRes
       if (starterConfig) {
         log(
           `  Config:     ${starterConfig.poolsCreated} pools, ` +
-            `${starterConfig.profilesCreated} profiles, default policy`,
+            `${starterConfig.profilesCreated} profiles, ` +
+            `${starterConfig.promptTemplatesCreated} prompts, default policy`,
         );
       }
       log(`  Marker:     ${markerPath}`);
@@ -753,6 +755,8 @@ export interface StarterConfigResult {
   profilesCreated: number;
   /** Whether a policy set was created. */
   policySetCreated: boolean;
+  /** Number of prompt templates created. */
+  promptTemplatesCreated: number;
 }
 
 /**
@@ -822,7 +826,94 @@ export function setupStarterConfiguration(db: Database.Database): StarterConfigR
     JSON.stringify({ token_limit: 50000, cost_cap_usd: 10.0 }),
   );
 
-  // ── 2. Worker pools ────────────────────────────────────────────────────
+  // ── 2. Default prompt templates (one per role) ──────────────────────────
+  const promptTemplateIds = new Map<string, string>();
+
+  const rolePrompts: { role: string; name: string; text: string }[] = [
+    {
+      role: "planner",
+      name: "Default Planner Prompt",
+      text: [
+        "You are a Task Planner agent for the Autonomous Software Factory.",
+        "Your job is to analyze the backlog, consider priority/blockers/dependencies/scope/risk,",
+        "and produce a ranked list of task candidates with rationale.",
+        "You must NOT assign workers or mutate task state.",
+        "Output a structured packet matching the expected output schema.",
+      ].join("\n"),
+    },
+    {
+      role: "developer",
+      name: "Default Developer Prompt",
+      text: [
+        "You are a Developer agent for the Autonomous Software Factory.",
+        "Your job is to implement the task described in the task packet.",
+        "Work within the provided workspace, follow repo conventions, and run validations.",
+        "Produce a dev_result_packet with implementation summary, files changed, tests added,",
+        "validation results, assumptions, risks, and unresolved issues.",
+        "Unresolved issues are for acceptable incompleteness only — not blocking failures.",
+      ].join("\n"),
+    },
+    {
+      role: "reviewer",
+      name: "Default Reviewer Prompt",
+      text: [
+        "You are a Specialist Reviewer agent for the Autonomous Software Factory.",
+        "Your job is to review the developer's implementation from your assigned perspective.",
+        "Distinguish blocking issues from non-blocking suggestions. Avoid duplicate feedback.",
+        "Produce a review_packet with verdict, issues, confidence, and rationale.",
+        "An 'approved' verdict must have zero blocking issues.",
+      ].join("\n"),
+    },
+    {
+      role: "lead-reviewer",
+      name: "Default Lead Reviewer Prompt",
+      text: [
+        "You are a Lead Reviewer agent for the Autonomous Software Factory.",
+        "Your job is to consolidate all specialist reviews into a final decision.",
+        "Deduplicate feedback, prevent endless rejection loops, and produce a clear decision.",
+        "Produce a lead_review_decision_packet with decision, blocking issues,",
+        "non-blocking suggestions, and follow-up recommendations.",
+        "A 'changes_requested' decision must include at least one blocking issue.",
+      ].join("\n"),
+    },
+    {
+      role: "merge-assist",
+      name: "Default Merge Assist Prompt",
+      text: [
+        "You are a Merge Assist agent for the Autonomous Software Factory.",
+        "Your job is to analyze merge conflicts when deterministic merge fails.",
+        "Recommend a resolution strategy: auto_resolve, reject_to_dev, or escalate.",
+        "Validate that your proposed resolution stays within the approved diff scope.",
+        "Produce a merge_assist_packet with recommendation, confidence, files affected, and rationale.",
+        "Low confidence must recommend reject_to_dev or escalate, never auto_resolve.",
+      ].join("\n"),
+    },
+    {
+      role: "post-merge-analysis",
+      name: "Default Post-Merge Analysis Prompt",
+      text: [
+        "You are a Post-Merge Analysis agent for the Autonomous Software Factory.",
+        "Your job is to analyze post-merge validation failures and recommend corrective action.",
+        "Determine failure attribution, suggest revert scope if applicable,",
+        "and recommend follow-up tasks.",
+        "Produce a post_merge_analysis_packet with recommendation, attribution, and rationale.",
+      ].join("\n"),
+    },
+  ];
+
+  const insertPromptTemplate = db.prepare(
+    `INSERT INTO prompt_template (
+       prompt_template_id, name, version, role, template_text, created_at
+     ) VALUES (?, ?, ?, ?, ?, unixepoch())`,
+  );
+
+  for (const rp of rolePrompts) {
+    const id = randomUUID();
+    insertPromptTemplate.run(id, rp.name, "1.0.0", rp.role, rp.text);
+    promptTemplateIds.set(rp.role, id);
+  }
+
+  // ── 3. Worker pools ────────────────────────────────────────────────────
   const insertPool = db.prepare(
     `INSERT INTO worker_pool (
        worker_pool_id, name, pool_type, provider, runtime, model,
@@ -856,19 +947,21 @@ export function setupStarterConfiguration(db: Database.Database): StarterConfigR
     );
   }
 
-  // ── 3. Agent profiles ──────────────────────────────────────────────────
+  // ── 4. Agent profiles (linked to prompt templates) ──────────────────
   const insertProfile = db.prepare(
     `INSERT INTO agent_profile (
-       agent_profile_id, pool_id,
+       agent_profile_id, pool_id, prompt_template_id,
        tool_policy_id, command_policy_id, review_policy_id,
        validation_policy_id, budget_policy_id
-     ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
   );
 
   for (const pool of pools) {
+    const templateId = promptTemplateIds.get(pool.type) ?? null;
     insertProfile.run(
       randomUUID(),
       pool.id,
+      templateId,
       policySetId,
       policySetId,
       policySetId,
@@ -881,6 +974,7 @@ export function setupStarterConfiguration(db: Database.Database): StarterConfigR
     poolsCreated: pools.length,
     profilesCreated: pools.length,
     policySetCreated: true,
+    promptTemplatesCreated: rolePrompts.length,
   };
 }
 

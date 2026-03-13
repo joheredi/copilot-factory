@@ -121,6 +121,14 @@ export interface RunContext {
 
   /** Time-related constraints for this run. */
   readonly timeoutSettings: TimeoutSettings;
+
+  /**
+   * Optional custom prompt template text resolved from the agent profile's
+   * linked prompt template. When provided, overrides the hardcoded
+   * role-specific prompt in the adapter. When absent, the adapter falls
+   * back to its built-in ROLE_PROMPTS.
+   */
+  readonly customPrompt?: string;
 }
 
 // ─── Prepared Run ────────────────────────────────────────────────────────────
