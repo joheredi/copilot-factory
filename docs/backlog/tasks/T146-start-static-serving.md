@@ -5,7 +5,7 @@
 | **ID**                    | T146                                                                     |
 | **Epic**                  | [E027: Factory Lifecycle & Recovery](../epics/E027-factory-lifecycle.md) |
 | **Type**                  | feature                                                                  |
-| **Status**                | pending                                                                  |
+| **Status**                | done                                                                     |
 | **Priority**              | P0                                                                       |
 | **Owner**                 | backend-engineer                                                         |
 | **AI Executable**         | Yes                                                                      |
@@ -97,13 +97,13 @@ The implementing agent should read these files before starting:
 
 ## Acceptance Criteria
 
-- [ ] `SERVE_STATIC=true` + `WEB_UI_DIST=/path/to/dist` → serves web UI files
-- [ ] `GET /` returns `index.html`
-- [ ] `GET /dashboard` returns `index.html` (SPA fallback)
-- [ ] `GET /tasks` returns JSON (API route, not index.html)
-- [ ] `GET /health` returns JSON health check
-- [ ] Without `SERVE_STATIC`, no static files served (default behavior)
-- [ ] Missing or invalid `WEB_UI_DIST` logs warning but doesn't crash
+- [x] `SERVE_STATIC=true` + `WEB_UI_DIST=/path/to/dist` → serves web UI files
+- [x] `GET /` returns `index.html`
+- [x] `GET /dashboard` returns `index.html` (SPA fallback)
+- [x] `GET /tasks` returns JSON (API route, not index.html)
+- [x] `GET /health` returns JSON health check
+- [x] Without `SERVE_STATIC`, no static files served (default behavior)
+- [x] Missing or invalid `WEB_UI_DIST` logs warning but doesn't crash
 
 ## Definition of Done
 

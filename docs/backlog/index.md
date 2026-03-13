@@ -111,7 +111,7 @@ See [index-archive.md](index-archive.md) for the 21 completed epics: E001–E008
 | ID                                           | Title                                        | Priority | Type          | Status  |
 | -------------------------------------------- | -------------------------------------------- | -------- | ------------- | ------- |
 | [T119](tasks/T119-scaffold-cli-workspace.md) | Scaffold apps/cli workspace                  | P0       | foundation    | done    |
-| [T120](tasks/T120-bundle-web-ui.md)          | Serve web-ui static files from control-plane | P0       | feature       | pending |
+| [T120](tasks/T120-bundle-web-ui.md)          | Serve web-ui static files from control-plane | P0       | feature       | done    |
 | [T121](tasks/T121-cli-entry-point.md)        | Build CLI entry point command                | P0       | feature       | done    |
 | [T122](tasks/T122-cli-readme.md)             | Write CLI and import documentation           | P2       | documentation | pending |
 
@@ -143,7 +143,7 @@ See [index-archive.md](index-archive.md) for the 21 completed epics: E001–E008
 | ID                                               | Title                                      | Priority | Type          | Status  |
 | ------------------------------------------------ | ------------------------------------------ | -------- | ------------- | ------- |
 | [T145](tasks/T145-start-command.md)              | Build factory start command                | P0       | feature       | pending |
-| [T146](tasks/T146-start-static-serving.md)       | Serve web-ui static files from same server | P0       | feature       | pending |
+| [T146](tasks/T146-start-static-serving.md)       | Serve web-ui static files from same server | P0       | feature       | done    |
 | [T147](tasks/T147-two-phase-shutdown.md)         | Implement two-phase Ctrl+C shutdown        | P0       | feature       | pending |
 | [T148](tasks/T148-startup-recovery-log.md)       | Log recovery status on startup             | P1       | feature       | pending |
 | [T149](tasks/T149-workspace-cleanup.md)          | Clean orphaned worktrees on start          | P2       | feature       | pending |
@@ -185,8 +185,9 @@ E027 (Factory Lifecycle) — depends on T140/T141 (from E026)
 
 Pending tasks whose dependencies are all satisfied (can start immediately):
 
-- [T112](tasks/T112-define-import-schema.md): Define task import Zod schemas (E023)
-- [T119](tasks/T119-scaffold-cli-workspace.md): Scaffold apps/cli workspace (E024)
+- [T142](tasks/T142-init-project-detection.md): Auto-detect project metadata (E026)
+- [T145](tasks/T145-start-command.md): Build factory start command (E027)
+- [T115](tasks/T115-import-discovery-endpoint.md): Create POST /import/discover endpoint (E023)
 - [T124](tasks/T124-create-task-dialog.md): Add Create Task dialog to Tasks page (E025)
 - [T125](tasks/T125-create-project-dialog.md): Add Create Project dialog (E025)
 - [T126](tasks/T126-create-repository-dialog.md): Add Create Repository dialog to Project detail (E025)
@@ -195,27 +196,16 @@ Pending tasks whose dependencies are all satisfied (can start immediately):
 - [T129](tasks/T129-edit-task-form.md): Add Edit Task form to Task detail page (E025)
 - [T130](tasks/T130-batch-task-import-ui.md): Add Batch Task Import UI to Tasks page (E025)
 - [T131](tasks/T131-reassign-pool-action.md): Add Reassign Pool operator action to Task detail (E025)
-- [T136](tasks/T136-infrastructure-adapter-wiring.md): Wire workspace, runtime, and packet adapters (E009)
 - [T150](tasks/T150-dashboard-project-selector.md): Add multi-project filter to dashboard (E027)
 - [T123](tasks/T123-import-format-docs.md): Write task format reference documentation (E023)
 
 ### High-Priority (P0) Pending Tasks
 
-- [T112](tasks/T112-define-import-schema.md): Define task import Zod schemas (E023)
-- [T113](tasks/T113-build-markdown-parser.md): Build deterministic markdown task parser (E023)
 - [T115](tasks/T115-import-discovery-endpoint.md): Create POST /import/discover endpoint (E023)
 - [T116](tasks/T116-import-execute-endpoint.md): Create POST /import/execute endpoint (E023)
-- [T120](tasks/T120-bundle-web-ui.md): Serve web-ui static files from control-plane (E024)
-- [T121](tasks/T121-cli-entry-point.md): Build CLI entry point command (E024)
-- [T136](tasks/T136-infrastructure-adapter-wiring.md): Wire workspace, runtime, and packet adapters (E009)
-- [T137](tasks/T137-wire-dispatch-automation.md): Integrate dispatch into AutomationService (E009)
-- [T138](tasks/T138-dispatch-integration-test.md): End-to-end dispatch integration test (E009)
-- [T140](tasks/T140-global-data-dir.md): Establish ~/.copilot-factory/ convention (E026)
-- [T141](tasks/T141-programmatic-migrations.md): Run Drizzle migrations from code (E026)
 - [T142](tasks/T142-init-project-detection.md): Auto-detect project metadata (E026)
 - [T143](tasks/T143-init-interactive-flow.md): Build init interactive flow (E026)
 - [T145](tasks/T145-start-command.md): Build factory start command (E027)
-- [T146](tasks/T146-start-static-serving.md): Serve web-ui static files (E027)
 - [T147](tasks/T147-two-phase-shutdown.md): Implement two-phase shutdown (E027)
 - [T148](tasks/T148-startup-recovery-log.md): Log recovery status on startup (E027)
 - [T150](tasks/T150-dashboard-project-selector.md): Multi-project dashboard filter (E027)

@@ -436,3 +436,20 @@ Build a deterministic parser for JSON task files (backlog.json and flat array fo
 - Created `CreateTaskDialog.test.tsx` — 16 tests covering rendering, validation, submission flow, error display, cascading selects, and form reset
 - Pattern: native `<select>` elements styled like Input (no shadcn Select component exists), useState for form management, `useCreateTask` mutation hook
 - Key learning: In tests with cascading selects, must wait for options to actually populate (not just for the select to be enabled) before selecting a value
+
+## T146: Serve web-ui static files from same server
+
+### What was done
+
+- Verified T146 is already fully implemented by the existing T120 work in `apps/control-plane/src/static-serve/`
+- All 7 acceptance criteria confirmed met: SERVE_STATIC env var gating, SPA fallback for client routes, API route precedence, graceful handling of missing WEB_UI_DIST
+- Marked T146 as `done` in task file and backlog index
+- Also fixed T120 status in backlog index (was `pending` but task file was already `done`)
+- Cleaned up Ready-Now and P0 Pending lists to remove completed tasks (T112, T113, T119, T120, T121, T136, T137, T138, T140, T141, T146)
+- Added newly-ready tasks: T142, T145, T115
+
+### For next loop
+
+- T145 (Build factory start command) is now unblocked (deps T141+T146 both done) — high priority P0
+- T142 (Auto-detect project metadata) is ready (dep T141 done) — P0
+- T115 (Import discovery endpoint) is ready (deps T113+T114 done) — P0
