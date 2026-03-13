@@ -403,3 +403,19 @@ Enhanced `apps/cli/src/startup.ts` to complete T145 acceptance criteria:
 - Added 5 new tests: metadata update on re-init, repository update, re-init without marker, task dedup on re-import, and the existing re-init test was updated to check for "updating" message
 - All 4,390 tests pass, lint clean
 - Pattern: `insertProject()` and `insertRepository()` extracted as helper functions for cleaner control flow
+
+---
+
+## T148 — Log recovery status on startup (2026-03-13)
+
+- Created `StartupDiagnosticsService` implementing `OnApplicationBootstrap` lifecycle hook
+- Service runs three COUNT queries on startup to detect: stale leases (heartbeat > 75s old), orphaned jobs (CLAIMED/RUNNING > 10min old), stuck tasks (ASSIGNED > 5min old)
+- Thresholds match reconciliation sweep defaults (`DEFAULT_STALENESS_POLICY`, `DEFAULT_ORPHANED_JOB_TIMEOUT_MS`, `DEFAULT_STUCK_TASK_TIMEOUT_MS`)
+- Clean startup: logs "Clean startup — no pending recovery items" at INFO
+- Recovery needed: logs counts at WARN with note that reconciliation will process within 60s
+- Error handling: catches and logs any database errors so diagnostics never block app startup
+- Created `StartupDiagnosticsModule` registered in `AppModule`
+- 15 unit tests covering: empty DB, recent vs stale leases, completed leases excluded, orphaned jobs by status, stuck tasks by status, combined scenario, bootstrap error handling
+- All 4,405 tests pass, build clean
+- Pattern: direct service instantiation with `createTestDatabase()` — no NestJS testing module needed
+- Uses raw SQLite `conn.sqlite.prepare()` for simple COUNT queries (more efficient than Drizzle for pure counts)
