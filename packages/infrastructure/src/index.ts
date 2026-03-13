@@ -119,7 +119,7 @@ export {
 } from "./artifacts/index.js";
 
 // ─── Task Import ─────────────────────────────────────────────────────────────
-export type { ParseTaskFileResult, ParseIndexResult } from "./import/index.js";
+export type { ParseTaskFileResult, ParseIndexResult, LlmExtractorOptions } from "./import/index.js";
 export type { TaskClassifier } from "./import/index.js";
 export type { ParseJsonTaskResult, JsonFormat } from "./import/index.js";
 
@@ -129,10 +129,25 @@ export type {
   AiClassifierDeps,
 } from "./import/index.js";
 
+export type {
+  MarkdownFileInput,
+  LlmExtractionResult,
+  CopilotClientFactory,
+  CopilotClientLike,
+  CopilotSessionLike,
+  LlmTaskExtractorConfig,
+} from "./import/index.js";
+
 export {
   classifyImportedTasks,
   parseClassificationResponse,
   getGitHubToken,
+} from "./import/index.js";
+
+export {
+  extractTasksWithLlm,
+  parseLlmResponse,
+  createCopilotClientFactory,
 } from "./import/index.js";
 
 export {

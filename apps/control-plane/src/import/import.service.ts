@@ -21,8 +21,11 @@ import {
   parseJsonTasks,
   classifyImportedTasks,
   createNodeFileSystem,
+  createCopilotClientFactory,
   type FileSystem,
   type TaskClassifier,
+  type LlmExtractorOptions,
+  type CopilotClientFactory,
 } from "@factory/infrastructure";
 import { randomUUID } from "node:crypto";
 
@@ -98,6 +101,7 @@ export class ImportService {
   private readonly fs: FileSystem;
   private readonly conn: DatabaseConnection | null;
   private readonly classify: TaskClassifier;
+  private clientFactory: CopilotClientFactory | undefined;
 
   /**
    * @param conn Database connection for write operations (execute).
@@ -106,8 +110,6 @@ export class ImportService {
    *   usage and for tests that only exercise the discover path.
    * @param fileSystem Optional injected filesystem for testability.
    *   Defaults to the real Node.js filesystem.
-   * @param classifier Optional AI task classifier for type/status inference.
-   *   Defaults to the built-in {@link classifyImportedTasks}.
    */
   constructor(
     @Optional() @Inject(DATABASE_CONNECTION) conn?: DatabaseConnection,
@@ -116,6 +118,21 @@ export class ImportService {
     this.conn = conn ?? null;
     this.fs = fileSystem ?? createNodeFileSystem();
     this.classify = classifyImportedTasks;
+  }
+
+  /** Lazily initialize the Copilot SDK client factory. */
+  private async getLlmExtractor(): Promise<LlmExtractorOptions> {
+    if (!this.clientFactory) {
+      try {
+        this.clientFactory = await createCopilotClientFactory();
+      } catch {
+        // SDK not available — return a factory that always throws.
+        this.clientFactory = () => {
+          throw new Error("Copilot SDK is not available");
+        };
+      }
+    }
+    return { clientFactory: this.clientFactory };
   }
 
   /**
@@ -150,7 +167,8 @@ export class ImportService {
       manifest = await parseJsonTasks(backlogJsonPath, this.fs);
       format = "json";
     } else {
-      manifest = await discoverMarkdownTasks(resolvedPath, this.fs, this.classify);
+      const llmExtractor = await this.getLlmExtractor();
+      manifest = await discoverMarkdownTasks(resolvedPath, this.fs, this.classify, llmExtractor);
       format = "markdown";
     }
 
@@ -223,6 +241,7 @@ export class ImportService {
           remoteUrl,
           defaultBranch: "main",
           localCheckoutStrategy: "worktree",
+          localCheckoutPath: request.path,
           status: "active",
         });
       }

@@ -20,6 +20,8 @@ import type { ImportManifest, ImportedTask, ParseWarning } from "@factory/schema
 import { ImportManifestSchema, ImportedTaskSchema } from "@factory/schemas";
 import type { FileSystem } from "../workspace/types.js";
 import type { TaskClassificationInput, TaskClassificationResult } from "./ai-task-classifier.js";
+import type { CopilotClientFactory, LlmTaskExtractorConfig } from "./llm-task-extractor.js";
+import { extractTasksWithLlm } from "./llm-task-extractor.js";
 import * as path from "node:path";
 
 // ---------------------------------------------------------------------------
@@ -35,23 +37,40 @@ export type TaskClassifier = (
 ) => Promise<{ results: TaskClassificationResult[]; warnings: ParseWarning[] }>;
 
 /**
+ * Options for LLM-based task extraction in the discovery pipeline.
+ */
+export interface LlmExtractorOptions {
+  /** Factory function to create a CopilotClient instance. */
+  readonly clientFactory: CopilotClientFactory;
+  /** Optional configuration (model selection, etc.). */
+  readonly config?: LlmTaskExtractorConfig;
+}
+
+/**
  * Discover and parse all markdown task files under {@link sourcePath}.
  *
  * Walks `tasks/` (or the directory itself if it already contains `.md` files),
  * parses each file through {@link parseTaskFile}, and collects the results
  * into a validated {@link ImportManifest}.
  *
+ * When {@link llmExtractor} is provided, attempts LLM-based extraction first.
+ * Files that fail LLM extraction fall back to deterministic parsing.
+ * When LLM extraction succeeds for a file, the AI classifier is skipped
+ * for that file (the LLM already classifies taskType and status).
+ *
  * @param sourcePath - Root directory of the backlog (contains `tasks/` and
  *   optionally `index.md`).
  * @param fs - Filesystem abstraction for reading files and listing
  *   directories. Inject a fake in tests.
  * @param classify - Optional AI classifier for taskType and status inference.
+ * @param llmExtractor - Optional LLM extractor for markdown-to-task conversion.
  * @returns A validated import manifest with parsed tasks and any warnings.
  */
 export async function discoverMarkdownTasks(
   sourcePath: string,
   fs: FileSystem,
   classify?: TaskClassifier,
+  llmExtractor?: LlmExtractorOptions,
 ): Promise<ImportManifest> {
   const warnings: ParseWarning[] = [];
   const tasks: ImportedTask[] = [];
@@ -77,13 +96,46 @@ export async function discoverMarkdownTasks(
     warnings.push(...indexResult.warnings);
   }
 
-  // Parse each task file.
+  // Read all task file contents (needed for both LLM and deterministic paths).
+  const fileContents: { filePath: string; filename: string; content: string }[] = [];
   for (const filePath of mdFiles) {
     const filename = path.basename(filePath);
-    // Skip index.md — it's metadata, not a task.
     if (filename.toLowerCase() === "index.md") continue;
-
     const content = await fs.readFile(filePath);
+    fileContents.push({ filePath, filename, content });
+  }
+
+  // Track which files were successfully handled by LLM.
+  const llmHandledFiles = new Set<string>();
+
+  // ── LLM extraction (when available) ────────────────────────────────────
+  if (llmExtractor && fileContents.length > 0) {
+    const llmInputs = fileContents.map((f) => ({
+      filename: f.filename,
+      content: f.content,
+    }));
+
+    const llmResult = await extractTasksWithLlm(
+      llmInputs,
+      llmExtractor.clientFactory,
+      llmExtractor.config,
+    );
+    warnings.push(...llmResult.warnings);
+    tasks.push(...llmResult.tasks);
+
+    // Mark successfully extracted files so we skip them in deterministic parsing.
+    const failedSet = new Set(llmResult.failedFiles);
+    for (const f of fileContents) {
+      if (!failedSet.has(f.filename)) {
+        llmHandledFiles.add(f.filename);
+      }
+    }
+  }
+
+  // ── Deterministic fallback for remaining files ─────────────────────────
+  const fallbackFiles = fileContents.filter((f) => !llmHandledFiles.has(f.filename));
+
+  for (const { filename, content } of fallbackFiles) {
     const result = parseTaskFile(content, filename);
     warnings.push(...result.warnings);
     if (result.task) {
@@ -94,10 +146,16 @@ export async function discoverMarkdownTasks(
   // Apply ordering from index.md if available.
   const orderedTasks = ordering ? applyOrdering(tasks, ordering) : tasks;
 
-  // Run AI classification if a classifier is provided.
+  // Run AI classification only on fallback-parsed tasks (LLM-extracted
+  // tasks already have accurate taskType and status).
   let classifiedTasks = orderedTasks;
-  if (classify && orderedTasks.length > 0) {
-    const inputs: TaskClassificationInput[] = orderedTasks.map((t) => ({
+  const fallbackTaskSources = new Set(fallbackFiles.map((f) => f.filename));
+  const tasksNeedingClassification = orderedTasks.filter(
+    (t) => t.source && fallbackTaskSources.has(t.source),
+  );
+
+  if (classify && tasksNeedingClassification.length > 0) {
+    const inputs: TaskClassificationInput[] = tasksNeedingClassification.map((t) => ({
       title: t.title,
       description: t.description,
       acceptanceCriteria: t.acceptanceCriteria,
@@ -107,8 +165,18 @@ export async function discoverMarkdownTasks(
     const classResult = await classify(inputs);
     warnings.push(...classResult.warnings);
 
-    classifiedTasks = orderedTasks.map((task, i) => {
+    // Build a map from source filename to classification result.
+    const classificationBySource = new Map<string, TaskClassificationResult>();
+    tasksNeedingClassification.forEach((t, i) => {
       const classification = classResult.results[i];
+      if (classification && t.source) {
+        classificationBySource.set(t.source, classification);
+      }
+    });
+
+    classifiedTasks = orderedTasks.map((task) => {
+      if (!task.source || !fallbackTaskSources.has(task.source)) return task;
+      const classification = classificationBySource.get(task.source);
       if (!classification) return task;
       return {
         ...task,

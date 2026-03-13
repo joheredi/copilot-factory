@@ -19,6 +19,7 @@
     "@factory/application": "workspace:*",
     "@factory/domain": "workspace:*",
     "@factory/schemas": "workspace:*",
+    "@github/copilot-sdk": "^0.1.32",
     "zod": "^3.25.76"
   },
   "scripts": {

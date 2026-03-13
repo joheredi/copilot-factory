@@ -22,7 +22,11 @@ export {
   findMarkdownFiles,
 } from "./markdown-task-parser.js";
 
-export type { ParseTaskFileResult, ParseIndexResult } from "./markdown-task-parser.js";
+export type {
+  ParseTaskFileResult,
+  ParseIndexResult,
+  LlmExtractorOptions,
+} from "./markdown-task-parser.js";
 export type { TaskClassifier } from "./markdown-task-parser.js";
 
 export {
@@ -48,3 +52,19 @@ export {
   parseClassificationResponse,
   getGitHubToken,
 } from "./ai-task-classifier.js";
+
+// ─── LLM task extractor ─────────────────────────────────────────────────────
+export type {
+  MarkdownFileInput,
+  LlmExtractionResult,
+  CopilotClientFactory,
+  CopilotClientLike,
+  CopilotSessionLike,
+  LlmTaskExtractorConfig,
+} from "./llm-task-extractor.js";
+
+export {
+  extractTasksWithLlm,
+  parseLlmResponse,
+  createCopilotClientFactory,
+} from "./llm-task-extractor.js";
