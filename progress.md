@@ -1,5 +1,37 @@
 # Progress Log
 
+## T113 — Build deterministic markdown task parser
+
+### Task
+
+T113 - Build markdown task parser (Epic E023: Task Import Pipeline)
+
+### What was done
+
+- Created `packages/infrastructure/src/import/markdown-task-parser.ts` with ~550 lines implementing full deterministic markdown parsing
+- Key exports: `discoverMarkdownTasks()`, `parseTaskFile()`, `parseMetadataTable()`, `extractSection()`, `extractCheckboxItems()`, `extractDependencyRefs()`, `extractExternalRef()`, `extractFileReferences()`, `mapTaskType()`, `mapPriority()`, `parseIndexFile()`, `applyOrdering()`, `findMarkdownFiles()`
+- Created `packages/infrastructure/src/import/index.ts` barrel exports
+- Updated `packages/infrastructure/src/index.ts` with import module exports
+- Created comprehensive test suite with 68 tests covering all public functions, edge cases, and full pipeline integration
+- Uses FileSystem interface for DI (consistent with infrastructure package patterns)
+- Lenient parsing: unrecognized types/priorities produce warnings and fall back to defaults rather than failing
+- Zod validation via ImportedTaskSchema.safeParse for final validation
+
+### Patterns used
+
+- Functional approach over class-based: pure parsing functions with FileSystem DI only for I/O
+- Recursive readdir for file discovery (no glob library needed)
+- createFakeFs() test helper for filesystem abstraction in tests
+- Non-null assertions on regex capture groups (TypeScript strict mode)
+- Type/priority mapping: P0→critical, P1→high, P2→medium, P3→low; foundation/infrastructure→chore, feature→feature, etc.
+
+### For next loop
+
+- T115 (import discovery endpoint) and T123 (import format docs) are now unblocked
+- T120 (bundle web-ui static files) and T140 (global data directory convention) are also P0 and ready
+
+---
+
 ## T110 — Integration test: lease timeout and crash recovery
 
 ### Task

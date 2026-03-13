@@ -118,6 +118,26 @@ export {
   summaryPath,
 } from "./artifacts/index.js";
 
+// ─── Task Import ─────────────────────────────────────────────────────────────
+export type { ParseTaskFileResult, ParseIndexResult } from "./import/index.js";
+
+export {
+  discoverMarkdownTasks,
+  parseTaskFile,
+  parseMetadataTable,
+  extractSection,
+  extractCheckboxItems,
+  extractDependencyRefs,
+  extractExternalRef,
+  extractFileReferences,
+  extractTitle,
+  parseIndexFile,
+  applyOrdering,
+  mapTaskType,
+  mapPriority,
+  findMarkdownFiles,
+} from "./import/index.js";
+
 // ─── Crash Recovery ──────────────────────────────────────────────────────────
 export type { GitDiffProvider, WorkspaceInspectorDependencies } from "./crash-recovery/index.js";
 
