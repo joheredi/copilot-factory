@@ -28,8 +28,11 @@
   },
   "dependencies": {
     "@factory/control-plane": "workspace:*",
+    "@factory/observability": "workspace:*",
     "better-sqlite3": "^12.6.2",
-    "drizzle-orm": "^0.45.1"
+    "commander": "^14.0.3",
+    "drizzle-orm": "^0.45.1",
+    "open": "^11.0.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13"

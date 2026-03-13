@@ -359,3 +359,39 @@ T141 - Run Drizzle migrations from code (Epic E026: CLI Init & Project Onboardin
 - T142 (auto-detect project metadata) and T145 (factory start command) are now unblocked
 - T146 (static serving) is also ready (depends on T140 which is done)
 - When integrating into `factory init`/`factory start`, call `runMigrations(getDbPath(), getMigrationsDir())`
+
+## T121 — Build CLI entry point command
+
+### Task
+
+T121 - Build CLI entry point command (Epic E024: CLI Package & Single-Command Startup)
+
+### What was done
+
+- Extracted `createApp()` from `apps/control-plane/src/main.ts` into `apps/control-plane/src/bootstrap.ts`. This creates a NestJS Fastify app with CORS, Swagger, validation, and error handling — but does NOT listen or init tracing. Allows both `main.ts` and the CLI to share the same app setup.
+- Refactored `apps/control-plane/src/main.ts` to import and use `createApp()` from `bootstrap.ts`. Module-scope tracing init and auto-start remain in `main.ts`.
+- Exported `createApp` and `configureStaticServing` from `@factory/control-plane` package (`index.ts`).
+- Installed `commander` (v14) and `open` (v11) as CLI dependencies, plus `@factory/observability` for tracing init.
+- Implemented full CLI in `apps/cli/src/startup.ts` (testable core) + `apps/cli/src/cli.ts` (shebang entry point):
+  - Commander arg parsing: `--port` (default 4100), `--db-path`, `--no-open`, `--no-ui`
+  - `ensureFactoryHome()` → Drizzle migrations → tracing init → `createApp()` → static serving → `app.listen()` → browser open
+  - Graceful SIGINT/SIGTERM shutdown
+  - EADDRINUSE error handling with helpful message
+  - Startup banner with API/Swagger/WebUI URLs and DB path
+  - Dependency injection for `openBrowser`, `webUiDistPath`, `migrationsPath` to enable testing
+- Created 15 unit tests in `apps/cli/src/cli.test.ts` covering arg parsing, option validation, path resolution.
+- All 4,249 tests pass across the monorepo (184 test files).
+
+### Patterns used
+
+- **Side-effect isolation**: Separated testable logic (`startup.ts`) from entry point (`cli.ts`) to prevent module-scope `main()` calls during test imports.
+- **Dependency injection for testing**: `startServer()` accepts `deps` object for overriding browser open, paths. Same pattern as `FakeClock`/`FakeFileSystem` in infrastructure tests.
+- **Monorepo-relative paths**: Used `import.meta.dirname` + relative `join()` for migrations dir and web-UI dist — same pattern as `migrate.test.ts`.
+- **Graceful degradation**: Missing web-UI dist logs a warning and continues in API-only mode instead of failing.
+
+### For next loop
+
+- T122 (CLI readme/docs) is now unblocked by T121
+- T114 (parser integration tests) is ready (P1)
+- T124-T131 (web-UI CRUD dialogs) are ready (P1)
+- T150 (dashboard project selector) is ready (P1)

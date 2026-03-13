@@ -112,7 +112,7 @@ See [index-archive.md](index-archive.md) for the 21 completed epics: E001–E008
 | -------------------------------------------- | -------------------------------------------- | -------- | ------------- | ------- |
 | [T119](tasks/T119-scaffold-cli-workspace.md) | Scaffold apps/cli workspace                  | P0       | foundation    | done    |
 | [T120](tasks/T120-bundle-web-ui.md)          | Serve web-ui static files from control-plane | P0       | feature       | pending |
-| [T121](tasks/T121-cli-entry-point.md)        | Build CLI entry point command                | P0       | feature       | pending |
+| [T121](tasks/T121-cli-entry-point.md)        | Build CLI entry point command                | P0       | feature       | done    |
 | [T122](tasks/T122-cli-readme.md)             | Write CLI and import documentation           | P2       | documentation | pending |
 
 ### E025: Web UI Creation & Editing Forms

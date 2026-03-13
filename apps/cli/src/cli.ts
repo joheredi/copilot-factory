@@ -3,20 +3,53 @@
 /**
  * Entry point for the Autonomous Software Factory CLI.
  *
- * This module serves as the shebang-bearing executable that will be linked
- * as the `factory` command when the package is installed globally or via npx.
+ * This module is the shebang-bearing executable linked as the `factory`
+ * command. It delegates all logic to `startup.ts` to keep side effects
+ * isolated from testable code.
  *
- * Current scope: minimal startup message confirming the CLI is reachable.
- * Full CLI logic (argument parsing, server startup, web UI serving) is
- * implemented in T121 (cli-entry-point).
+ * Single command that boots the full stack: runs database migrations, starts
+ * the control-plane API server with static web-UI serving, and optionally
+ * opens a browser window. Designed for `npx @copilot/factory` ergonomics.
+ *
+ * @see docs/backlog/tasks/T121-cli-entry-point.md — task specification
+ * @see docs/prd/007-technical-architecture.md §7.1 — stack rationale
+ * @module @copilot/factory
  */
 
-const VERSION = "0.1.0";
+import { buildProgram, resolveOptions, startServer } from "./startup.js";
 
-/** Prints the CLI startup banner to stdout. */
-function printBanner(): void {
-  console.log(`🏭 Autonomous Software Factory CLI v${VERSION}`);
-  console.log("   Ready for commands. Use --help for usage information.");
+/**
+ * CLI entry point — parses arguments and starts the server.
+ *
+ * Wires up SIGINT/SIGTERM handlers for graceful shutdown and exits
+ * with code 1 on any unhandled startup error.
+ */
+async function main(): Promise<void> {
+  const program = buildProgram();
+  program.parse(process.argv);
+
+  const options = resolveOptions(program);
+  const { shutdown } = await startServer(options);
+
+  // Graceful shutdown on signals
+  let shuttingDown = false;
+  const handleShutdown = (): void => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    shutdown().then(
+      () => process.exit(0),
+      (err: unknown) => {
+        console.error("Error during shutdown:", err);
+        process.exit(1);
+      },
+    );
+  };
+
+  process.on("SIGINT", handleShutdown);
+  process.on("SIGTERM", handleShutdown);
 }
 
-printBanner();
+main().catch((err: unknown) => {
+  console.error("\n  ❌ Failed to start:", err);
+  process.exit(1);
+});
