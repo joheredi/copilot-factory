@@ -8,6 +8,7 @@ import { WorkerPoolSummaryCard } from "./components/worker-pool-summary.js";
 import { RecentActivityFeed } from "./components/recent-activity-feed.js";
 import { ProjectSelector } from "./components/project-selector.js";
 import { CreateProjectDialog } from "../projects/components/CreateProjectDialog.js";
+import { CreateRepositoryDialog } from "../projects/components/CreateRepositoryDialog.js";
 
 /**
  * Dashboard overview page.
@@ -36,6 +37,7 @@ export default function DashboardPage() {
     repositoryIds: projectFilter.repositoryIds.length > 0 ? projectFilter.repositoryIds : undefined,
   });
   const [showCreateProject, setShowCreateProject] = useState(false);
+  const [showCreateRepository, setShowCreateRepository] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -46,6 +48,15 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-3">
           <ProjectSelector filterState={projectFilter} filterActions={projectActions} />
+          {projectFilter.selectedProjectId && (
+            <Button
+              variant="outline"
+              onClick={() => setShowCreateRepository(true)}
+              data-testid="add-repository-button"
+            >
+              Add Repository
+            </Button>
+          )}
           <Button onClick={() => setShowCreateProject(true)} data-testid="create-project-button">
             Create Project
           </Button>
@@ -53,6 +64,13 @@ export default function DashboardPage() {
       </div>
 
       <CreateProjectDialog open={showCreateProject} onOpenChange={setShowCreateProject} />
+      {projectFilter.selectedProjectId && (
+        <CreateRepositoryDialog
+          open={showCreateRepository}
+          onOpenChange={setShowCreateRepository}
+          projectId={projectFilter.selectedProjectId}
+        />
+      )}
 
       {isError && (
         <div

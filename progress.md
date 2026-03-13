@@ -1,270 +1,32 @@
 # Progress Log
 
-## T150: Add multi-project filter to dashboard — DONE
-
-**What was done:**
-
-- Created `apps/web-ui/src/components/ui/select.tsx` — shadcn/ui Select component built on `@radix-ui/react-select`
-- Created `apps/web-ui/src/features/dashboard/hooks/use-project-filter.ts` — URL-synced project filter hook (stores `projectId` in search params, resolves project's repositories)
-- Created `apps/web-ui/src/features/dashboard/components/project-selector.tsx` — dropdown component showing "All Projects" + registered projects
-- Modified `apps/web-ui/src/features/dashboard/hooks/use-dashboard-data.ts` — accepts optional `repositoryIds` filter, scopes task count queries per-repo, filters audit events client-side
-- Modified `apps/web-ui/src/features/dashboard/page.tsx` — integrated ProjectSelector in header, passes repositoryIds to useDashboardData
-- Created `apps/web-ui/src/features/tasks/hooks/use-repository-name-map.ts` — builds Map<repositoryId, "ProjectName / RepoName"> from API data
-- Modified `apps/web-ui/src/features/tasks/components/task-table.tsx` — added optional Project column with Badge when repositoryNames map is provided
-- Modified `apps/web-ui/src/features/tasks/page.tsx` — wired useRepositoryNameMap into TaskTable
-- Created 3 test files: project-selector, use-project-filter, use-repository-name-map (12 tests total)
-
-**Key patterns:**
-
-- Project filter stored in URL `?projectId=...` for bookmarkability
-- Multi-repo projects handled by making one count query per status per repo and summing
-- Audit events filtered client-side: fetch larger batch, match entityIds to project tasks/repos, slice to 10
-- Repository name map built by fetching all projects + their repos, memoized via useMemo
-- TaskTable shows Project column conditionally only when repositoryNames map is non-empty
-
-**Next loop notes:**
-
-- T149 (workspace cleanup) is now unblocked (depends on T148 which is done)
-- T151 (CLI hero docs) needs both T144 (done) and T149 — available after T149
-- Remaining P1 tasks: T118 (import dialog), T126 (create repo dialog), T127 (create pool dialog)
-
-## T118: Build Import Tasks multi-step dialog — DONE
-
-**What was done:**
-
-- Created `apps/web-ui/src/features/tasks/components/ImportTasksDialog.tsx` — 4-step wizard dialog (Path Input → Preview → Confirm → Result) using shadcn Dialog, Table, Card, Input, Label, Badge, Button components
-- Created `apps/web-ui/src/features/tasks/components/ImportTasksDialog.test.tsx` — 22 tests covering all steps, state transitions, API payloads, error handling, and cross-cutting concerns
-- Modified `apps/web-ui/src/features/tasks/page.tsx` — added "Import Tasks" button to page header and wired ImportTasksDialog
-
-**Key patterns:**
-
-- Single-file multi-step dialog matching existing patterns (CreateTaskDialog, CreateProjectDialog)
-- Step state managed via `useState<DialogState>` with full reset on close
-- Native HTML checkboxes (no shadcn Checkbox component exists yet) with `accent-primary` styling
-- Destructive border pattern for warnings/errors (no shadcn Alert component exists yet)
-- `useDiscoverTasks()` and `useExecuteImport()` hooks from `use-import.ts`
-- Dialog uses `max-w-3xl` to accommodate preview table
-- Parse warnings rendered with severity-specific icons and color schemes
-- Select-all checkbox and individual task toggle via Set<number>
-- Repository name is optional in execute payload (omitted when empty)
-
-**Next loop notes:**
-
-- E023 (Task Import) is now 7/8 complete — only T123 (docs, P2) remains
-- Remaining P1 tasks: T126 (create repo dialog), T127 (create pool dialog)
-- Remaining P2 tasks: T123 (import docs), T122 (CLI readme), T128-T131 (web UI forms), T149 (workspace cleanup), T151 (CLI hero docs)
-
-## T117: Create TanStack Query import hooks — DONE
-
-**What was done:**
-
-- Added import pipeline types to `apps/web-ui/src/api/types.ts`: `ParseWarning`, `ParseWarningSeverity`, `ImportedTask`, `DiscoverRequest`, `DiscoverResponse`, `ExecuteImportRequest`, `ExecuteImportResponse`
-- Added `import` query key section to `apps/web-ui/src/api/query-keys.ts`
-- Created `apps/web-ui/src/api/hooks/use-import.ts` with `useDiscoverTasks()` and `useExecuteImport()` mutation hooks
-- Created `apps/web-ui/src/api/hooks/use-import.test.tsx` with 9 tests covering success, error, isPending, cache invalidation, and request body validation
-- Exported hooks from `apps/web-ui/src/api/hooks/index.ts`
-
-**Key patterns:**
-
-- Follows the same `useMutation` + `apiPost` pattern as `useCreateTask` in `use-tasks.ts`
-- `useExecuteImport` invalidates both `queryKeys.tasks.all` and `queryKeys.projects.all` since importing can create new projects
-- Tests use the fetch-spy + QueryClientProvider pattern with `mutate` + `waitFor(isSuccess)` for data assertions (not `mutateAsync` alone, which has timing issues in jsdom)
-
-**Next loop notes:**
-
-- T118 (Import Tasks dialog component) is now unblocked and can use these hooks
-- The import types match the backend DTOs from `apps/control-plane/src/modules/import/`
-
-## T125: Add Create Project dialog — DONE
-
-**What was done:**
-
-- Created `apps/web-ui/src/features/projects/components/CreateProjectDialog.tsx` — modal dialog with name (required), owner (required), and description (optional) fields
-- Created `apps/web-ui/src/features/projects/components/CreateProjectDialog.test.tsx` — 15 tests covering rendering, validation, submission, error display, whitespace trimming, and dialog lifecycle
-- Added "Create Project" button to the Dashboard page (`features/dashboard/page.tsx`) for initial setup flow access
-- Wired to existing `useCreateProject` hook with automatic cache invalidation on success
-
-**Key patterns:**
-
-- Follows the same architecture as `CreateTaskDialog`: controlled open/close via props, `useState` form state, client-side validation, mutation error display, form reset on close
-- Uses shadcn/ui Dialog, Input, Label, Textarea, Button components
-- Tests use fetch-spy + QueryClientProvider pattern (no MSW), matching existing test conventions
-- `fetchSpy.mockReset()` in `beforeEach` prevents cross-test call accumulation
-
-**Next loop notes:**
-
-- T126 (Create Repository dialog) and T127 (Create Worker Pool dialog) are ready and follow the same pattern
-- A dedicated `/projects` route could be added later if project management grows beyond creation
-
-## T139: Update worker-runner package to re-export dispatch types — DONE
-
-**What was done:**
-
-- Added `@factory/application` as a dependency of `@factory/worker-runner`
-- Updated `apps/worker-runner/src/index.ts` to re-export dispatch and supervisor types
-- Added tsconfig reference to `../../packages/application`
-- Added 3 unit tests verifying value exports are accessible
-- Fixed stale backlog index (many tasks showed `pending` but were actually `done`)
-- E009 (Worker Runtime & Execution) is now fully complete (13/13 tasks done)
-
-**Key patterns:**
-
-- Re-exports are organized into Dispatch and Supervisor sections
-- Both value exports (factory functions, constants) and type exports are included
-- Port interfaces (WorkspaceProviderPort, RuntimeAdapterPort, etc.) are also re-exported for consumers
-
-**Next loop notes:**
-
-- No P0 tasks remain. All remaining tasks are P1 or P2.
-- Ready P1 tasks: T144 (idempotent init), T148 (recovery log), T117 (import hooks), T125-T127 (UI dialogs), T150 (dashboard filter)
-- E009 is fully done and should be moved to the archive
-
-## T116: Create POST /import/execute endpoint — DONE
-
-**What was done:**
-
-- Added `POST /import/execute` endpoint to the import controller
-- Added `execute()` method to `ImportService` with full atomic transaction
-- Created `ExecuteRequestDto` with Zod 4 schema (separate from Zod 3 `@factory/schemas`)
-- Updated `ImportModule` docs and `ImportController` to expose both discover and execute
-
-**Key patterns:**
-
-- Single `writeTransaction` wraps all writes (project, repo, tasks, deps) for atomicity
-- Find-or-create for project (by name) and repository (by name within project)
-- Dedup via `externalRef` — skips tasks whose externalRef already exists in the repo
-- Dependency wiring is best-effort: unresolved refs emit warnings, don't fail import
-- Tasks created in `BACKLOG` status with `source: "automated"`
-- Uses repository factory functions inside the transaction (not NestJS services)
-
-**Zod version note:** `apps/control-plane` uses Zod 4 while `@factory/schemas` uses Zod 3. The execute DTO defines its own imported task schema using Zod 4 to avoid cross-version type incompatibilities. Both schemas mirror the same fields.
-
-**Tests added:** 10 integration tests with in-memory SQLite covering first import, re-import dedup, dependency resolution, unresolved deps, mixed imports, project/repo reuse, custom names, and tasks without externalRef.
-
-## T143: Build init interactive flow and registration — DONE
-
-**What was done:**
-
-- Created `apps/cli/src/commands/init.ts` with the full `factory init` interactive flow
-- Modified `apps/cli/src/cli.ts` to support subcommands (`factory init` + default server start)
-- Added `@factory/infrastructure` as a CLI dependency for task import parsers
-
-**Init command flow:**
-
-1. Auto-detects project metadata via `detectAll()` (name, git remote, branch, owner)
-2. Displays detected values with ✓ prefix, prompts for missing ones via readline
-3. Ensures factory home directory and runs Drizzle migrations
-4. Creates Project and Repository records using raw better-sqlite3 SQL (follows queryProjectCount pattern)
-5. Optional task import: discovers tasks via infrastructure parsers, inserts into task table
-6. Writes `.copilot-factory.json` marker file to project root
-7. Prints summary with next steps
-
-**Key design decisions:**
-
-- Used raw better-sqlite3 for DB operations (not Drizzle repositories) because repositories aren't exported from @factory/control-plane main entry. Follows existing `queryProjectCount` pattern in startup.ts.
-- Used `ON CONFLICT (name) DO NOTHING` for project insert for basic idempotency. Full idempotent re-run is deferred to T144.
-- Dynamic import of `@factory/infrastructure` for task discovery to keep init lightweight.
-- CLI restructured with Commander subcommand + `subcommandRan` flag to support both `factory` (default=start) and `factory init`.
-
-**Tests added (18 new tests):**
-
-- 12 tests for `runInit`: all-detected happy path, missing values prompting, re-init idempotency, empty name/owner validation, no-git-remote handling, task import, import skip, import failure, marker file format, summary output, Ctrl+C handling, SSH remote URL
-- 6 tests for `extractRepoName`: HTTPS with/without .git, SSH with/without .git, unrecognizable URL
-
-**Patterns for next loops:**
-
-- Init command deps injection pattern: `InitDeps` interface with all injectable functions
-- Task import uses `discoverMarkdownTasks`/`parseJsonTasks` from @factory/infrastructure
-- CLI subcommands: add `.command("name").action()` to program, use `subcommandRan` flag
-
-## T137: Wire WorkerDispatchService into AutomationService — DONE
-
-**What was done:**
-
-- Wired the full worker dispatch chain into `AutomationService` constructor: HeartbeatService → HeartbeatForwarderAdapter → InfrastructureAdapters → WorkerSupervisorService → WorkerDispatchService
-- Added `processWorkerDispatches()` fire-and-forget method to `runCycle()` — dispatches WORKER_DISPATCH jobs without blocking readiness reconciliation or scheduler tick
-- Tracks active dispatch promises in a `Set<Promise>` to prevent unbounded concurrency
-- Added two new UoW factory functions in `application-adapters.ts`:
-  - `createWorkerSupervisorUnitOfWork(conn)` — wraps worker repository for supervisor create/find/update operations
-  - `createHeartbeatUnitOfWork(conn)` — wraps lease repository with raw SQLite UNION query for stale lease detection, plus audit event persistence
-- Added `mapWorkerRow()` helper to map DB rows to `SupervisedWorker` domain entities
-
-**Tests added:**
-
-- `application-adapters.test.ts`: 9 new tests — 3 for `createWorkerSupervisorUnitOfWork` (create, find, update), 6 for `createHeartbeatUnitOfWork` (find stale, extend lease, revoke lease, record audit, version conflict, no stale returns empty)
-- `automation.service.test.ts`: 1 new test for `processWorkerDispatches` fire-and-forget behavior
-
-**Key design decisions:**
-
-- Inline construction in constructor (not extracted factory) — matches existing pattern for transitionService, readinessService, schedulerService
-- Fire-and-forget dispatch with `.catch()` error handling — `processWorkerDispatches()` is sync, starts async work, logs results/errors
-- HeartbeatUnitOfWork uses raw SQLite for `findStaleLeases` — the heartbeat-stale OR TTL-expired pattern is simpler in raw SQL than Drizzle
-- Worker table `currentTaskId` has FK to task table — tests must seed project → repository → task before creating workers
-
-**What the next loop should know:**
-
-- T138 (dispatch integration test) is now unblocked — it should test the full end-to-end flow from job queue to worker spawn
-- The `ProcessDispatchResult` uses `processed`/`dispatched` boolean discriminants, NOT an `outcome` field
-- `Record<string, unknown>` fields require bracket notation access (`updateData["expiresAt"]`) due to `noPropertyAccessFromIndexSignature`
-
-## T138: End-to-End Dispatch Integration Test — DONE
-
-- Added integration test in `apps/control-plane/src/automation/automation.service.test.ts` proving the full task lifecycle: BACKLOG → READY → ASSIGNED → dispatch → IN_DEVELOPMENT → DEV_COMPLETE.
-- Test uses hybrid wiring: AutomationService for readiness/scheduling, manually-wired dispatch chain with FakeRunnerAdapter + FakeWorkspaceManager for the dispatch step.
-- Verifies: dispatch job completion, worker entity creation (terminal status), heartbeat forwarding (lease STARTING → RUNNING → COMPLETING), task state transitions through guard-protected states, workspace creation, and packet mounting.
-- **Discovered gap:** The dispatch pipeline does not automatically transition the lease from LEASED → STARTING. Heartbeat forwarding requires the lease to be in STARTING state. The test manually transitions the lease (mirroring the full-lifecycle integration test pattern).
-- All 4,134 tests pass. Build clean.
-
-## T140 — Establish ~/.copilot-factory/ global data directory convention
+## T126 — Add Create Repository dialog to Project detail
 
 ### Task
 
-T140 - Create paths module for centralized data directory resolution (Epic E026: CLI Init & Project Onboarding)
+T126 - Add Create Repository dialog to Project detail (Epic E025: Web UI Creation & Editing Forms)
 
 ### What was done
 
-- Created `apps/cli/src/paths.ts` with 6 exported helpers: `getFactoryHome()`, `getDbPath()`, `getWorkspacesRoot()`, `getArtifactsRoot()`, `getMigrationsDir()`, `ensureFactoryHome()`
-- Created `apps/cli/src/paths.test.ts` with 10 unit tests covering default resolution, FACTORY_HOME override, empty string fallback, all path helpers, idempotent directory creation, and nested directory creation
-- Created `apps/cli/vitest.config.ts` for test infrastructure
-- Added `test` script to `apps/cli/package.json`
+- Created `CreateRepositoryDialog` component at `apps/web-ui/src/features/projects/components/CreateRepositoryDialog.tsx`
+- Fields: name (required), remoteUrl (required, URL validation), defaultBranch (default "main"), localCheckoutStrategy (Select: worktree/clone, default "worktree")
+- Wired to existing `useCreateRepository` hook; cache invalidation on success
+- Client-side URL validation using native `URL` constructor with inline error hint
+- Added "Add Repository" button to dashboard page, visible only when a project is selected via the ProjectSelector
+- 18 comprehensive tests covering rendering, defaults, validation, submission, error handling, cancel, and URL validation feedback
 
 ### Patterns used
 
-- Pure functions composing on `getFactoryHome()` for all path resolution
-- `os.homedir()` for cross-platform home directory resolution
-- `FACTORY_HOME` env var override for testing and non-standard setups
-- Temp directories in tests to avoid touching real `~/.copilot-factory/`
-- Consistent with existing infrastructure patterns (recursive mkdirSync, existsSync checks)
+- Same dialog pattern as `CreateProjectDialog`: `{ open, onOpenChange }` props + `projectId` prop
+- Form state via `useState` with `updateField` callback, same as all existing dialogs
+- fetch-spy testing pattern matching `CreateProjectDialog.test.tsx`
+- Conditional rendering of button/dialog on dashboard based on `projectFilter.selectedProjectId`
 
-### For next loop
+### Notes for next loop
 
-- T141 (programmatic Drizzle migrations) and T146 (start static serving) are now unblocked
-- T141 depends on this paths module to resolve `getDbPath()` and `getMigrationsDir()`
-
-## T120: Serve web-ui static files from control-plane — DONE
-
-### What was done
-
-- Created `apps/control-plane/src/static-serve/` module with:
-  - `configure-static-serving.ts`: Core function `configureStaticServing(app, distPath)` and lower-level `registerStaticFileServing(fastifyInstance, distPath)` for Fastify plugin registration + SPA fallback wildcard route
-  - `static-serve.module.ts`: `StaticServeModule` NestJS module with env-var-based activation (`SERVE_STATIC=true`, `WEB_UI_DIST=<path>`). Uses `OnApplicationBootstrap` lifecycle hook for correct timing.
-  - `index.ts`: Re-exports
-  - `configure-static-serving.test.ts`: 12 tests covering validation, static file serving, SPA fallback, API route precedence, and edge cases
-- Added `StaticServeModule` to `AppModule` imports
-
-### Key patterns
-
-- `@fastify/static` with `wildcard: false` — prevents plugin from registering its own `GET /*` route
-- Custom `GET /*` wildcard route checks filesystem for actual files, falls back to `index.html` for SPA routing
-- Fastify routing priority: exact routes > parametric > wildcard ensures NestJS API routes always win
-- Module is always imported but is a no-op when `SERVE_STATIC !== 'true'`
-- `configureStaticServing()` exported for CLI entry point (T121) to call programmatically
-- Pre-reads `index.html` into memory to avoid filesystem reads on every SPA navigation
-- Fastify version type mismatch between NestJS adapter and direct dependency requires `as unknown as FastifyInstance` cast
-
-### For next loop
-
-- T121 (CLI entry point) is now unblocked — it can call `configureStaticServing(app, distPath)` directly
+- No project detail page exists yet — the "Add Repository" button lives on the dashboard, shown when a project is selected
+- If a project detail page is created later, the dialog can easily be moved there since it takes `projectId` as a prop
+- The `CreateRepositoryDialog` is self-contained and reusable from any page that has a projectId
 
 ## T141 — Run Drizzle migrations from code
 
