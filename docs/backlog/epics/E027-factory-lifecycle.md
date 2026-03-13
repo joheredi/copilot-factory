@@ -56,7 +56,7 @@ Operators need a predictable, reliable experience when starting and stopping the
 | [T148](../tasks/T148-startup-recovery-log.md)       | Log recovery status on startup             | P1       | pending |
 | [T149](../tasks/T149-workspace-cleanup.md)          | Clean orphaned worktrees on start          | P2       | pending |
 | [T150](../tasks/T150-dashboard-project-selector.md) | Add multi-project filter to dashboard      | P1       | pending |
-| [T151](../tasks/T151-cli-hero-docs.md)              | Document the CLI hero experience           | P2       | pending |
+| [T151](../tasks/T151-cli-hero-docs.md)              | Document the CLI hero experience           | P2       | done    |
 
 ## Sequencing Notes
 

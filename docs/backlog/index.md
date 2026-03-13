@@ -36,7 +36,7 @@ The Autonomous Software Factory is a local-first orchestration platform for soft
 
 ### Progress
 
-22 of 27 epics are complete (E001–E010, E010–E022). See [index-archive.md](index-archive.md) for details.
+23 of 27 epics are complete (E001–E010, E010–E022, E027). See [index-archive.md](index-archive.md) for details.
 
 ### Active Workstreams
 
@@ -45,7 +45,7 @@ The Autonomous Software Factory is a local-first orchestration platform for soft
 3. **CLI Package** (E024) — Scaffold workspace, entry point (0/4 tasks done)
 4. **Web UI Forms** (E025) — Creation/editing dialogs for all entities (0/8 tasks done)
 5. **CLI Init & Onboarding** (E026) — Global data dir, project auto-detection, interactive init (0/5 tasks done)
-6. **Factory Lifecycle & Recovery** (E027) — Start command, static serving, two-phase shutdown, recovery logging (0/7 tasks done)
+6. **Factory Lifecycle & Recovery** (E027) — Start command, static serving, two-phase shutdown, recovery logging (7/7 tasks done) ✅
 
 ### Key Risks
 
@@ -65,7 +65,7 @@ The Autonomous Software Factory is a local-first orchestration platform for soft
 | [E024](epics/E024-cli-package.md)       | CLI Package & Single-Command Startup | E001, E017, E019             | 4           | 0    | 4       |
 | [E025](epics/E025-web-ui-forms.md)      | Web UI Creation & Editing Forms      | E019, E020, E021             | 8           | 8    | 0       |
 | [E026](epics/E026-cli-init.md)          | CLI Init & Project Onboarding        | E001, E002, E023             | 5           | 5    | 0       |
-| [E027](epics/E027-factory-lifecycle.md) | Factory Lifecycle & Recovery         | E024, E026                   | 7           | 6    | 1       |
+| [E027](epics/E027-factory-lifecycle.md) | Factory Lifecycle & Recovery         | E024, E026                   | 7           | 7    | 0       |
 
 ### Completed Epics (archived)
 
@@ -140,15 +140,15 @@ See [index-archive.md](index-archive.md) for the 21 completed epics: E001–E008
 
 ### E027: Factory Lifecycle & Recovery
 
-| ID                                               | Title                                      | Priority | Type          | Status  |
-| ------------------------------------------------ | ------------------------------------------ | -------- | ------------- | ------- |
-| [T145](tasks/T145-start-command.md)              | Build factory start command                | P0       | feature       | done    |
-| [T146](tasks/T146-start-static-serving.md)       | Serve web-ui static files from same server | P0       | feature       | done    |
-| [T147](tasks/T147-two-phase-shutdown.md)         | Implement two-phase Ctrl+C shutdown        | P0       | feature       | done    |
-| [T148](tasks/T148-startup-recovery-log.md)       | Log recovery status on startup             | P1       | feature       | done    |
-| [T149](tasks/T149-workspace-cleanup.md)          | Clean orphaned worktrees on start          | P2       | feature       | done    |
-| [T150](tasks/T150-dashboard-project-selector.md) | Add multi-project filter to dashboard      | P1       | feature       | done    |
-| [T151](tasks/T151-cli-hero-docs.md)              | Document the CLI hero experience           | P2       | documentation | pending |
+| ID                                               | Title                                      | Priority | Type          | Status |
+| ------------------------------------------------ | ------------------------------------------ | -------- | ------------- | ------ |
+| [T145](tasks/T145-start-command.md)              | Build factory start command                | P0       | feature       | done   |
+| [T146](tasks/T146-start-static-serving.md)       | Serve web-ui static files from same server | P0       | feature       | done   |
+| [T147](tasks/T147-two-phase-shutdown.md)         | Implement two-phase Ctrl+C shutdown        | P0       | feature       | done   |
+| [T148](tasks/T148-startup-recovery-log.md)       | Log recovery status on startup             | P1       | feature       | done   |
+| [T149](tasks/T149-workspace-cleanup.md)          | Clean orphaned worktrees on start          | P2       | feature       | done   |
+| [T150](tasks/T150-dashboard-project-selector.md) | Add multi-project filter to dashboard      | P1       | feature       | done   |
+| [T151](tasks/T151-cli-hero-docs.md)              | Document the CLI hero experience           | P2       | documentation | done   |
 
 ---
 
@@ -185,7 +185,6 @@ E027 (Factory Lifecycle) — depends on T140/T141 (from E026)
 
 Pending tasks whose dependencies are all satisfied (can start immediately):
 
-- [T151](tasks/T151-cli-hero-docs.md): Document the CLI hero experience (E027)
 - [T122](tasks/T122-cli-readme.md): Write CLI and import documentation (E024)
 
 ### High-Priority (P1) Pending Tasks

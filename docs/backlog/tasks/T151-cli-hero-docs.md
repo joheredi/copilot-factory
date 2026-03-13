@@ -5,7 +5,7 @@
 | **ID**                    | T151                                                                     |
 | **Epic**                  | [E027: Factory Lifecycle & Recovery](../epics/E027-factory-lifecycle.md) |
 | **Type**                  | documentation                                                            |
-| **Status**                | pending                                                                  |
+| **Status**                | done                                                                     |
 | **Priority**              | P2                                                                       |
 | **Owner**                 | technical-writer                                                         |
 | **AI Executable**         | Yes                                                                      |
@@ -64,12 +64,12 @@ The implementing agent should read these files before starting:
 
 ## Acceptance Criteria
 
-- [ ] README has npx quick-start flow
-- [ ] User guide documents `factory init` with all auto-detection behavior
-- [ ] User guide documents `factory start` with all flags
-- [ ] User guide documents shutdown behavior and recovery guarantees
-- [ ] User guide documents `~/.copilot-factory/` directory layout
-- [ ] User guide documents `.copilot-factory.json` marker file
+- [x] README has npx quick-start flow
+- [x] User guide documents `factory init` with all auto-detection behavior
+- [x] User guide documents `factory start` with all flags
+- [x] User guide documents shutdown behavior and recovery guarantees
+- [x] User guide documents `~/.copilot-factory/` directory layout
+- [x] User guide documents `.copilot-factory.json` marker file
 
 ## Definition of Done
 

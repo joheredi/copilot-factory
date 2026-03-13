@@ -93,10 +93,284 @@ Before using the system, familiarize yourself with these core terms.
 ### Prerequisites
 
 - **Node.js** ≥ 20
-- **pnpm** (managed via corepack)
 - **Git** (for worktree-based workspaces)
 
-### Installation
+### Quick Start
+
+From your project directory:
+
+```bash
+# Register your project with the factory
+npx @copilot/factory init
+
+# Launch the full factory stack
+npx @copilot/factory start
+```
+
+That's it. The factory detects your project metadata, sets up the database, and opens the operator dashboard in your browser.
+
+### `factory init` — Project Registration
+
+The `init` command registers the current directory as a factory project. It auto-detects metadata from your environment and prompts only when values can't be determined automatically.
+
+#### Auto-Detection
+
+| Field              | Detection Method                            | Fallback                               |
+| ------------------ | ------------------------------------------- | -------------------------------------- |
+| **Project name**   | `name` field in `package.json`              | Directory basename                     |
+| **Git remote URL** | `git remote get-url origin`                 | Skipped (no repository record created) |
+| **Default branch** | `git symbolic-ref refs/remotes/origin/HEAD` | `main`                                 |
+| **Owner**          | `git config user.name` → OS username        | Interactive prompt                     |
+
+#### What It Does
+
+1. **Detects project metadata** — reads `package.json`, Git config, and OS info
+2. **Prompts for missing values** — project name and owner are required
+3. **Creates the data directory** — `~/.copilot-factory/` with subdirectories (see [Global Data Directory](#global-data-directory))
+4. **Runs database migrations** — applies Drizzle ORM migrations idempotently
+5. **Registers the project** — creates project and repository records in the database
+6. **Offers task import** — optionally imports tasks from a local directory (`backlog.json` or Markdown files)
+7. **Writes a marker file** — `.copilot-factory.json` in the project root (see [Marker File](#the-copilot-factoryjson-marker-file))
+
+#### Example Output
+
+```
+  ✓ Project name:   my-app
+  ✓ Git remote:     https://github.com/owner/my-app.git
+  ✓ Default branch: main
+  ✓ Owner:          jdoe
+
+  ✅ Applied 14 migration(s)
+  ✅ Created project: my-app
+  ✅ Created repository: my-app
+  ✅ Wrote .copilot-factory.json
+
+  ── Summary ──────────────────────────────────────
+  Project:    my-app
+  Repository: my-app
+  Marker:     /home/jdoe/projects/my-app/.copilot-factory.json
+
+  Next steps:
+    npx @copilot/factory start
+```
+
+#### Idempotency
+
+Running `factory init` again in the same directory is safe. It detects the existing `.copilot-factory.json` marker file and updates the project metadata (name, owner) rather than creating duplicates. If the database was reset but the marker file remains, the project is re-created with the same IDs.
+
+### `factory start` — Launching the Factory
+
+The `start` command launches the full factory stack as a foreground process on a single port.
+
+#### Flags
+
+| Flag                | Default                         | Description                                   |
+| ------------------- | ------------------------------- | --------------------------------------------- |
+| `-p, --port <port>` | `4100`                          | HTTP port for the control plane and dashboard |
+| `--db-path <path>`  | `~/.copilot-factory/factory.db` | Path to the SQLite database file              |
+| `--no-open`         | —                               | Do not open the browser on startup            |
+| `--no-ui`           | —                               | API-only mode — do not serve the web UI       |
+| `--verbose`         | —                               | Enable debug-level logging during startup     |
+
+#### Startup Sequence
+
+1. Creates the data directory (`~/.copilot-factory/`) if it doesn't exist
+2. Runs database migrations (idempotent, safe to run every time)
+3. Initializes OpenTelemetry tracing (console exporter in verbose mode)
+4. Starts the NestJS control plane (REST API, WebSocket events, scheduling)
+5. Serves the web UI as static files from the same port (unless `--no-ui`)
+6. Runs startup diagnostics — detects stale leases, orphaned jobs, stuck tasks
+7. Cleans orphaned worktrees — removes worktrees from crashed workers (7-day retention)
+8. Prints the startup banner with URLs, data path, and project count
+9. Opens the browser to the dashboard (unless `--no-open`)
+
+#### Startup Banner
+
+```
+  ┌───────────────────────────────────────────────┐
+  │  Autonomous Software Factory v0.1.0           │
+  │                                               │
+  │  Dashboard:  http://localhost:4100             │
+  │  API docs:   http://localhost:4100/api/docs    │
+  │  Data:       ~/.copilot-factory/               │
+  │  Projects:   2 registered                      │
+  │                                               │
+  │  Press Ctrl+C to stop                          │
+  └───────────────────────────────────────────────┘
+```
+
+#### Examples
+
+```bash
+# Start on the default port with browser
+npx @copilot/factory start
+
+# Start on a custom port, API-only, no browser
+npx @copilot/factory start --port 5000 --no-ui --no-open
+
+# Start with verbose logging and a custom database path
+npx @copilot/factory start --verbose --db-path /mnt/factory.db
+```
+
+### Shutdown & Recovery
+
+#### Two-Phase Ctrl+C Shutdown
+
+The factory uses a two-phase shutdown sequence to protect active workers.
+
+**First Ctrl+C — Graceful drain (up to 30 seconds):**
+
+```
+🛑 Shutting down gracefully... (30s drain, Ctrl+C again to force)
+```
+
+- Stops accepting new work
+- Polls the database every 2 seconds for active worker leases (states: `STARTING`, `RUNNING`, `HEARTBEATING`, `COMPLETING`)
+- Waits up to 30 seconds for workers to finish
+- Flushes telemetry and closes the database cleanly
+- Exits with code 0
+
+**Second Ctrl+C — Force kill:**
+
+```
+⚡ Force stopping...
+Killed 5 worker process(es)
+```
+
+- Sends SIGKILL to all tracked worker child processes
+- Exits immediately with code 1
+
+#### What Happens to Active Workers
+
+| Scenario                            | Outcome                                                              |
+| ----------------------------------- | -------------------------------------------------------------------- |
+| Workers finish before 30s timeout   | Clean shutdown, exit code 0                                          |
+| Workers still running after 30s     | Logged as warning; recovered by reconciliation sweep on next startup |
+| Second Ctrl+C during drain          | Worker processes killed immediately                                  |
+| Process crash (SIGKILL, power loss) | Recovered automatically on next startup                              |
+
+#### Recovery Guarantees
+
+On every startup, the factory runs automatic recovery:
+
+- **Stale leases** — worker leases with expired heartbeats (>75 seconds stale) are reclaimed
+- **Orphaned jobs** — claimed or running jobs older than 10 minutes are reset
+- **Stuck tasks** — tasks in `ASSIGNED` state for over 5 minutes are requeued
+
+The background reconciliation loop (60-second interval) handles all recovery automatically. Startup diagnostics log what will be recovered:
+
+```
+[startup-diagnostics] Startup recovery: 2 stale lease(s), 1 orphaned job(s), 0 stuck task(s) — reconciliation will process within 60s
+```
+
+If nothing needs recovery:
+
+```
+[startup-diagnostics] Clean startup — no pending recovery items
+```
+
+#### Crash Recovery Artifacts
+
+When a worker lease is reclaimed after a crash, the factory captures whatever work was completed:
+
+- **Git diffs** — changes the worker made before the crash (`git-diff.patch`)
+- **Output files** — files produced in the workspace output directory
+- **Partial snapshots** — metadata linking all captured artifacts (`crash-recovery-snapshot.json`)
+
+These artifacts are stored under `~/.copilot-factory/artifacts/` and linked to the task record for operator review.
+
+### Global Data Directory
+
+The factory stores all persistent data in a global directory, separate from any project repository.
+
+#### Default Layout
+
+```
+~/.copilot-factory/
+├── factory.db          # SQLite database (WAL mode)
+├── workspaces/         # Git worktrees for active tasks
+│   └── {repoId}/
+│       └── {taskId}/   # Isolated worktree per task
+└── artifacts/          # Task outputs, review packets, crash recovery
+    └── repositories/
+        └── {repoId}/
+            └── tasks/
+                └── {taskId}/
+                    └── runs/
+                        └── {runId}/
+                            ├── outputs/
+                            ├── review/
+                            └── merge/
+```
+
+#### Overriding with `FACTORY_HOME`
+
+Set the `FACTORY_HOME` environment variable to use a different location:
+
+```bash
+export FACTORY_HOME=/mnt/factory-data
+npx @copilot/factory start
+```
+
+This is useful for:
+
+- Storing data on a larger or faster disk
+- Running multiple factory instances with separate data
+- Testing without affecting your default installation
+
+### The `.copilot-factory.json` Marker File
+
+After running `factory init`, a `.copilot-factory.json` file is written to the project root:
+
+```json
+{
+  "projectId": "550e8400-e29b-41d4-a716-446655440000",
+  "repositoryId": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+  "factoryHome": "/home/user/.copilot-factory"
+}
+```
+
+| Field          | Description                                                 |
+| -------------- | ----------------------------------------------------------- |
+| `projectId`    | UUID of the registered project in the factory database      |
+| `repositoryId` | UUID of the registered repository (`null` if no Git remote) |
+| `factoryHome`  | Absolute path to the factory data directory                 |
+
+**Purpose:**
+
+- Links the project directory to its factory registration
+- Enables `factory init` to be re-run safely (idempotent updates instead of duplicates)
+- Used by future CLI commands to identify the project without prompting
+
+> **Tip:** Add `.copilot-factory.json` to your `.gitignore` — it contains machine-specific paths and UUIDs.
+
+### Multi-Project Support
+
+The factory supports registering multiple projects. Each project gets its own isolated workspaces and artifact directories under `~/.copilot-factory/`.
+
+To register additional projects, run `factory init` in each project directory. The operator dashboard includes a **project selector** dropdown (default: "All Projects") that filters:
+
+- Task list and task counts
+- Worker pool status
+- Activity feed
+
+The selected project is persisted as a URL query parameter, so you can bookmark filtered views.
+
+### Environment Variables
+
+| Variable                      | Default                     | Description                                        |
+| ----------------------------- | --------------------------- | -------------------------------------------------- |
+| `FACTORY_HOME`                | `~/.copilot-factory`        | Global data directory for DB, worktrees, artifacts |
+| `DATABASE_PATH`               | `{FACTORY_HOME}/factory.db` | SQLite database file path                          |
+| `SERVE_STATIC`                | —                           | Set to `true` to serve web UI from control plane   |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4318`     | OpenTelemetry collector endpoint                   |
+| `OTEL_TRACING_ENABLED`        | `true`                      | Set to `"false"` to disable tracing                |
+| `NODE_ENV`                    | `production`                | Set to `"development"` for console trace output    |
+| `WORKSPACE_RETENTION_DAYS`    | `7`                         | Days before orphaned worktrees are cleaned up      |
+
+### Developer Setup (Contributing)
+
+If you are developing the factory itself (not using it as an operator), follow these additional steps:
 
 ```bash
 # Enable pnpm via corepack
@@ -109,55 +383,25 @@ pnpm install
 pnpm build
 ```
 
-### Starting the Control Plane
+Run the control plane and web UI as separate dev servers:
 
 ```bash
+# Terminal 1: Control plane API server (port 3000)
 cd apps/control-plane
-
-# Initialize the database (first time only)
 pnpm db:migrate
-
-# Start the development server
 pnpm dev
-```
 
-The control plane API is now running at **http://localhost:3000**.
-
-- **Health check:** `GET http://localhost:3000/health`
-- **API documentation (Swagger):** http://localhost:3000/api/docs
-
-### Starting the Web UI
-
-In a separate terminal:
-
-```bash
+# Terminal 2: Web UI dev server (port 5173, proxies API to 3000)
 cd apps/web-ui
 pnpm dev
 ```
 
-The operator dashboard is now available at **http://localhost:5173**.
-
-The Web UI automatically proxies API requests (`/api`) and WebSocket connections (`/socket.io`) to the control plane on port 3000.
-
-### Verifying the Setup
+Verification:
 
 ```bash
-# Check the control plane is running
 curl http://localhost:3000/health
-
-# Expected response:
 # { "status": "ok", "service": "factory-control-plane", "timestamp": "..." }
 ```
-
-### Environment Variables
-
-| Variable                      | Default                 | Description                                     |
-| ----------------------------- | ----------------------- | ----------------------------------------------- |
-| `PORT`                        | `3000`                  | Control plane HTTP port                         |
-| `DATABASE_PATH`               | `./data/factory.db`     | SQLite database file path                       |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4318` | OpenTelemetry collector endpoint                |
-| `OTEL_TRACING_ENABLED`        | `true`                  | Set to `"false"` to disable tracing             |
-| `NODE_ENV`                    | `production`            | Set to `"development"` for console trace output |
 
 ---
 

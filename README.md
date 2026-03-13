@@ -98,6 +98,28 @@ A task flows through a dependency-aware pipeline with isolated execution at ever
 
 ---
 
+## Quick Start
+
+> **Prerequisites:** [Node.js](https://nodejs.org/) ≥ 20
+
+```bash
+# In your project directory, register with the factory
+npx @copilot/factory init
+
+# Launch the factory (control plane + dashboard on one port)
+npx @copilot/factory start
+```
+
+`factory init` auto-detects your project name, Git remote, default branch, and owner. It creates a `~/.copilot-factory/` data directory, runs database migrations, and registers your project — no manual setup required.
+
+`factory start` launches the full stack on a single port (default `4100`), opens the operator dashboard in your browser, and starts processing tasks. Press **Ctrl+C** to shut down gracefully — active workers drain for up to 30 seconds before exit.
+
+On next startup, any interrupted work is automatically recovered by the reconciliation sweep.
+
+For full CLI documentation, see the [User Guide](docs/user-guide.md#3-getting-started).
+
+---
+
 ## Repository Structure
 
 ```
@@ -155,7 +177,10 @@ docs/
 
 ---
 
-## Getting Started
+## Development Setup
+
+> To **use** the factory as an operator, see [Quick Start](#quick-start) above.
+> This section is for developing the factory itself.
 
 ### Prerequisites
 
@@ -170,17 +195,21 @@ pnpm install
 pnpm build
 ```
 
-### Development
+### Running in Development Mode
 
 ```bash
 pnpm test              # Run all tests
 pnpm lint              # Lint the entire repo
 pnpm format:check      # Check formatting
 
-# Control plane
+# Control plane (separate dev server on port 3000)
 cd apps/control-plane
 pnpm db:migrate        # Apply database migrations
 pnpm dev               # Start the dev server (http://localhost:3000)
+
+# Web UI (separate Vite dev server on port 5173, proxies to 3000)
+cd apps/web-ui
+pnpm dev
 ```
 
 ### Documentation

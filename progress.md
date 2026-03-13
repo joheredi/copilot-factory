@@ -1,254 +1,5 @@
 # Progress Log
 
-## T123 — Write task format reference documentation (2026-03-13)
-
-### What was done
-
-- Created `docs/TASK_FORMAT.md` — comprehensive reference for the two import formats
-  - Section 1: Overview — supported formats, when to use each, import pipeline flow diagram
-  - Section 2: Markdown Format — metadata table fields (required/optional), headed sections, checkbox syntax, filename-based external ref extraction
-  - Section 3: JSON Format — backlog.json (structured with epics/tasks arrays) and flat tasks.json (simple array) sub-formats, field tables for both, format detection logic
-  - Section 4: Field Mapping Table — three-column mapping (Markdown → JSON → System field), type mapping table (22 input values → 7 canonical types), priority mapping table (P0–P3 shortcodes + full names)
-  - Section 5: Complete Examples — full markdown task file, backlog.json entry, flat tasks.json entry, all using the same fictional task (T042) for consistency
-  - Section 6: AI Prompt Template — ready-to-paste prompt for Copilot/ChatGPT/Claude that instructs the AI to convert arbitrary tasks into factory-compatible markdown format
-  - Section 7: Troubleshooting — 7 common parse warnings with cause/fix explanations (missing title, unknown type, unmapped priority, circular deps, duplicate externalRef, unknown fields, empty criteria)
-
-### Patterns
-
-- All field mappings verified against the actual parser implementations (`markdown-task-parser.ts`, `json-task-parser.ts`) and Zod schemas (`task-import.ts`, `shared.ts`)
-- Type/priority mapping tables sourced from `TASK_TYPE_MAP` and `PRIORITY_MAP` constants in the markdown parser
-- Examples use realistic data consistent with the project's own backlog format
-
-### Notes for next loop
-
-- 2 pending tasks remain (both P2 documentation): T122 (CLI and import docs), T151 (CLI hero experience docs)
-- Both update `README.md` and `docs/user-guide.md` — consider doing T151 first as it's more comprehensive, then T122 can layer on top
-
-## T130 — Add Batch Task Import UI to Tasks page (2026-03-13)
-
-### What was done
-
-- Created `BatchCreateDialog.tsx` at `apps/web-ui/src/features/tasks/components/`
-  - Monospace JSON textarea for pasting an array of CreateTaskInput objects
-  - "Validate" button runs client-side validation: JSON syntax, array check, per-item required field + enum validation
-  - Success preview shows task count ("3 tasks ready to create")
-  - Validation errors shown as itemized list with per-task error labels (e.g., "Task 1: missing title")
-  - "Create Tasks" button submits validated batch via `useCreateTaskBatch` hook
-  - Create button label dynamically shows task count after validation
-  - Dialog prevents closing during pending mutations, resets state on close
-  - Exported `validateJsonInput` and `validateTaskItem` for unit testing
-- Created `BatchCreateDialog.test.tsx` — 29 tests covering:
-  - Unit tests: `validateTaskItem` (8 tests) and `validateJsonInput` (6 tests)
-  - Component tests (15): rendering, button states, JSON validation errors, missing field errors,
-    success preview, singular/plural grammar, validation clearing on edit, submission flow,
-    API error display, cancel, non-array input, submit button label
-- Updated `page.tsx` — added "Create Batch" button with List icon between Import Tasks and Create Task
-
-### Patterns
-
-- Same dialog pattern as CreateTaskDialog: `{ open, onOpenChange }` props, useState form state
-- Client-side validation mirrors server-side Zod schema constraints (required fields, enum values, max lengths)
-- Validation functions exported separately for direct unit testing outside React context
-- `data-testid` attributes on all interactive elements matching codebase convention
-
-### Notes for next loop
-
-- E025 is now complete (8/8 tasks done)
-- 3 pending tasks remain (all P2 documentation): T151 (CLI hero docs), T122 (CLI README), T123 (import format docs)
-
-## T128 — Add Create Agent Profile dialog to Pool detail
-
-### Task
-
-T128 - Add Create Agent Profile dialog to Pool detail (Epic E025: Web UI Creation & Editing Forms)
-
-### What was done
-
-- Created `CreateProfileDialog.tsx` following the established CreatePoolDialog pattern
-  - 8 optional policy/template ID text input fields (all fields are optional)
-  - Form state management with `useState` and `useCallback`
-  - Error display in dialog with auto-clear on field edit
-  - Form reset on close, submit disabled while pending
-  - Scrollable content area for the 8 fields (`max-h-[60vh] overflow-y-auto`)
-  - Wired to existing `useCreateAgentProfile(poolId)` mutation hook
-  - Empty fields omitted from API payload (whitespace-only treated as empty)
-- Created comprehensive test suite (`CreateProfileDialog.test.tsx`, 12 tests)
-  - Uses fetch-spy + QueryClientProvider pattern from other dialog tests
-  - Tests: rendering, empty submission, partial fill, full fill, whitespace handling,
-    API errors, cancel, form reset, error clearing, closed state, endpoint URL
-- Modified `PoolDetailPage.tsx` to add "Add Agent Profile" button
-  - Button placed in Agent Profiles CardHeader with Plus icon
-  - Dialog state managed via `useState`
-  - `CreateProfileDialog` rendered with pool ID from URL params
-
-### Patterns
-
-- All dialog components follow the same pattern: `open`/`onOpenChange` props, controlled form
-  state, `useCallback` handlers, `data-testid` attributes, error display with auto-clear
-- Test pattern: fetch spy, fakeResponse helper, QueryClient+WebSocketProvider+MemoryRouter wrapper
-
-### Notes for next loop
-
-- 4 pending tasks remain (all P2): T130 (batch import UI), T151 (CLI docs), T122 (CLI README), T123 (import format docs)
-- E025 is now 7/8 complete (only T130 remains)
-
-## T131 — Add Reassign Pool operator action to Task detail
-
-### Task
-
-T131 - Add Reassign Pool operator action to Task detail (Epic E025: Web UI Creation & Editing Forms)
-
-### What was done
-
-- Added `reassign-pool` to `OperatorActionId` type, `ACTION_DEFS`, and `STATUS_ACTIONS` in `action-definitions.ts`
-- Added `reassign-pool` to statuses: BACKLOG, READY, BLOCKED, ASSIGNED, IN_DEVELOPMENT, ESCALATED
-- Created `ReassignPoolDialog.tsx` component with pool selector dropdown + reason textarea
-  - Fetches pools via existing `usePools({ limit: 100 })` hook
-  - Shows loading state while pools load; empty state when no pools available
-  - Validates: both pool selection and reason required before submit enabled
-  - Resets form on close
-- Updated `TaskActionBar.tsx` to wire in `useReassignPool` mutation and `ReassignPoolDialog`
-  - Reassign Pool button rendered as a special action (like PriorityChangeSelect and EscalationResolutionPanel)
-  - Filtered from regular actions to avoid the generic ConfirmActionDialog
-- Updated `index.ts` to export `ReassignPoolDialog`
-- Updated existing tests in `operator-actions.test.tsx` for new status action mappings
-- Added 3 new unit tests: reassign-pool no confirmation, reassign-pool status coverage across all statuses
-- Added 2 integration tests: full dialog submit flow with pool fetch + API call verification, terminal state exclusion
-
-### Patterns used
-
-- Followed the "special action" pattern from PriorityChangeSelect and EscalationResolutionPanel
-- Dialog with form state (pool selector + reason) — same Dialog/DialogContent/DialogFooter component pattern
-- Native `<select>` for pool dropdown matching CreateTaskDialog's project selector pattern
-- Pool data fetched via `usePools` and extracted with `poolsData?.data ?? []`
-- `data-testid` attributes on all interactive elements for testing
-
-### Notes for next loop
-
-- Remaining E025 tasks: T128 (Create Profile dialog), T130 (Batch Task Import UI)
-- Documentation tasks still ready: T122, T123, T151
-- All tasks are P2 with no dependencies
-
-## T129 — Add Edit Task form to Task detail page
-
-### Task
-
-T129 - Add Edit Task form to Task detail page (Epic E025: Web UI Creation & Editing Forms)
-
-### What was done
-
-- Created `EditTaskDialog` component at `apps/web-ui/src/features/task-detail/components/EditTaskDialog.tsx`
-- Editable fields: title, description, priority, riskLevel, estimatedSize, externalRef, severity, acceptanceCriteria, definitionOfDone, requiredCapabilities, suggestedFileScope
-- Pre-populates form from current task data; array fields joined with newlines for textarea editing
-- Only sends changed fields in the update payload (compares form state vs original task)
-- Includes `version` field for optimistic concurrency control
-- Handles 409 Conflict with clear user-friendly message ("modified by another user")
-- Added "Edit" button with Pencil icon to TaskDetailPage header
-- 15 comprehensive tests covering pre-population of all fields, null handling, validation, submission with version, dialog close on success, 409 conflict handling, generic error handling, cancel, and saving state feedback
-- 2 integration tests added to TaskDetailPage.test.tsx for edit button rendering and dialog opening
-
-### Patterns used
-
-- Same dialog pattern as `CreateTaskDialog`: `{ open, onOpenChange }` props
-- `taskToFormState()` helper converts Task to form strings; `buildUpdateInput()` diffs form vs original
-- Array fields (acceptanceCriteria, definitionOfDone, etc.) stored as newline-separated strings in form state
-- `useEffect` re-populates form when dialog opens or task data changes
-- Follows existing selectClasses pattern for native selects matching Input component styling
-
-### Notes for next loop
-
-- All remaining E025 tasks (T128, T130, T131) are independent P2 UI features with no deps
-- Documentation tasks (T122, T123, T151) are also ready
-- The `useUpdateTask` hook uses `apiPut` (PUT method), not PATCH
-
-## T127 — Add Create Worker Pool dialog to Pools page
-
-### Task
-
-T127 - Add Create Worker Pool dialog to Pools page (Epic E025: Web UI Creation & Editing Forms)
-
-### What was done
-
-- Created `CreatePoolDialog` component at `apps/web-ui/src/features/pools/components/CreatePoolDialog.tsx`
-- Fields: name (required), poolType (required, shadcn Select: developer/reviewer/lead-reviewer/merge-assist/planner), provider (optional), model (optional), maxConcurrency (number, default 3), defaultTimeoutSec (number, default 3600)
-- Wired to existing `useCreatePool` hook; cache invalidation on success via hook's `onSuccess`
-- Added "Create Pool" button with Plus icon to PoolsPage header
-- 11 comprehensive tests covering rendering, defaults, validation, submission with required and optional fields, error handling, cancel, form reset, and whitespace-only name rejection
-- Added jsdom polyfills for Radix UI Select (`scrollIntoView`, pointer capture methods) to test file
-
-### Patterns used
-
-- Same dialog pattern as `CreateProjectDialog` and `CreateRepositoryDialog`: `{ open, onOpenChange }` props
-- shadcn `Select` component for poolType (same pattern as CreateRepositoryDialog's checkout strategy)
-- useState-based form state with `INITIAL_FORM_STATE` constant
-- `useCallback` for all handlers, `updateField` generic helper that clears errors on change
-- `data-testid` attributes on all interactive elements
-- fetch-spy + QueryClientProvider + WebSocketProvider test harness
-
-### Notes for next iteration
-
-- Remaining E025 tasks (T128–T131) are all P2 and follow the same dialog pattern
-- T128 (Create Agent Profile dialog) may need `poolId` as a prop, similar to how CreateRepositoryDialog receives `projectId`
-
-## T126 — Add Create Repository dialog to Project detail
-
-### Task
-
-T126 - Add Create Repository dialog to Project detail (Epic E025: Web UI Creation & Editing Forms)
-
-### What was done
-
-- Created `CreateRepositoryDialog` component at `apps/web-ui/src/features/projects/components/CreateRepositoryDialog.tsx`
-- Fields: name (required), remoteUrl (required, URL validation), defaultBranch (default "main"), localCheckoutStrategy (Select: worktree/clone, default "worktree")
-- Wired to existing `useCreateRepository` hook; cache invalidation on success
-- Client-side URL validation using native `URL` constructor with inline error hint
-- Added "Add Repository" button to dashboard page, visible only when a project is selected via the ProjectSelector
-- 18 comprehensive tests covering rendering, defaults, validation, submission, error handling, cancel, and URL validation feedback
-
-### Patterns used
-
-- Same dialog pattern as `CreateProjectDialog`: `{ open, onOpenChange }` props + `projectId` prop
-- Form state via `useState` with `updateField` callback, same as all existing dialogs
-- fetch-spy testing pattern matching `CreateProjectDialog.test.tsx`
-- Conditional rendering of button/dialog on dashboard based on `projectFilter.selectedProjectId`
-
-### Notes for next loop
-
-- No project detail page exists yet — the "Add Repository" button lives on the dashboard, shown when a project is selected
-- If a project detail page is created later, the dialog can easily be moved there since it takes `projectId` as a prop
-- The `CreateRepositoryDialog` is self-contained and reusable from any page that has a projectId
-
-## T141 — Run Drizzle migrations from code
-
-### Task
-
-T141 - Run Drizzle migrations from code (Epic E026: CLI Init & Project Onboarding)
-
-### What was done
-
-- Created `apps/cli/src/migrate.ts` with `runMigrations(dbPath, migrationsFolder)` function
-- Uses Drizzle ORM's built-in `migrate()` from `drizzle-orm/better-sqlite3/migrator`
-- Counts applied migrations by querying `__drizzle_migrations` table before/after migration run
-- Configures SQLite with WAL mode, busy_timeout=5000, foreign_keys=ON (matching control-plane connection.ts)
-- Creates parent directories for DB file automatically
-- Custom `MigrationError` class wraps errors with dbPath and migrationsFolder context
-- Validates migrations folder exists before opening the database
-- Always closes the database connection in a `finally` block
-- Added `better-sqlite3` and `drizzle-orm` as dependencies of `apps/cli/package.json`
-- Created 10 unit tests covering first-run, idempotency, parent dir creation, WAL mode, table verification, error cases
-
-### Patterns
-
-- Tests use real control-plane migration files from `apps/control-plane/drizzle/` (resolved via `import.meta.dirname`) to catch schema compatibility issues
-- Temporary directories with `mkdtempSync` for test isolation, cleaned up in `afterEach`
-- Database table names are singular snake_case (e.g., `project`, `task`, `repository`) — not plural
-
-### For next loop
-
-- T142 (auto-detect project metadata) and T145 (factory start command) are now unblocked
-- T146 (static serving) is also ready (depends on T140 which is done)
-- When integrating into `factory init`/`factory start`, call `runMigrations(getDbPath(), getMigrationsDir())`
-
 ## T121 — Build CLI entry point command
 
 ### Task
@@ -499,3 +250,38 @@ T149 - Clean orphaned worktrees on startup (Epic E027: Factory Lifecycle & Recov
 - T149 completion unblocks T151 (Document the CLI hero experience)
 - Remaining E027 tasks: T149 (done), T151 (pending/docs)
 - The `WORKSPACES_ROOT` env var defaults to `./data/workspaces` (matching infrastructure-adapters.ts)
+
+## T151 — Document the CLI hero experience
+
+### Task
+
+T151 - Document the CLI hero experience (Epic E027: Factory Lifecycle & Recovery)
+
+### What was done
+
+- Added a **Quick Start** section to root `README.md` showing the `npx @copilot/factory init` + `start` two-command flow, positioned between Architecture and Repository Structure for immediate visibility.
+- Renamed the README's "Getting Started" section to "Development Setup" with a note directing operators to Quick Start.
+- Rewrote `docs/user-guide.md` section 3 ("Getting Started") to be CLI-first with comprehensive subsections:
+  - **Quick Start** — two-command hero scenario
+  - **`factory init`** — auto-detection table (project name, git remote, default branch, owner), 7-step flow, example output, idempotency behavior
+  - **`factory start`** — all 5 flags with defaults, 9-step startup sequence, banner format, usage examples
+  - **Shutdown & Recovery** — two-phase Ctrl+C (graceful drain + force kill), active worker outcome table, recovery guarantees (stale leases 75s, orphaned jobs 10m, stuck tasks 5m), crash recovery artifacts
+  - **Global Data Directory** — `~/.copilot-factory/` tree layout, `FACTORY_HOME` override
+  - **`.copilot-factory.json` Marker File** — JSON schema, field descriptions, `.gitignore` tip
+  - **Multi-Project Support** — project selector in dashboard, URL persistence
+  - **Environment Variables** — full table with 8 variables including `FACTORY_HOME`, `WORKSPACE_RETENTION_DAYS`
+  - **Developer Setup** — preserved original clone/install/dev-server instructions for contributors
+- Updated E027 epic table (T151 → done, 7/7 complete)
+- Updated backlog index: E027 7/7, progress counter 23/27, removed T151 from ready-now list
+
+### Patterns used
+
+- All documentation sourced from actual implementation code (cli.ts, startup.ts, shutdown.ts, paths.ts, detect.ts, init.ts, startup-diagnostics, workspace-cleanup)
+- Verified default port (4100), drain timeout (30s), retention period (7 days) from source constants
+- Kept developer setup section for contributors while making operator flow the default path
+
+### Notes for next iteration
+
+- E027 is now fully complete (7/7 tasks done)
+- T122 (CLI and import documentation, E024) is the only remaining ready-now task
+- E024 still shows 0/4 done in index but T122 is listed as ready — may need index reconciliation
