@@ -27,6 +27,7 @@ import { StaticServeModule } from "./static-serve/static-serve.module.js";
 import { TasksModule } from "./tasks/tasks.module.js";
 import { ValidationModule } from "./validation/validation.module.js";
 import { WorkersModule } from "./workers/workers.module.js";
+import { WorkspaceCleanupModule } from "./workspace-cleanup/workspace-cleanup.module.js";
 
 /**
  * Root module that composes all feature modules.
@@ -46,6 +47,7 @@ import { WorkersModule } from "./workers/workers.module.js";
  * - EventsModule: WebSocket gateway for real-time event delivery (§7.7)
  * - OperatorActionsModule: operator action endpoints (§6.2)
  * - StartupDiagnosticsModule: recovery status logging on startup (T148)
+ * - WorkspaceCleanupModule: orphaned worktree cleanup on startup (T149)
  * - StaticServeModule: optional web-ui static file serving (T120)
  */
 @Module({
@@ -66,6 +68,7 @@ import { WorkersModule } from "./workers/workers.module.js";
     ImportModule,
     OperatorActionsModule,
     StartupDiagnosticsModule,
+    WorkspaceCleanupModule,
     StaticServeModule,
   ],
 })

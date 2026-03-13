@@ -65,7 +65,7 @@ The Autonomous Software Factory is a local-first orchestration platform for soft
 | [E024](epics/E024-cli-package.md)       | CLI Package & Single-Command Startup | E001, E017, E019             | 4           | 0    | 4       |
 | [E025](epics/E025-web-ui-forms.md)      | Web UI Creation & Editing Forms      | E019, E020, E021             | 8           | 4    | 4       |
 | [E026](epics/E026-cli-init.md)          | CLI Init & Project Onboarding        | E001, E002, E023             | 5           | 5    | 0       |
-| [E027](epics/E027-factory-lifecycle.md) | Factory Lifecycle & Recovery         | E024, E026                   | 7           | 5    | 2       |
+| [E027](epics/E027-factory-lifecycle.md) | Factory Lifecycle & Recovery         | E024, E026                   | 7           | 6    | 1       |
 
 ### Completed Epics (archived)
 
@@ -146,7 +146,7 @@ See [index-archive.md](index-archive.md) for the 21 completed epics: E001–E008
 | [T146](tasks/T146-start-static-serving.md)       | Serve web-ui static files from same server | P0       | feature       | done    |
 | [T147](tasks/T147-two-phase-shutdown.md)         | Implement two-phase Ctrl+C shutdown        | P0       | feature       | done    |
 | [T148](tasks/T148-startup-recovery-log.md)       | Log recovery status on startup             | P1       | feature       | done    |
-| [T149](tasks/T149-workspace-cleanup.md)          | Clean orphaned worktrees on start          | P2       | feature       | pending |
+| [T149](tasks/T149-workspace-cleanup.md)          | Clean orphaned worktrees on start          | P2       | feature       | done    |
 | [T150](tasks/T150-dashboard-project-selector.md) | Add multi-project filter to dashboard      | P1       | feature       | done    |
 | [T151](tasks/T151-cli-hero-docs.md)              | Document the CLI hero experience           | P2       | documentation | pending |
 
@@ -189,7 +189,6 @@ Pending tasks whose dependencies are all satisfied (can start immediately):
 - [T129](tasks/T129-edit-task-form.md): Add Edit Task form to Task detail page (E025)
 - [T130](tasks/T130-batch-task-import-ui.md): Add Batch Task Import UI to Tasks page (E025)
 - [T131](tasks/T131-reassign-pool-action.md): Add Reassign Pool operator action to Task detail (E025)
-- [T149](tasks/T149-workspace-cleanup.md): Clean orphaned worktrees on start (E027)
 - [T151](tasks/T151-cli-hero-docs.md): Document the CLI hero experience (E027)
 - [T122](tasks/T122-cli-readme.md): Write CLI and import documentation (E024)
 - [T123](tasks/T123-import-format-docs.md): Write task format reference documentation (E023)

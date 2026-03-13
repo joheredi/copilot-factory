@@ -306,3 +306,35 @@ Enhanced `apps/cli/src/startup.ts` to complete T145 acceptance criteria:
 - All 4,405 tests pass, build clean
 - Pattern: direct service instantiation with `createTestDatabase()` — no NestJS testing module needed
 - Uses raw SQLite `conn.sqlite.prepare()` for simple COUNT queries (more efficient than Drizzle for pure counts)
+
+## T149 — Clean orphaned worktrees on start
+
+### Task
+
+T149 - Clean orphaned worktrees on startup (Epic E027: Factory Lifecycle & Recovery)
+
+### What was done
+
+- Created `WorkspaceCleanupService` in `apps/control-plane/src/workspace-cleanup/`
+- NestJS service implementing `OnApplicationBootstrap` — runs once after all modules are initialized
+- Scans `{WORKSPACES_ROOT}/{repoId}/{taskId}/` directories and cross-references with DB leases
+- Orphaned worktrees (no non-terminal lease) older than retention period → auto-deleted
+- Recent orphans → logged as "pending cleanup in N days"
+- Active-leased worktrees → never deleted (primary safety invariant)
+- Created `WorkspaceCleanupModule` registered in `AppModule` after `StartupDiagnosticsModule`
+- 17 unit tests covering: empty/missing dir, active lease protection (all 7 non-terminal statuses), orphan deletion (no lease, terminal-only leases, multi-repo), retention period (boundary, zero, default), mixed scenarios, error isolation, bootstrap safety, summary counts, freed bytes tracking, non-directory entry skipping
+- Configurable via `WORKSPACE_RETENTION_DAYS` env var (default 7 days) and `WORKSPACES_ROOT` env var
+
+### Patterns used
+
+- Follows `StartupDiagnosticsService` pattern: `@Inject(DATABASE_CONNECTION)`, direct SQL queries, error-swallowing `onApplicationBootstrap()`
+- `CleanupFileSystem` interface abstracts Node.js `fs` for deterministic testing
+- Fake filesystem helper (`createFakeFs`) for path-based directory tree simulation
+- Terminal lease statuses (`COMPLETING`, `RECLAIMED`) match domain enum values
+- `cleanOrphanedWorkspaces(options?)` exposes all config for testing while `onApplicationBootstrap()` uses env var defaults
+
+### Notes for next iteration
+
+- T149 completion unblocks T151 (Document the CLI hero experience)
+- Remaining E027 tasks: T149 (done), T151 (pending/docs)
+- The `WORKSPACES_ROOT` env var defaults to `./data/workspaces` (matching infrastructure-adapters.ts)
