@@ -1,19 +1,20 @@
 /**
- * Service for task import discovery.
+ * Service for task import discovery and execution.
  *
- * Implements the read-only discovery step of the import pipeline: accepts a
- * local directory path, auto-detects whether it contains markdown task files
- * or a backlog.json, runs the appropriate deterministic parser, and returns
- * a preview of discovered tasks without writing anything to the database.
- *
- * This is the backend for the `POST /import/discover` endpoint (T115).
+ * Implements both steps of the import pipeline:
+ * 1. **Discovery** (read-only): accepts a local directory path, auto-detects
+ *    format, runs parsers, and returns a preview.
+ * 2. **Execution** (write): takes previewed tasks, auto-creates project/repo
+ *    scaffolding, inserts tasks, and wires up dependency edges — all in a
+ *    single atomic transaction.
  *
  * @module @factory/control-plane
  * @see T115 — Create POST /import/discover endpoint
+ * @see T116 — Create POST /import/execute endpoint
  * @see {@link @factory/infrastructure!discoverMarkdownTasks} — markdown parser
  * @see {@link @factory/infrastructure!parseJsonTasks} — JSON parser
  */
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable, Optional } from "@nestjs/common";
 import type { ImportManifest } from "@factory/schemas";
 import {
   discoverMarkdownTasks,
@@ -21,8 +22,17 @@ import {
   createNodeFileSystem,
   type FileSystem,
 } from "@factory/infrastructure";
+import { randomUUID } from "node:crypto";
 
 import * as path from "node:path";
+
+import { DATABASE_CONNECTION } from "../infrastructure/database/database.module.js";
+import type { DatabaseConnection } from "../infrastructure/database/connection.js";
+import { createProjectRepository } from "../infrastructure/repositories/project.repository.js";
+import { createRepositoryRepository } from "../infrastructure/repositories/repository.repository.js";
+import { createTaskRepository } from "../infrastructure/repositories/task.repository.js";
+import { createTaskDependencyRepository } from "../infrastructure/repositories/task-dependency.repository.js";
+import type { ExecuteRequestDto } from "./dtos/execute-request.dto.js";
 
 /**
  * Response shape for the discovery endpoint.
@@ -44,7 +54,27 @@ export interface DiscoverResponse {
 }
 
 /**
- * Service that orchestrates task discovery from local filesystem paths.
+ * Response shape for the execution endpoint.
+ *
+ * Summarises what was persisted to the database: which project and repository
+ * were used, how many tasks were created vs skipped (dedup), and any
+ * non-fatal errors encountered during dependency wiring.
+ */
+export interface ExecuteResponse {
+  /** ID of the project (created or reused). */
+  projectId: string;
+  /** ID of the repository (created or reused). */
+  repositoryId: string;
+  /** Number of tasks newly created in this import. */
+  created: number;
+  /** Number of tasks skipped because their externalRef already existed. */
+  skipped: number;
+  /** Non-fatal errors encountered (e.g. unresolved dependency refs). */
+  errors: string[];
+}
+
+/**
+ * Service that orchestrates task discovery and import execution.
  *
  * The discovery flow:
  * 1. Validate that the path exists and is a readable directory
@@ -52,16 +82,33 @@ export interface DiscoverResponse {
  * 3. Otherwise, use the markdown parser to discover `.md` files
  * 4. Derive suggested project/repository names from the directory basename
  * 5. Return a preview manifest without touching the database
+ *
+ * The execution flow:
+ * 1. Find or create a project by name
+ * 2. Find or create a repository by name within the project
+ * 3. Query existing tasks by externalRef to build a dedup skip set
+ * 4. Insert non-duplicate tasks in BACKLOG status
+ * 5. Wire up TaskDependency records from externalRef cross-references
+ * 6. Return summary counts
  */
 @Injectable()
 export class ImportService {
   private readonly fs: FileSystem;
+  private readonly conn: DatabaseConnection | null;
 
   /**
+   * @param conn Database connection for write operations (execute).
+   *   Injected from the global {@link DatabaseModule}. Optional so the
+   *   service can be instantiated without a database for discovery-only
+   *   usage and for tests that only exercise the discover path.
    * @param fileSystem Optional injected filesystem for testability.
    *   Defaults to the real Node.js filesystem.
    */
-  constructor(fileSystem?: FileSystem) {
+  constructor(
+    @Optional() @Inject(DATABASE_CONNECTION) conn?: DatabaseConnection,
+    fileSystem?: FileSystem,
+  ) {
+    this.conn = conn ?? null;
     this.fs = fileSystem ?? createNodeFileSystem();
   }
 
@@ -113,5 +160,154 @@ export class ImportService {
       suggestedRepositoryName,
       format,
     };
+  }
+
+  /**
+   * Execute an import: persist discovered tasks to the database.
+   *
+   * All writes happen in a single SQLite transaction (BEGIN IMMEDIATE).
+   * If any step fails, the entire import is rolled back — no partial data
+   * is left behind. The method is idempotent with respect to `externalRef`:
+   * tasks whose externalRef already exists in the target repository are
+   * skipped rather than duplicated.
+   *
+   * Project and repository scaffolding is automatic: if no project with the
+   * given name exists, one is created. Similarly for the repository within
+   * that project.
+   *
+   * Dependency wiring is best-effort: if a dependency's externalRef does not
+   * match any imported or existing task, a warning is emitted in the errors
+   * array but the import continues.
+   *
+   * @param request Validated execution request with tasks and project/repo names.
+   * @returns Summary with created/skipped counts and any non-fatal errors.
+   * @throws BadRequestException if no database connection is available.
+   */
+  execute(request: ExecuteRequestDto): ExecuteResponse {
+    if (!this.conn) {
+      throw new BadRequestException("Database connection is required for import execution");
+    }
+
+    return this.conn.writeTransaction((db) => {
+      const projectRepo = createProjectRepository(db);
+      const repoRepo = createRepositoryRepository(db);
+      const taskRepo = createTaskRepository(db);
+      const depRepo = createTaskDependencyRepository(db);
+
+      // ── 1. Find or create project ────────────────────────────────────
+      let project = projectRepo.findByName(request.projectName);
+      if (!project) {
+        project = projectRepo.create({
+          projectId: randomUUID(),
+          name: request.projectName,
+          owner: "imported",
+        });
+      }
+
+      // ── 2. Find or create repository within the project ──────────────
+      const repoName = request.repositoryName ?? request.projectName;
+      const existingRepos = repoRepo.findByProjectId(project.projectId);
+      let repository = existingRepos.find((r) => r.name === repoName);
+      if (!repository) {
+        const remoteUrl = request.repositoryUrl ?? `file://${request.path}`;
+        repository = repoRepo.create({
+          repositoryId: randomUUID(),
+          projectId: project.projectId,
+          name: repoName,
+          remoteUrl,
+          defaultBranch: "main",
+          localCheckoutStrategy: "worktree",
+          status: "active",
+        });
+      }
+
+      // ── 3. Build dedup set from existing tasks ───────────────────────
+      const existingTasks = taskRepo.findByRepositoryId(repository.repositoryId);
+      const existingExternalRefs = new Set<string>();
+      const externalRefToTaskId = new Map<string, string>();
+
+      for (const t of existingTasks) {
+        if (t.externalRef) {
+          existingExternalRefs.add(t.externalRef);
+          externalRefToTaskId.set(t.externalRef, t.taskId);
+        }
+      }
+
+      // ── 4. Insert tasks ──────────────────────────────────────────────
+      let created = 0;
+      let skipped = 0;
+      const errors: string[] = [];
+
+      for (const importedTask of request.tasks) {
+        if (importedTask.externalRef && existingExternalRefs.has(importedTask.externalRef)) {
+          skipped++;
+          continue;
+        }
+
+        const taskId = randomUUID();
+        taskRepo.create({
+          taskId,
+          repositoryId: repository.repositoryId,
+          title: importedTask.title,
+          description: importedTask.description ?? null,
+          taskType: importedTask.taskType,
+          priority: importedTask.priority ?? "medium",
+          source: "automated",
+          status: "BACKLOG",
+          externalRef: importedTask.externalRef ?? null,
+          acceptanceCriteria: importedTask.acceptanceCriteria ?? null,
+          definitionOfDone: importedTask.definitionOfDone ?? null,
+          estimatedSize: importedTask.estimatedSize ?? null,
+          riskLevel: importedTask.riskLevel ?? null,
+          suggestedFileScope: importedTask.suggestedFileScope ?? null,
+        });
+
+        if (importedTask.externalRef) {
+          externalRefToTaskId.set(importedTask.externalRef, taskId);
+        }
+        created++;
+      }
+
+      // ── 5. Wire dependency edges ─────────────────────────────────────
+      for (const importedTask of request.tasks) {
+        if (!importedTask.dependencies?.length || !importedTask.externalRef) continue;
+
+        const taskId = externalRefToTaskId.get(importedTask.externalRef);
+        if (!taskId) continue;
+
+        for (const depRef of importedTask.dependencies) {
+          const depTaskId = externalRefToTaskId.get(depRef);
+          if (!depTaskId) {
+            errors.push(
+              `Dependency "${depRef}" for task "${importedTask.externalRef}" not found — skipped`,
+            );
+            continue;
+          }
+
+          try {
+            depRepo.create({
+              taskDependencyId: randomUUID(),
+              taskId,
+              dependsOnTaskId: depTaskId,
+              dependencyType: "blocks",
+              isHardBlock: 1,
+            });
+          } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            errors.push(
+              `Failed to create dependency ${importedTask.externalRef} → ${depRef}: ${msg}`,
+            );
+          }
+        }
+      }
+
+      return {
+        projectId: project.projectId,
+        repositoryId: repository.repositoryId,
+        created,
+        skipped,
+        errors,
+      };
+    });
   }
 }

@@ -101,7 +101,7 @@ See [index-archive.md](index-archive.md) for the 21 completed epics: E001–E008
 | [T113](tasks/T113-build-markdown-parser.md)     | Build deterministic markdown task parser  | P0       | feature       | pending |
 | [T114](tasks/T114-build-json-parser.md)         | Build JSON/backlog.json task parser       | P1       | feature       | pending |
 | [T115](tasks/T115-import-discovery-endpoint.md) | Create POST /import/discover endpoint     | P0       | feature       | done    |
-| [T116](tasks/T116-import-execute-endpoint.md)   | Create POST /import/execute endpoint      | P0       | feature       | pending |
+| [T116](tasks/T116-import-execute-endpoint.md)   | Create POST /import/execute endpoint      | P0       | feature       | done    |
 | [T117](tasks/T117-import-api-hooks.md)          | Create TanStack Query import hooks        | P1       | feature       | pending |
 | [T118](tasks/T118-import-dialog-component.md)   | Build Import Tasks multi-step dialog      | P1       | feature       | pending |
 | [T123](tasks/T123-import-format-docs.md)        | Write task format reference documentation | P2       | documentation | pending |
@@ -197,10 +197,10 @@ Pending tasks whose dependencies are all satisfied (can start immediately):
 - [T131](tasks/T131-reassign-pool-action.md): Add Reassign Pool operator action to Task detail (E025)
 - [T150](tasks/T150-dashboard-project-selector.md): Add multi-project filter to dashboard (E027)
 - [T123](tasks/T123-import-format-docs.md): Write task format reference documentation (E023)
+- [T117](tasks/T117-import-api-hooks.md): Create TanStack Query import hooks (E023)
 
 ### High-Priority (P0) Pending Tasks
 
-- [T116](tasks/T116-import-execute-endpoint.md): Create POST /import/execute endpoint (E023)
 - [T142](tasks/T142-init-project-detection.md): Auto-detect project metadata (E026)
 - [T143](tasks/T143-init-interactive-flow.md): Build init interactive flow (E026)
 - [T145](tasks/T145-start-command.md): Build factory start command (E027)

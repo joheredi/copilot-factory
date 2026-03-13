@@ -1,5 +1,27 @@
 # Progress Log
 
+## T116: Create POST /import/execute endpoint — DONE
+
+**What was done:**
+
+- Added `POST /import/execute` endpoint to the import controller
+- Added `execute()` method to `ImportService` with full atomic transaction
+- Created `ExecuteRequestDto` with Zod 4 schema (separate from Zod 3 `@factory/schemas`)
+- Updated `ImportModule` docs and `ImportController` to expose both discover and execute
+
+**Key patterns:**
+
+- Single `writeTransaction` wraps all writes (project, repo, tasks, deps) for atomicity
+- Find-or-create for project (by name) and repository (by name within project)
+- Dedup via `externalRef` — skips tasks whose externalRef already exists in the repo
+- Dependency wiring is best-effort: unresolved refs emit warnings, don't fail import
+- Tasks created in `BACKLOG` status with `source: "automated"`
+- Uses repository factory functions inside the transaction (not NestJS services)
+
+**Zod version note:** `apps/control-plane` uses Zod 4 while `@factory/schemas` uses Zod 3. The execute DTO defines its own imported task schema using Zod 4 to avoid cross-version type incompatibilities. Both schemas mirror the same fields.
+
+**Tests added:** 10 integration tests with in-memory SQLite covering first import, re-import dedup, dependency resolution, unresolved deps, mixed imports, project/repo reuse, custom names, and tasks without externalRef.
+
 ## T143: Build init interactive flow and registration — DONE
 
 **What was done:**

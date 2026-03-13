@@ -141,7 +141,7 @@ describe("ImportService", () => {
 
   beforeEach(() => {
     fs = new FakeFileSystem();
-    service = new ImportService(fs);
+    service = new ImportService(undefined, fs);
   });
 
   /**

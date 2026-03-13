@@ -4,16 +4,18 @@
  * Tests verify that the controller correctly delegates to ImportService
  * and passes through the request parameters. The controller is thin —
  * business logic lives in the service — so these tests focus on:
- * 1. Correct delegation of path and pattern to the service
- * 2. Return value passthrough from service to HTTP response
+ * 1. Correct delegation of path and pattern to the service (discover)
+ * 2. Correct delegation of execution request to the service (execute)
+ * 3. Return value passthrough from service to HTTP response
  *
  * @module @factory/control-plane
  * @see T115 — Create POST /import/discover endpoint
+ * @see T116 — Create POST /import/execute endpoint
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ImportController } from "./import.controller.js";
-import type { DiscoverResponse } from "./import.service.js";
+import type { DiscoverResponse, ExecuteResponse } from "./import.service.js";
 
 /**
  * Creates a fake discover response for testing.
@@ -40,15 +42,34 @@ function fakeDiscoverResponse(overrides?: Partial<DiscoverResponse>): DiscoverRe
   };
 }
 
+/**
+ * Creates a fake execute response for testing.
+ *
+ * Provides a complete, valid response object that mimics what the service
+ * would return from the execute method.
+ */
+function fakeExecuteResponse(overrides?: Partial<ExecuteResponse>): ExecuteResponse {
+  return {
+    projectId: "proj-123",
+    repositoryId: "repo-456",
+    created: 5,
+    skipped: 2,
+    errors: [],
+    ...overrides,
+  };
+}
+
 describe("ImportController", () => {
   let controller: ImportController;
   let service: {
     discover: ReturnType<typeof vi.fn>;
+    execute: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
     service = {
       discover: vi.fn(),
+      execute: vi.fn(),
     };
     controller = new ImportController(service as never);
   });
@@ -130,5 +151,43 @@ describe("ImportController", () => {
     await expect(controller.discover({ path: "/nonexistent" })).rejects.toThrow(
       "Path does not exist",
     );
+  });
+
+  /**
+   * Validates that the execute endpoint delegates to service.execute
+   * with the full DTO and returns the result unmodified.
+   */
+  it("should call service.execute with the request DTO", () => {
+    const response = fakeExecuteResponse();
+    service.execute.mockReturnValue(response);
+
+    const dto = {
+      path: "/test/project",
+      tasks: [{ title: "Task A", taskType: "feature" as const, priority: "medium" as const }],
+      projectName: "my-project",
+    };
+
+    const result = controller.execute(dto as never);
+
+    expect(service.execute).toHaveBeenCalledWith(dto);
+    expect(result).toEqual(response);
+  });
+
+  /**
+   * Validates that execution errors propagate to the controller caller.
+   * For example, if the database is unavailable or a constraint fails.
+   */
+  it("should propagate execute errors", () => {
+    service.execute.mockImplementation(() => {
+      throw new Error("Database unavailable");
+    });
+
+    const dto = {
+      path: "/test/project",
+      tasks: [{ title: "Task A", taskType: "feature" as const, priority: "medium" as const }],
+      projectName: "my-project",
+    };
+
+    expect(() => controller.execute(dto as never)).toThrow("Database unavailable");
   });
 });

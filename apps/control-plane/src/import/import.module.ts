@@ -1,13 +1,14 @@
 /**
  * NestJS module for task import functionality.
  *
- * Provides the import discovery endpoint (`POST /import/discover`) that
- * scans local directories for task files and returns a preview. The module
- * is self-contained — it does not depend on the database module since
- * discovery is read-only.
+ * Provides the import discovery endpoint (`POST /import/discover`) and
+ * the import execution endpoint (`POST /import/execute`). The execution
+ * endpoint requires the database connection, which is provided by the
+ * global {@link DatabaseModule}.
  *
  * @module @factory/control-plane
  * @see T115 — Create POST /import/discover endpoint
+ * @see T116 — Create POST /import/execute endpoint
  */
 import { Module } from "@nestjs/common";
 
@@ -17,8 +18,9 @@ import { ImportService } from "./import.service.js";
 /**
  * Module that owns task import operations.
  *
- * Currently provides only the discovery endpoint. The execution endpoint
- * (T116) will be added in a future task and will require DatabaseModule.
+ * Provides both discovery (read-only preview) and execution (database write)
+ * endpoints. The database connection is injected from the global
+ * {@link DatabaseModule} — no explicit import is needed.
  */
 @Module({
   controllers: [ImportController],
