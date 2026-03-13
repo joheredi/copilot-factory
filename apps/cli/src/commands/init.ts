@@ -67,6 +67,8 @@ export interface InitResult {
   markerPath: string;
   /** Number of tasks imported (0 if skipped or no tasks found). */
   tasksImported: number;
+  /** Starter configuration result, or `null` if skipped. */
+  starterConfig: StarterConfigResult | null;
 }
 
 /**
@@ -271,6 +273,19 @@ export async function runInit(cwd: string, deps: InitDeps = {}): Promise<InitRes
         importCount = await handleTaskImport(db, actualRepositoryId, promptFn, deps, log);
       }
 
+      // ── Step 6.5: Optional starter configuration ───────────────────────
+      let starterConfig: StarterConfigResult | null = null;
+      const setupAnswer = await promptFn(
+        "  ? Set up starter configuration? (pools, profiles, policies) [y/N]: ",
+      );
+      if (setupAnswer.trim().toLowerCase() === "y") {
+        starterConfig = setupStarterConfiguration(db);
+        log(
+          `  ✅ Created ${starterConfig.poolsCreated} worker pool(s), ` +
+            `${starterConfig.profilesCreated} profile(s), and default policy set`,
+        );
+      }
+
       // ── Step 7: Write marker file ──────────────────────────────────────
       const factoryHome = factoryHomeFn();
       const marker: MarkerFile = {
@@ -291,6 +306,12 @@ export async function runInit(cwd: string, deps: InitDeps = {}): Promise<InitRes
       if (importCount > 0) {
         log(`  Tasks:      ${importCount} imported`);
       }
+      if (starterConfig) {
+        log(
+          `  Config:     ${starterConfig.poolsCreated} pools, ` +
+            `${starterConfig.profilesCreated} profiles, default policy`,
+        );
+      }
       log(`  Marker:     ${markerPath}`);
       log("");
       log("  Next steps:");
@@ -303,6 +324,7 @@ export async function runInit(cwd: string, deps: InitDeps = {}): Promise<InitRes
         factoryHome,
         markerPath,
         tasksImported: importCount,
+        starterConfig,
       };
     } finally {
       db.close();
@@ -703,6 +725,147 @@ async function loadDefaultDiscoverer(
       return parseJsonTasks(backlogJsonPath, fs);
     }
     return discoverMarkdownTasks(resolvedPath, fs, classify);
+  };
+}
+
+/**
+ * Result of setting up starter configuration.
+ */
+export interface StarterConfigResult {
+  /** Number of worker pools created. */
+  poolsCreated: number;
+  /** Number of agent profiles created. */
+  profilesCreated: number;
+  /** Whether a policy set was created. */
+  policySetCreated: boolean;
+}
+
+/**
+ * Sets up a starter configuration with default pools, profiles, and policies.
+ *
+ * Creates a sensible V1 baseline that the operator can tweak through the UI:
+ * - 1 default policy set with review, merge, validation, security, and budget policies
+ * - 3 worker pools (developer, reviewer, lead-reviewer) with copilot-cli runtime
+ * - 3 agent profiles linking each pool to the default policy set
+ *
+ * Concurrency is tuned so 3 dev tasks can run in parallel, with reviewer
+ * throughput matching dev output and lead review handling bursts via queuing.
+ *
+ * All inserts happen within the caller's transaction — no partial writes.
+ *
+ * @param db - Open better-sqlite3 database connection.
+ * @returns Summary of what was created.
+ * @internal
+ */
+export function setupStarterConfiguration(db: Database.Database): StarterConfigResult {
+  const policySetId = randomUUID();
+  const devPoolId = randomUUID();
+  const reviewerPoolId = randomUUID();
+  const leadReviewerPoolId = randomUUID();
+
+  // ── 1. Default policy set ──────────────────────────────────────────────
+  const insertPolicy = db.prepare(
+    `INSERT INTO policy_set (
+       policy_set_id, name, version,
+       scheduling_policy_json, review_policy_json, merge_policy_json,
+       security_policy_json, validation_policy_json, budget_policy_json,
+       created_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, unixepoch())`,
+  );
+
+  insertPolicy.run(
+    policySetId,
+    "default",
+    "1.0.0",
+    JSON.stringify({ priority_weight: 1.0, starvation_prevention: true }),
+    JSON.stringify({
+      max_review_rounds: 3,
+      required_reviewer_types: ["general"],
+      optional_reviewer_types: ["security", "performance"],
+      lead_reviewer_required: true,
+    }),
+    JSON.stringify({ strategy: "squash", require_linear_history: true }),
+    JSON.stringify({
+      allowed_commands: [
+        "npm",
+        "npx",
+        "pnpm",
+        "node",
+        "tsc",
+        "eslint",
+        "prettier",
+        "vitest",
+        "jest",
+        "git",
+      ],
+      network_access: "restricted",
+    }),
+    JSON.stringify({
+      required_checks: ["lint", "typecheck", "unit_tests"],
+      optional_checks: ["integration_tests", "build"],
+    }),
+    JSON.stringify({ token_limit: 50000, cost_cap_usd: 10.0 }),
+  );
+
+  // ── 2. Worker pools ────────────────────────────────────────────────────
+  const insertPool = db.prepare(
+    `INSERT INTO worker_pool (
+       worker_pool_id, name, pool_type, provider, runtime, model,
+       max_concurrency, default_timeout_sec, enabled,
+       created_at, updated_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, unixepoch(), unixepoch())`,
+  );
+
+  const pools = [
+    { id: devPoolId, name: "Developer Pool", type: "developer", concurrency: 3, timeout: 3600 },
+    { id: reviewerPoolId, name: "Reviewer Pool", type: "reviewer", concurrency: 3, timeout: 1800 },
+    {
+      id: leadReviewerPoolId,
+      name: "Lead Reviewer Pool",
+      type: "lead-reviewer",
+      concurrency: 2,
+      timeout: 1800,
+    },
+  ];
+
+  for (const pool of pools) {
+    insertPool.run(
+      pool.id,
+      pool.name,
+      pool.type,
+      "copilot",
+      "copilot-cli",
+      null,
+      pool.concurrency,
+      pool.timeout,
+    );
+  }
+
+  // ── 3. Agent profiles ──────────────────────────────────────────────────
+  const insertProfile = db.prepare(
+    `INSERT INTO agent_profile (
+       agent_profile_id, pool_id,
+       tool_policy_id, command_policy_id, review_policy_id,
+       validation_policy_id, budget_policy_id
+     ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  );
+
+  for (const pool of pools) {
+    insertProfile.run(
+      randomUUID(),
+      pool.id,
+      policySetId,
+      policySetId,
+      policySetId,
+      policySetId,
+      policySetId,
+    );
+  }
+
+  return {
+    poolsCreated: pools.length,
+    profilesCreated: pools.length,
+    policySetCreated: true,
   };
 }
 

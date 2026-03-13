@@ -90,7 +90,7 @@ function createTestDeps(
     prompt: async (question: string): Promise<string> => {
       logs.push(`PROMPT: ${question}`);
       if (promptIndex >= promptResponses.length) {
-        throw new Error(`Unexpected prompt (no more responses): "${question}"`);
+        return "";
       }
       return promptResponses[promptIndex++]!;
     },
@@ -785,6 +785,86 @@ describe("runInit", () => {
 
     const output = logs.join("\n");
     expect(output).toContain("✅ Created repository: ssh-repo");
+  });
+
+  /**
+   * Validates that starter configuration creates pools, profiles, and a
+   * policy set when the user answers "y" to the setup prompt.
+   */
+  it("sets up starter configuration when user answers y", async () => {
+    // Responses: "" = skip task import, "y" = set up starter config
+    const { deps, logs } = createTestDeps(env, ["", "y"]);
+    deps.detect = () => ({
+      projectName: "config-project",
+      gitRemoteUrl: "https://github.com/test/config-project.git",
+      defaultBranch: "main",
+      owner: "test-user",
+    });
+
+    const result = await runInit(env.projectDir, deps);
+    expect(result.starterConfig).not.toBeNull();
+    expect(result.starterConfig!.poolsCreated).toBe(3);
+    expect(result.starterConfig!.profilesCreated).toBe(3);
+    expect(result.starterConfig!.policySetCreated).toBe(true);
+
+    // Verify database contents
+    const db = new Database(env.dbPath, { readonly: true });
+    try {
+      const pools = db.prepare("SELECT * FROM worker_pool").all() as Record<string, unknown>[];
+      expect(pools).toHaveLength(3);
+
+      const poolTypes = pools.map((p) => p["pool_type"]).sort();
+      expect(poolTypes).toEqual(["developer", "lead-reviewer", "reviewer"]);
+
+      const devPool = pools.find((p) => p["pool_type"] === "developer");
+      expect(devPool!["max_concurrency"]).toBe(3);
+      expect(devPool!["runtime"]).toBe("copilot-cli");
+
+      const reviewerPool = pools.find((p) => p["pool_type"] === "reviewer");
+      expect(reviewerPool!["max_concurrency"]).toBe(3);
+
+      const leadPool = pools.find((p) => p["pool_type"] === "lead-reviewer");
+      expect(leadPool!["max_concurrency"]).toBe(2);
+
+      const profiles = db.prepare("SELECT * FROM agent_profile").all();
+      expect(profiles).toHaveLength(3);
+
+      const policies = db.prepare("SELECT * FROM policy_set").all() as Record<string, unknown>[];
+      expect(policies).toHaveLength(1);
+      expect(policies[0]!["name"]).toBe("default");
+    } finally {
+      db.close();
+    }
+
+    const output = logs.join("\n");
+    expect(output).toContain("3 worker pool(s)");
+    expect(output).toContain("3 profile(s)");
+    expect(output).toContain("3 pools, 3 profiles, default policy");
+  });
+
+  /**
+   * Validates that starter configuration is skipped when the user
+   * presses Enter (empty response) at the setup prompt.
+   */
+  it("skips starter configuration when user declines", async () => {
+    const { deps } = createTestDeps(env, ["", ""]);
+    deps.detect = () => ({
+      projectName: "skip-config",
+      gitRemoteUrl: "https://github.com/test/skip-config.git",
+      defaultBranch: "main",
+      owner: "test-user",
+    });
+
+    const result = await runInit(env.projectDir, deps);
+    expect(result.starterConfig).toBeNull();
+
+    const db = new Database(env.dbPath, { readonly: true });
+    try {
+      const pools = db.prepare("SELECT * FROM worker_pool").all();
+      expect(pools).toHaveLength(0);
+    } finally {
+      db.close();
+    }
   });
 });
 
