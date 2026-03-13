@@ -18,11 +18,12 @@
  * @see T150 — Add project name badges to task rows
  */
 
-import { Filter, Plus, Upload } from "lucide-react";
+import { Filter, List, Plus, Upload } from "lucide-react";
 import { useState } from "react";
 import { useTasks } from "../../api/hooks/use-tasks.js";
 import { Button } from "../../components/ui/button.js";
 import { Card, CardContent } from "../../components/ui/card.js";
+import { BatchCreateDialog } from "./components/BatchCreateDialog.js";
 import { CreateTaskDialog } from "./components/CreateTaskDialog.js";
 import { ImportTasksDialog } from "./components/ImportTasksDialog.js";
 import { PaginationControls } from "./components/pagination-controls.js";
@@ -36,6 +37,7 @@ export default function TasksPage() {
   const [showFilters, setShowFilters] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showBatchDialog, setShowBatchDialog] = useState(false);
 
   const { data, isLoading, isError } = useTasks(filterState.params);
   const repositoryNames = useRepositoryNameMap();
@@ -61,6 +63,16 @@ export default function TasksPage() {
           >
             <Upload className="h-4 w-4" />
             Import Tasks
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => setShowBatchDialog(true)}
+            data-testid="batch-create-button"
+          >
+            <List className="h-4 w-4" />
+            Create Batch
           </Button>
           <Button
             size="sm"
@@ -89,6 +101,9 @@ export default function TasksPage() {
 
       {/* Import Tasks dialog */}
       <ImportTasksDialog open={showImportDialog} onOpenChange={setShowImportDialog} />
+
+      {/* Batch Create dialog */}
+      <BatchCreateDialog open={showBatchDialog} onOpenChange={setShowBatchDialog} />
 
       {/* Error state */}
       {isError && (

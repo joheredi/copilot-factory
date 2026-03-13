@@ -1,5 +1,37 @@
 # Progress Log
 
+## T130 — Add Batch Task Import UI to Tasks page (2026-03-13)
+
+### What was done
+
+- Created `BatchCreateDialog.tsx` at `apps/web-ui/src/features/tasks/components/`
+  - Monospace JSON textarea for pasting an array of CreateTaskInput objects
+  - "Validate" button runs client-side validation: JSON syntax, array check, per-item required field + enum validation
+  - Success preview shows task count ("3 tasks ready to create")
+  - Validation errors shown as itemized list with per-task error labels (e.g., "Task 1: missing title")
+  - "Create Tasks" button submits validated batch via `useCreateTaskBatch` hook
+  - Create button label dynamically shows task count after validation
+  - Dialog prevents closing during pending mutations, resets state on close
+  - Exported `validateJsonInput` and `validateTaskItem` for unit testing
+- Created `BatchCreateDialog.test.tsx` — 29 tests covering:
+  - Unit tests: `validateTaskItem` (8 tests) and `validateJsonInput` (6 tests)
+  - Component tests (15): rendering, button states, JSON validation errors, missing field errors,
+    success preview, singular/plural grammar, validation clearing on edit, submission flow,
+    API error display, cancel, non-array input, submit button label
+- Updated `page.tsx` — added "Create Batch" button with List icon between Import Tasks and Create Task
+
+### Patterns
+
+- Same dialog pattern as CreateTaskDialog: `{ open, onOpenChange }` props, useState form state
+- Client-side validation mirrors server-side Zod schema constraints (required fields, enum values, max lengths)
+- Validation functions exported separately for direct unit testing outside React context
+- `data-testid` attributes on all interactive elements matching codebase convention
+
+### Notes for next loop
+
+- E025 is now complete (8/8 tasks done)
+- 3 pending tasks remain (all P2 documentation): T151 (CLI hero docs), T122 (CLI README), T123 (import format docs)
+
 ## T128 — Add Create Agent Profile dialog to Pool detail
 
 ### Task
