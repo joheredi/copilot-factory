@@ -566,8 +566,9 @@ export function extractCheckboxItems(content: string): string[] {
  */
 export function extractDependencyRefs(raw: string): string[] {
   const refs: string[] = [];
-  // Match [TXXX](...) markdown links or standalone TXXX references
-  const linkPattern = /\[(T\d+)\]/g;
+
+  // Match markdown links: [REF](...) — any alphanumeric ref inside brackets
+  const linkPattern = /\[([A-Za-z]+[\d][\w-]*)\]/g;
   let match: RegExpExecArray | null;
 
   match = linkPattern.exec(raw);
@@ -576,12 +577,18 @@ export function extractDependencyRefs(raw: string): string[] {
     match = linkPattern.exec(raw);
   }
 
-  // If no markdown links found, try plain comma-separated refs
+  // If no markdown links found, try plain comma/space-separated refs.
+  // Matches identifiers like T001, M12-006, M8, GH#123, JIRA-42.
+  // Strips parenthetical annotations: "M12-006 (description)" → "M12-006"
   if (refs.length === 0) {
-    const plainPattern = /\b(T\d+)\b/g;
+    const plainPattern = /\b([A-Za-z]+[\d][\w-]*)\b/g;
     match = plainPattern.exec(raw);
     while (match !== null) {
-      refs.push(match[1]!);
+      const ref = match[1]!;
+      // Skip common English words that look like refs (e.g., "a1", "is2")
+      if (ref.length >= 2) {
+        refs.push(ref);
+      }
       match = plainPattern.exec(raw);
     }
   }
@@ -596,14 +603,16 @@ export function extractDependencyRefs(raw: string): string[] {
 /**
  * Extract the task external reference from a filename.
  *
- * Matches patterns like `T045` from `T045-copilot-cli-adapter.md`.
+ * Matches patterns like `T045` from `T045-copilot-cli-adapter.md`,
+ * `M12-005` from `M12-005-llm-provider.md`, or any alphanumeric
+ * prefix followed by digits (with optional sub-numbering).
  *
  * @param filename - Basename of the task file.
  * @returns External reference string, or `undefined` if no pattern matched.
  */
 export function extractExternalRef(filename: string): string | undefined {
-  const match = filename.match(/^(T\d+)/i);
-  return match ? match[1]!.toUpperCase() : undefined;
+  const match = filename.match(/^([A-Za-z]+\d[\w-]*?)(?=-[a-zA-Z]|\.md$)/);
+  return match ? match[1]! : undefined;
 }
 
 // ---------------------------------------------------------------------------
