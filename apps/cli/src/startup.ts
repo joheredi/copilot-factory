@@ -28,7 +28,7 @@ import type { TracingHandle } from "@factory/observability";
 
 import { createApp, configureStaticServing } from "@factory/control-plane";
 import { runMigrations } from "./migrate.js";
-import { ensureFactoryHome, getDbPath } from "./paths.js";
+import { ensureFactoryHome, getDbPath, getWorkspacesRoot, getArtifactsRoot } from "./paths.js";
 
 /** CLI version — kept in sync with package.json. */
 export const VERSION = "0.1.0";
@@ -263,9 +263,13 @@ export async function startServer(
     console.log("  ✅ Database is up to date");
   }
 
-  // Step 3: Set DATABASE_PATH env var for the control-plane NestJS modules
+  // Step 3: Set env vars for the control-plane NestJS modules
   process.env["DATABASE_PATH"] = options.dbPath;
+  process.env["WORKSPACES_ROOT"] = getWorkspacesRoot();
+  process.env["ARTIFACTS_ROOT"] = getArtifactsRoot();
   if (options.verbose) console.log(`  [verbose] DATABASE_PATH=${options.dbPath}`);
+  if (options.verbose) console.log(`  [verbose] WORKSPACES_ROOT=${process.env["WORKSPACES_ROOT"]}`);
+  if (options.verbose) console.log(`  [verbose] ARTIFACTS_ROOT=${process.env["ARTIFACTS_ROOT"]}`);
 
   // Step 4: Initialize tracing (console-only for CLI, no OTLP exporter)
   const tracingHandle: TracingHandle = initTracing({

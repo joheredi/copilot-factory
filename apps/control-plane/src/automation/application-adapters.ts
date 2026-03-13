@@ -8,6 +8,9 @@
  * @module @factory/control-plane/automation
  */
 
+import { resolve, join } from "node:path";
+import { mkdirSync } from "node:fs";
+
 import {
   VersionConflictError,
   type JobQueueTransactionRepositories,
@@ -517,7 +520,13 @@ function buildTaskPacket(task: {
  *
  * @see {@link file://docs/backlog/tasks/T134-worker-dispatch-adapter.md}
  */
-export function createWorkerDispatchUnitOfWork(conn: DatabaseConnection): WorkerDispatchUnitOfWork {
+export function createWorkerDispatchUnitOfWork(
+  conn: DatabaseConnection,
+  artifactsRoot?: string,
+): WorkerDispatchUnitOfWork {
+  const resolvedArtifactsRoot = resolve(
+    artifactsRoot ?? process.env["ARTIFACTS_ROOT"] ?? "./data/artifacts",
+  );
   return {
     runInTransaction<T>(fn: (repos: WorkerDispatchTransactionRepositories) => T): T {
       const taskRepo = createTaskRepository(conn.db);
@@ -545,11 +554,18 @@ export function createWorkerDispatchUnitOfWork(conn: DatabaseConnection): Worker
 
             const taskPacket = buildTaskPacket(task);
 
+            // Build absolute paths for artifacts and ensure directories exist
+            const artifactRoot = join(resolvedArtifactsRoot, task.taskId);
+            const packetInputPath = join(artifactRoot, "packets", "input");
+            const policySnapshotPath = join(artifactRoot, "policy-snapshot.json");
+
+            mkdirSync(packetInputPath, { recursive: true });
+
             const workspacePaths: SupervisorWorkspacePaths = {
               worktreePath: `worktrees/${task.taskId}`,
-              artifactRoot: `artifacts/${task.taskId}`,
-              packetInputPath: `artifacts/${task.taskId}/packets/input`,
-              policySnapshotPath: `artifacts/${task.taskId}/policy-snapshot.json`,
+              artifactRoot,
+              packetInputPath,
+              policySnapshotPath,
             };
 
             const timeBudgetSeconds = DEFAULT_TIME_BUDGET_SECONDS;

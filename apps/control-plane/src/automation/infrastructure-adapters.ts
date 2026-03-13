@@ -54,6 +54,13 @@ export interface InfrastructureAdapterConfig {
   readonly workspacesRoot: string;
 
   /**
+   * Root directory for task artifacts (packets, logs, snapshots).
+   * Each task gets a subdirectory under this path.
+   * Defaults to `./data/artifacts`.
+   */
+  readonly artifactsRoot: string;
+
+  /**
    * Optional Copilot CLI configuration overrides.
    * If omitted, defaults to the standard `gh copilot` binary.
    */
@@ -206,7 +213,8 @@ export function createRuntimeAdapterBridge(adapter: CopilotCliAdapter): RuntimeA
  */
 export function resolveInfrastructureConfig(): InfrastructureAdapterConfig {
   const workspacesRoot = process.env["WORKSPACES_ROOT"] ?? "./data/workspaces";
-  return { workspacesRoot };
+  const artifactsRoot = process.env["ARTIFACTS_ROOT"] ?? "./data/artifacts";
+  return { workspacesRoot, artifactsRoot };
 }
 
 /**
