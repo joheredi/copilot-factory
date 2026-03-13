@@ -17,12 +17,14 @@
  */
 
 import { buildProgram, resolveOptions, startServer } from "./startup.js";
+import { setupShutdownHandlers, childPids } from "./shutdown.js";
 
 /**
  * CLI entry point — parses arguments and starts the server.
  *
- * Wires up SIGINT/SIGTERM handlers for graceful shutdown and exits
- * with code 1 on any unhandled startup error.
+ * Wires up two-phase SIGINT/SIGTERM handlers for graceful shutdown:
+ * first signal drains active workers and shuts down cleanly; second
+ * signal force-kills tracked child processes and exits immediately.
  */
 async function main(): Promise<void> {
   const program = buildProgram();
@@ -31,22 +33,11 @@ async function main(): Promise<void> {
   const options = resolveOptions(program);
   const { shutdown } = await startServer(options);
 
-  // Graceful shutdown on signals
-  let shuttingDown = false;
-  const handleShutdown = (): void => {
-    if (shuttingDown) return;
-    shuttingDown = true;
-    shutdown().then(
-      () => process.exit(0),
-      (err: unknown) => {
-        console.error("Error during shutdown:", err);
-        process.exit(1);
-      },
-    );
-  };
-
-  process.on("SIGINT", handleShutdown);
-  process.on("SIGTERM", handleShutdown);
+  setupShutdownHandlers({
+    shutdown,
+    dbPath: options.dbPath,
+    childPids,
+  });
 }
 
 main().catch((err: unknown) => {

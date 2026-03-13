@@ -282,3 +282,31 @@ Enhanced `apps/cli/src/startup.ts` to complete T145 acceptance criteria:
 - T147 (Two-phase shutdown) is now unblocked — depends on T145 (done)
 - T143 (Build init interactive flow) remains ready
 - T115 (Import discovery endpoint) remains ready — P0
+
+---
+
+## T147: Two-phase Ctrl+C shutdown — DONE
+
+### What was done
+
+1. Created `apps/cli/src/shutdown.ts` — standalone two-phase shutdown module:
+   - `countActiveLeases(dbPath)` — polls SQLite for active leases (STARTING, RUNNING, HEARTBEATING, COMPLETING)
+   - `drain(dbPath, timeoutMs, deps?)` — polling loop with injectable timer/counter for testability
+   - `forceKillChildren(pids)` — sends force signal to tracked PIDs, handles already-dead processes
+   - `setupShutdownHandlers(config)` — wires SIGINT/SIGTERM with two-phase logic
+   - `childPids` — module-level Set for worker supervisor to populate
+
+2. Modified `apps/cli/src/cli.ts` — replaced inline signal handlers with `setupShutdownHandlers()` call
+
+3. Created `apps/cli/src/shutdown.test.ts` — 22 unit tests covering all exported functions
+
+### Patterns used
+
+- Dependency injection for testability (ProcessHandle, injectable countLeases/sleep)
+- Read-only better-sqlite3 connection (same pattern as queryProjectCount)
+- Fake process handle with `exit()` returning `undefined as never` to avoid unhandled rejections
+
+### For next loop
+
+- Worker supervisor needs to populate `childPids` when spawning processes (future task)
+- T150 (Startup banner) and T143 (Build init interactive flow) are ready

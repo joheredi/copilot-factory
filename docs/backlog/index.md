@@ -144,7 +144,7 @@ See [index-archive.md](index-archive.md) for the 21 completed epics: E001–E008
 | ------------------------------------------------ | ------------------------------------------ | -------- | ------------- | ------- |
 | [T145](tasks/T145-start-command.md)              | Build factory start command                | P0       | feature       | done    |
 | [T146](tasks/T146-start-static-serving.md)       | Serve web-ui static files from same server | P0       | feature       | done    |
-| [T147](tasks/T147-two-phase-shutdown.md)         | Implement two-phase Ctrl+C shutdown        | P0       | feature       | pending |
+| [T147](tasks/T147-two-phase-shutdown.md)         | Implement two-phase Ctrl+C shutdown        | P0       | feature       | done    |
 | [T148](tasks/T148-startup-recovery-log.md)       | Log recovery status on startup             | P1       | feature       | pending |
 | [T149](tasks/T149-workspace-cleanup.md)          | Clean orphaned worktrees on start          | P2       | feature       | pending |
 | [T150](tasks/T150-dashboard-project-selector.md) | Add multi-project filter to dashboard      | P1       | feature       | pending |
