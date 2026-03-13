@@ -391,3 +391,15 @@ Enhanced `apps/cli/src/startup.ts` to complete T145 acceptance criteria:
 
 - Worker supervisor needs to populate `childPids` when spawning processes (future task)
 - T150 (Startup banner) and T143 (Build init interactive flow) are ready
+
+---
+
+## T144 — Make init safe to re-run (2026-03-13)
+
+- Made `factory init` fully idempotent by reading `.copilot-factory.json` marker file at startup
+- If marker file exists, uses stored projectId/repositoryId to find existing DB records and UPDATE metadata instead of INSERT
+- If marker file is missing but DB has the project (by name), falls through to ON CONFLICT path which also updates metadata
+- Repository re-init updates name, remote_url, and default_branch
+- Added 5 new tests: metadata update on re-init, repository update, re-init without marker, task dedup on re-import, and the existing re-init test was updated to check for "updating" message
+- All 4,390 tests pass, lint clean
+- Pattern: `insertProject()` and `insertRepository()` extracted as helper functions for cleaner control flow

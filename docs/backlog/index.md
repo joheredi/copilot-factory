@@ -64,7 +64,7 @@ The Autonomous Software Factory is a local-first orchestration platform for soft
 | [E023](epics/E023-task-import.md)       | Task Import Pipeline                 | E001, E002, E017, E019, E020 | 8           | 5    | 3       |
 | [E024](epics/E024-cli-package.md)       | CLI Package & Single-Command Startup | E001, E017, E019             | 4           | 0    | 4       |
 | [E025](epics/E025-web-ui-forms.md)      | Web UI Creation & Editing Forms      | E019, E020, E021             | 8           | 1    | 7       |
-| [E026](epics/E026-cli-init.md)          | CLI Init & Project Onboarding        | E001, E002, E023             | 5           | 4    | 1       |
+| [E026](epics/E026-cli-init.md)          | CLI Init & Project Onboarding        | E001, E002, E023             | 5           | 5    | 0       |
 | [E027](epics/E027-factory-lifecycle.md) | Factory Lifecycle & Recovery         | E024, E026                   | 7           | 3    | 4       |
 
 ### Completed Epics (archived)
@@ -130,13 +130,13 @@ See [index-archive.md](index-archive.md) for the 21 completed epics: E001–E008
 
 ### E026: CLI Init & Project Onboarding
 
-| ID                                            | Title                                        | Priority | Type       | Status  |
-| --------------------------------------------- | -------------------------------------------- | -------- | ---------- | ------- |
-| [T140](tasks/T140-global-data-dir.md)         | Establish ~/.copilot-factory/ convention     | P0       | foundation | done    |
-| [T141](tasks/T141-programmatic-migrations.md) | Run Drizzle migrations from code             | P0       | foundation | done    |
-| [T142](tasks/T142-init-project-detection.md)  | Auto-detect project metadata in init command | P0       | feature    | done    |
-| [T143](tasks/T143-init-interactive-flow.md)   | Build init interactive flow and registration | P0       | feature    | done    |
-| [T144](tasks/T144-init-idempotent.md)         | Make init safe to re-run                     | P1       | feature    | pending |
+| ID                                            | Title                                        | Priority | Type       | Status |
+| --------------------------------------------- | -------------------------------------------- | -------- | ---------- | ------ |
+| [T140](tasks/T140-global-data-dir.md)         | Establish ~/.copilot-factory/ convention     | P0       | foundation | done   |
+| [T141](tasks/T141-programmatic-migrations.md) | Run Drizzle migrations from code             | P0       | foundation | done   |
+| [T142](tasks/T142-init-project-detection.md)  | Auto-detect project metadata in init command | P0       | feature    | done   |
+| [T143](tasks/T143-init-interactive-flow.md)   | Build init interactive flow and registration | P0       | feature    | done   |
+| [T144](tasks/T144-init-idempotent.md)         | Make init safe to re-run                     | P1       | feature    | done   |
 
 ### E027: Factory Lifecycle & Recovery
 
@@ -185,7 +185,6 @@ E027 (Factory Lifecycle) — depends on T140/T141 (from E026)
 
 Pending tasks whose dependencies are all satisfied (can start immediately):
 
-- [T144](tasks/T144-init-idempotent.md): Make init safe to re-run (E026)
 - [T148](tasks/T148-startup-recovery-log.md): Log recovery status on startup (E027)
 - [T117](tasks/T117-import-api-hooks.md): Create TanStack Query import hooks (E023)
 - [T125](tasks/T125-create-project-dialog.md): Add Create Project dialog (E025)
@@ -196,12 +195,12 @@ Pending tasks whose dependencies are all satisfied (can start immediately):
 - [T130](tasks/T130-batch-task-import-ui.md): Add Batch Task Import UI to Tasks page (E025)
 - [T131](tasks/T131-reassign-pool-action.md): Add Reassign Pool operator action to Task detail (E025)
 - [T150](tasks/T150-dashboard-project-selector.md): Add multi-project filter to dashboard (E027)
+- [T151](tasks/T151-cli-hero-docs.md): Document the CLI hero experience (E027)
 - [T122](tasks/T122-cli-readme.md): Write CLI and import documentation (E024)
 - [T123](tasks/T123-import-format-docs.md): Write task format reference documentation (E023)
 
 ### High-Priority (P1) Pending Tasks
 
-- [T144](tasks/T144-init-idempotent.md): Make init safe to re-run (E026)
 - [T148](tasks/T148-startup-recovery-log.md): Log recovery status on startup (E027)
 - [T117](tasks/T117-import-api-hooks.md): Create TanStack Query import hooks (E023)
 - [T125](tasks/T125-create-project-dialog.md): Add Create Project dialog (E025)

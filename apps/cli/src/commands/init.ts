@@ -2,23 +2,29 @@
  * Factory init command — registers a project with the factory.
  *
  * Implements the complete `factory init` interactive flow:
- * 1. Auto-detects project metadata (name, git remote, branch, owner)
- * 2. Displays detected values and prompts for any missing ones
- * 3. Ensures the factory home directory and runs DB migrations
- * 4. Creates Project and Repository records in the database
- * 5. Optionally discovers and imports tasks from a local directory
- * 6. Writes a `.copilot-factory.json` marker file to the project root
- * 7. Prints a summary with next steps
+ * 1. Checks for an existing `.copilot-factory.json` marker file
+ * 2. Auto-detects project metadata (name, git remote, branch, owner)
+ * 3. Displays detected values and prompts for any missing ones
+ * 4. Ensures the factory home directory and runs DB migrations
+ * 5. Creates or updates Project and Repository records in the database
+ * 6. Optionally discovers and imports tasks from a local directory
+ * 7. Writes/updates the `.copilot-factory.json` marker file
+ * 8. Prints a summary with next steps
+ *
+ * The init command is fully idempotent — running it multiple times on the
+ * same project updates metadata (owner, branch, etc.) without creating
+ * duplicate records. Existing task imports are deduplicated by externalRef.
  *
  * All database writes are transactional — partial writes cannot occur.
  * Ctrl+C during prompts exits cleanly without side effects.
  *
  * @see {@link file://docs/backlog/tasks/T143-init-interactive-flow.md}
+ * @see {@link file://docs/backlog/tasks/T144-init-idempotent.md}
  * @module @copilot/factory
  */
 
 import { randomUUID } from "node:crypto";
-import { writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createInterface, type Interface as ReadlineInterface } from "node:readline/promises";
 import Database from "better-sqlite3";
@@ -110,6 +116,10 @@ export interface InitDeps {
   detect?: (cwd: string) => ProjectMetadata;
   /** Override file writing (for marker file). */
   writeFile?: (path: string, content: string) => void;
+  /** Override file reading (for existing marker file). */
+  readFile?: (path: string) => string | null;
+  /** Override file existence check (for existing marker file). */
+  fileExists?: (path: string) => boolean;
   /** Override factory home directory creation. */
   ensureHome?: () => void;
   /** Override migration runner. */
@@ -146,7 +156,31 @@ export async function runInit(cwd: string, deps: InitDeps = {}): Promise<InitRes
   const dbPathFn = deps.getDbPath ?? getDbPath;
   const factoryHomeFn = deps.getFactoryHome ?? getFactoryHome;
   const writeFn = deps.writeFile ?? ((p: string, c: string) => writeFileSync(p, c, "utf-8"));
+  const readFileFn =
+    deps.readFile ??
+    ((p: string): string | null => {
+      try {
+        return readFileSync(p, "utf-8");
+      } catch {
+        return null;
+      }
+    });
+  const fileExistsFn = deps.fileExists ?? existsSync;
   const openDbFn = deps.openDb ?? ((path: string) => new Database(path));
+
+  // ── Step 0: Check for existing marker file ──────────────────────────
+  const markerPath = join(cwd, MARKER_FILENAME);
+  let existingMarker: MarkerFile | null = null;
+  if (fileExistsFn(markerPath)) {
+    const raw = readFileFn(markerPath);
+    if (raw) {
+      try {
+        existingMarker = JSON.parse(raw) as MarkerFile;
+      } catch {
+        // Corrupted marker file — ignore and proceed as fresh init.
+      }
+    }
+  }
 
   // Create readline interface upfront if no prompt function is injected.
   // Closed in the finally block to ensure cleanup on Ctrl+C.
@@ -207,14 +241,14 @@ export async function runInit(cwd: string, deps: InitDeps = {}): Promise<InitRes
       log("  ✅ Database is up to date");
     }
 
-    // ── Step 5: Create project and repository records ──────────────────
+    // ── Step 5: Create or update project and repository records ────────
     const db = openDbFn(dbPath);
     db.pragma("journal_mode = WAL");
     db.pragma("busy_timeout = 5000");
     db.pragma("foreign_keys = ON");
 
-    const projectId = randomUUID();
-    const repositoryId = gitRemoteUrl ? randomUUID() : null;
+    const projectId = existingMarker?.projectId ?? randomUUID();
+    const repositoryId = gitRemoteUrl ? (existingMarker?.repositoryId ?? randomUUID()) : null;
 
     try {
       const { actualProjectId, actualRepositoryId, tasksImported } = createRecords(db, {
@@ -224,6 +258,7 @@ export async function runInit(cwd: string, deps: InitDeps = {}): Promise<InitRes
         gitRemoteUrl,
         defaultBranch,
         repositoryId,
+        existingMarker,
         log,
         promptFn,
         deps,
@@ -242,7 +277,6 @@ export async function runInit(cwd: string, deps: InitDeps = {}): Promise<InitRes
         repositoryId: actualRepositoryId,
         factoryHome,
       };
-      const markerPath = join(cwd, MARKER_FILENAME);
       writeFn(markerPath, JSON.stringify(marker, null, 2) + "\n");
       log(`  ✅ Wrote ${MARKER_FILENAME}`);
 
@@ -290,17 +324,23 @@ interface CreateRecordsParams {
   gitRemoteUrl: string | null;
   defaultBranch: string;
   repositoryId: string | null;
+  existingMarker: MarkerFile | null;
   log: (...args: unknown[]) => void;
   promptFn: (question: string) => Promise<string>;
   deps: InitDeps;
 }
 
 /**
- * Creates project and repository records in a single transaction.
+ * Creates or updates project and repository records in a single transaction.
  *
- * Uses `ON CONFLICT (name) DO NOTHING` for the project to provide basic
- * idempotency — running init twice on the same project won't fail. If the
- * project already exists, its ID is retrieved and reused.
+ * When a `.copilot-factory.json` marker file was found, the function first
+ * tries to locate existing records by their stored IDs. If found, metadata
+ * is updated in place. If not found (e.g. the DB was reset), falls through
+ * to normal INSERT logic.
+ *
+ * Without a marker file, uses `ON CONFLICT (name) DO NOTHING` for the
+ * project to provide basic idempotency, and catches UNIQUE constraint
+ * errors for the repository.
  *
  * @param db - Open better-sqlite3 database connection.
  * @param params - Record creation parameters.
@@ -312,61 +352,194 @@ function createRecords(
   db: Database.Database,
   params: CreateRecordsParams,
 ): { actualProjectId: string; actualRepositoryId: string | null; tasksImported: number } {
-  const { projectId, trimmedName, trimmedOwner, gitRemoteUrl, defaultBranch, repositoryId, log } =
-    params;
+  const {
+    projectId,
+    trimmedName,
+    trimmedOwner,
+    gitRemoteUrl,
+    defaultBranch,
+    repositoryId,
+    existingMarker,
+    log,
+  } = params;
 
-  const insertProject = db.prepare(
-    `INSERT INTO project (project_id, name, owner, created_at, updated_at)
-     VALUES (?, ?, ?, unixepoch(), unixepoch())
-     ON CONFLICT (name) DO NOTHING`,
-  );
+  // ── Project: update or insert ─────────────────────────────────────
+  let actualProjectId: string;
 
-  const projectResult = insertProject.run(projectId, trimmedName, trimmedOwner);
-
-  let actualProjectId = projectId;
-  if (projectResult.changes === 0) {
+  if (existingMarker?.projectId) {
+    // Try to find the project by its stored ID first.
     const existing = db
-      .prepare("SELECT project_id FROM project WHERE name = ?")
-      .get(trimmedName) as { project_id: string } | undefined;
+      .prepare("SELECT project_id, name FROM project WHERE project_id = ?")
+      .get(existingMarker.projectId) as { project_id: string; name: string } | undefined;
+
     if (existing) {
+      // Update metadata on re-run.
+      db.prepare(`UPDATE project SET owner = ?, updated_at = unixepoch() WHERE project_id = ?`).run(
+        trimmedOwner,
+        existing.project_id,
+      );
       actualProjectId = existing.project_id;
-      log(`  ℹ️  Project "${trimmedName}" already exists`);
+      log(`  ℹ️  Project "${trimmedName}" already registered, updating...`);
+    } else {
+      // Marker refers to a project that no longer exists (DB was reset).
+      actualProjectId = insertProject(db, projectId, trimmedName, trimmedOwner, log);
     }
   } else {
-    log(`  ✅ Created project: ${trimmedName}`);
+    // No marker file — use INSERT with conflict handling.
+    actualProjectId = insertProject(db, projectId, trimmedName, trimmedOwner, log);
   }
 
+  // ── Repository: update or insert ──────────────────────────────────
   let actualRepositoryId = repositoryId;
+
   if (gitRemoteUrl && repositoryId) {
     const repoName = extractRepoName(gitRemoteUrl) ?? trimmedName;
-    const insertRepo = db.prepare(
-      `INSERT INTO repository (repository_id, project_id, name, remote_url, default_branch,
-                               local_checkout_strategy, status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, unixepoch(), unixepoch())`,
-    );
 
-    try {
-      insertRepo.run(
-        repositoryId,
-        actualProjectId,
-        repoName,
-        gitRemoteUrl,
-        defaultBranch,
-        "worktree",
-        "active",
-      );
-      log(`  ✅ Created repository: ${repoName}`);
-    } catch (err: unknown) {
-      if (err instanceof Error && err.message.includes("UNIQUE constraint failed")) {
-        log("  ℹ️  Repository already exists");
-        actualRepositoryId = null;
+    if (existingMarker?.repositoryId) {
+      // Try to find the repository by its stored ID first.
+      const existing = db
+        .prepare("SELECT repository_id FROM repository WHERE repository_id = ?")
+        .get(existingMarker.repositoryId) as { repository_id: string } | undefined;
+
+      if (existing) {
+        // Update metadata on re-run.
+        db.prepare(
+          `UPDATE repository SET name = ?, remote_url = ?, default_branch = ?,
+           updated_at = unixepoch() WHERE repository_id = ?`,
+        ).run(repoName, gitRemoteUrl, defaultBranch, existing.repository_id);
+        actualRepositoryId = existing.repository_id;
+        log(`  ℹ️  Repository "${repoName}" already registered, updating...`);
       } else {
-        throw err;
+        // Marker refers to a repo that no longer exists. Fall through to INSERT.
+        actualRepositoryId = insertRepository(
+          db,
+          repositoryId,
+          actualProjectId,
+          repoName,
+          gitRemoteUrl,
+          defaultBranch,
+          log,
+        );
+      }
+    } else {
+      // No marker — try to find by remote_url under this project, then INSERT.
+      const existingByUrl = db
+        .prepare("SELECT repository_id FROM repository WHERE project_id = ? AND remote_url = ?")
+        .get(actualProjectId, gitRemoteUrl) as { repository_id: string } | undefined;
+
+      if (existingByUrl) {
+        db.prepare(
+          `UPDATE repository SET name = ?, default_branch = ?,
+           updated_at = unixepoch() WHERE repository_id = ?`,
+        ).run(repoName, defaultBranch, existingByUrl.repository_id);
+        actualRepositoryId = existingByUrl.repository_id;
+        log(`  ℹ️  Repository "${repoName}" already registered, updating...`);
+      } else {
+        actualRepositoryId = insertRepository(
+          db,
+          repositoryId,
+          actualProjectId,
+          repoName,
+          gitRemoteUrl,
+          defaultBranch,
+          log,
+        );
       }
     }
   }
 
   return { actualProjectId, actualRepositoryId, tasksImported: 0 };
+}
+
+/**
+ * Inserts a new project record, handling name conflicts gracefully.
+ *
+ * Uses `ON CONFLICT (name) DO NOTHING` so that re-running init on a project
+ * whose marker file was lost still works — the existing project is found by
+ * name and its ID is returned.
+ *
+ * @param db - Open better-sqlite3 database connection.
+ * @param projectId - UUID to use for the new project.
+ * @param name - Project name (unique constraint).
+ * @param owner - Project owner.
+ * @param log - Logger function.
+ * @returns The actual project ID (may differ from input if a conflict was hit).
+ * @internal
+ */
+function insertProject(
+  db: Database.Database,
+  projectId: string,
+  name: string,
+  owner: string,
+  log: (...args: unknown[]) => void,
+): string {
+  const stmt = db.prepare(
+    `INSERT INTO project (project_id, name, owner, created_at, updated_at)
+     VALUES (?, ?, ?, unixepoch(), unixepoch())
+     ON CONFLICT (name) DO NOTHING`,
+  );
+
+  const result = stmt.run(projectId, name, owner);
+
+  if (result.changes === 0) {
+    const existing = db.prepare("SELECT project_id FROM project WHERE name = ?").get(name) as
+      | { project_id: string }
+      | undefined;
+    if (existing) {
+      // Also update the owner in case it changed.
+      db.prepare(`UPDATE project SET owner = ?, updated_at = unixepoch() WHERE project_id = ?`).run(
+        owner,
+        existing.project_id,
+      );
+      log(`  ℹ️  Project "${name}" already registered, updating...`);
+      return existing.project_id;
+    }
+  } else {
+    log(`  ✅ Created project: ${name}`);
+  }
+
+  return projectId;
+}
+
+/**
+ * Inserts a new repository record, catching UNIQUE constraint violations.
+ *
+ * @param db - Open better-sqlite3 database connection.
+ * @param repositoryId - UUID to use for the new repository.
+ * @param projectId - UUID of the parent project.
+ * @param name - Human-readable repository name.
+ * @param remoteUrl - Git remote URL.
+ * @param defaultBranch - Default branch name.
+ * @param log - Logger function.
+ * @returns The actual repository ID, or `null` if a conflict prevented insertion.
+ * @internal
+ */
+function insertRepository(
+  db: Database.Database,
+  repositoryId: string,
+  projectId: string,
+  name: string,
+  remoteUrl: string,
+  defaultBranch: string,
+  log: (...args: unknown[]) => void,
+): string | null {
+  const stmt = db.prepare(
+    `INSERT INTO repository (repository_id, project_id, name, remote_url, default_branch,
+                             local_checkout_strategy, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, unixepoch(), unixepoch())`,
+  );
+
+  try {
+    stmt.run(repositoryId, projectId, name, remoteUrl, defaultBranch, "worktree", "active");
+    log(`  ✅ Created repository: ${name}`);
+    return repositoryId;
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message.includes("UNIQUE constraint failed")) {
+      log("  ℹ️  Repository already exists");
+      return null;
+    }
+    throw err;
+  }
 }
 
 /**
