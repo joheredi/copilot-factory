@@ -120,6 +120,7 @@ export {
 
 // ─── Task Import ─────────────────────────────────────────────────────────────
 export type { ParseTaskFileResult, ParseIndexResult } from "./import/index.js";
+export type { ParseJsonTaskResult, JsonFormat } from "./import/index.js";
 
 export {
   discoverMarkdownTasks,
@@ -136,6 +137,12 @@ export {
   mapTaskType,
   mapPriority,
   findMarkdownFiles,
+  parseJsonTasks,
+  detectJsonFormat,
+  mapBacklogTask,
+  mapFlatTask,
+  parseBacklogJsonData,
+  parseFlatJsonData,
 } from "./import/index.js";
 
 // ─── Crash Recovery ──────────────────────────────────────────────────────────

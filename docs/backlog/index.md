@@ -100,7 +100,7 @@ See [index-archive.md](index-archive.md) for the 21 completed epics: E001–E008
 | [T112](tasks/T112-define-import-schema.md)      | Define task import Zod schemas            | P0       | foundation    | pending |
 | [T113](tasks/T113-build-markdown-parser.md)     | Build deterministic markdown task parser  | P0       | feature       | pending |
 | [T114](tasks/T114-build-json-parser.md)         | Build JSON/backlog.json task parser       | P1       | feature       | pending |
-| [T115](tasks/T115-import-discovery-endpoint.md) | Create POST /import/discover endpoint     | P0       | feature       | pending |
+| [T115](tasks/T115-import-discovery-endpoint.md) | Create POST /import/discover endpoint     | P0       | feature       | done    |
 | [T116](tasks/T116-import-execute-endpoint.md)   | Create POST /import/execute endpoint      | P0       | feature       | pending |
 | [T117](tasks/T117-import-api-hooks.md)          | Create TanStack Query import hooks        | P1       | feature       | pending |
 | [T118](tasks/T118-import-dialog-component.md)   | Build Import Tasks multi-step dialog      | P1       | feature       | pending |
@@ -187,7 +187,6 @@ Pending tasks whose dependencies are all satisfied (can start immediately):
 
 - [T142](tasks/T142-init-project-detection.md): Auto-detect project metadata (E026)
 - [T145](tasks/T145-start-command.md): Build factory start command (E027)
-- [T115](tasks/T115-import-discovery-endpoint.md): Create POST /import/discover endpoint (E023)
 - [T124](tasks/T124-create-task-dialog.md): Add Create Task dialog to Tasks page (E025)
 - [T125](tasks/T125-create-project-dialog.md): Add Create Project dialog (E025)
 - [T126](tasks/T126-create-repository-dialog.md): Add Create Repository dialog to Project detail (E025)
@@ -201,7 +200,6 @@ Pending tasks whose dependencies are all satisfied (can start immediately):
 
 ### High-Priority (P0) Pending Tasks
 
-- [T115](tasks/T115-import-discovery-endpoint.md): Create POST /import/discover endpoint (E023)
 - [T116](tasks/T116-import-execute-endpoint.md): Create POST /import/execute endpoint (E023)
 - [T142](tasks/T142-init-project-detection.md): Auto-detect project metadata (E026)
 - [T143](tasks/T143-init-interactive-flow.md): Build init interactive flow (E026)

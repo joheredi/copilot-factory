@@ -1,5 +1,40 @@
 # Progress Log
 
+## T115 — Create POST /import/discover endpoint
+
+### Task
+
+T115 - Create POST /import/discover endpoint (Epic E023: Task Import Pipeline)
+
+### What was done
+
+- Created `apps/control-plane/src/import/` module with full NestJS ImportModule
+- `import.controller.ts`: `POST /import/discover` endpoint with Swagger docs, delegates to service
+- `import.service.ts`: `discover()` method with auto-detection (backlog.json → JSON parser, else markdown parser), suggested name derivation from directory basename or manifest metadata
+- `dtos/discover-request.dto.ts`: Zod-validated DTO with `path` (required) and `pattern` (optional)
+- `import.module.ts`: NestJS module registering controller and service
+- `import.controller.test.ts`: 4 tests covering delegation, pattern passthrough, format passthrough, error propagation
+- `import.service.test.ts`: 7 tests covering non-existent path, JSON discovery, markdown discovery, name derivation, warning passthrough, empty directory, format priority
+- Added JSON parser exports (`parseJsonTasks`, `detectJsonFormat`, etc.) to `packages/infrastructure/src/index.ts`
+- Registered ImportModule in AppModule
+
+### Patterns used
+
+- Zod DTO with static `schema` property (matches projects DTO pattern)
+- `@Inject(ImportService)` on constructor param (tsx compatibility)
+- Direct controller instantiation in tests (NestJS DI doesn't work with vitest/esbuild)
+- `vi.fn()` for service mocks, cast to real type
+- FakeFileSystem implementing full `FileSystem` interface with `readdir()` returning `{ name, isDirectory }` entries
+- Constructor-injected `FileSystem` on service for testability, defaults to `createNodeFileSystem()`
+
+### For next loop
+
+- T116 (import execute endpoint) is now unblocked — it writes discovered tasks to the database
+- T123 (import format docs) is also ready
+- The FakeFileSystem pattern in the service test could be extracted to `@factory/testing` if reused
+
+---
+
 ## T113 — Build deterministic markdown task parser
 
 ### Task

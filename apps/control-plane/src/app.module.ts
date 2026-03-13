@@ -14,6 +14,7 @@ import { AuditModule } from "./audit/audit.module.js";
 import { AutomationModule } from "./automation/automation.module.js";
 import { EventsModule } from "./events/events.module.js";
 import { HealthModule } from "./health/health.module.js";
+import { ImportModule } from "./import/import.module.js";
 import { DatabaseModule } from "./infrastructure/database/database.module.js";
 import { MergeModule } from "./merge/merge.module.js";
 import { MetricsModule } from "./metrics/metrics.module.js";
@@ -40,6 +41,7 @@ import { WorkersModule } from "./workers/workers.module.js";
  * - ValidationModule: validation run tracking
  * - AuditModule: audit event recording
  * - PolicyModule: policy set management
+ * - ImportModule: task import discovery and execution (T115)
  * - EventsModule: WebSocket gateway for real-time event delivery (§7.7)
  * - OperatorActionsModule: operator action endpoints (§6.2)
  * - StaticServeModule: optional web-ui static file serving (T120)
@@ -59,6 +61,7 @@ import { WorkersModule } from "./workers/workers.module.js";
     ValidationModule,
     AuditModule,
     PolicyModule,
+    ImportModule,
     OperatorActionsModule,
     StaticServeModule,
   ],
