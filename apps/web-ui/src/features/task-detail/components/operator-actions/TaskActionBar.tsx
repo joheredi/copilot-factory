@@ -22,6 +22,7 @@ import { EscalationResolutionPanel } from "./EscalationResolutionPanel";
 import { PriorityChangeSelect } from "./PriorityChangeSelect";
 import { ActionFeedbackBanner } from "./ActionFeedbackBanner";
 import { useActionFeedback } from "./use-action-feedback";
+import { ReassignPoolDialog } from "./ReassignPoolDialog";
 import {
   usePauseTask,
   useResumeTask,
@@ -29,6 +30,7 @@ import {
   useForceUnblock,
   useCancelTask,
   useChangePriority,
+  useReassignPool,
   useRerunReview,
   useOverrideMergeOrder,
   useReopenTask,
@@ -57,6 +59,7 @@ interface TaskActionBarProps {
  */
 export function TaskActionBar({ task }: TaskActionBarProps) {
   const [confirmAction, setConfirmAction] = useState<OperatorActionDef | null>(null);
+  const [showReassignPool, setShowReassignPool] = useState(false);
   const { feedback, showSuccess, showError, clearFeedback } = useActionFeedback();
 
   const actions = getActionsForStatus(task.status);
@@ -68,6 +71,7 @@ export function TaskActionBar({ task }: TaskActionBarProps) {
   const forceUnblockMutation = useForceUnblock(task.id);
   const cancelMutation = useCancelTask(task.id);
   const changePriorityMutation = useChangePriority(task.id);
+  const reassignPoolMutation = useReassignPool(task.id);
   const rerunReviewMutation = useRerunReview(task.id);
   const overrideMergeOrderMutation = useOverrideMergeOrder(task.id);
   const reopenMutation = useReopenTask(task.id);
@@ -80,6 +84,7 @@ export function TaskActionBar({ task }: TaskActionBarProps) {
     forceUnblockMutation.isPending ||
     cancelMutation.isPending ||
     changePriorityMutation.isPending ||
+    reassignPoolMutation.isPending ||
     rerunReviewMutation.isPending ||
     overrideMergeOrderMutation.isPending ||
     reopenMutation.isPending ||
@@ -179,11 +184,32 @@ export function TaskActionBar({ task }: TaskActionBarProps) {
   }
 
   /**
-   * Handles action button click — either opens confirmation dialog
-   * or executes immediately for non-confirmation actions.
+   * Handles pool reassignment from the ReassignPoolDialog.
+   */
+  function handleReassignPool(poolId: string, reason: string) {
+    reassignPoolMutation.mutate(
+      { actorId: OPERATOR_ACTOR_ID, reason, poolId },
+      {
+        onSuccess: () => {
+          showSuccess("Pool reassignment completed successfully.");
+          setShowReassignPool(false);
+        },
+        onError: (error) => {
+          showError(getErrorMessage(error));
+          setShowReassignPool(false);
+        },
+      },
+    );
+  }
+
+  /**
+   * Handles action button click — either opens confirmation dialog,
+   * the reassign pool dialog, or executes immediately for non-confirmation actions.
    */
   function handleActionClick(actionDef: OperatorActionDef) {
-    if (actionDef.requiresConfirmation) {
+    if (actionDef.id === "reassign-pool") {
+      setShowReassignPool(true);
+    } else if (actionDef.requiresConfirmation) {
       setConfirmAction(actionDef);
     }
   }
@@ -193,8 +219,9 @@ export function TaskActionBar({ task }: TaskActionBarProps) {
   // Separate special actions from regular ones
   const hasPriorityAction = actions.some((a) => a.id === "change-priority");
   const hasEscalationAction = actions.some((a) => a.id === "resolve-escalation");
+  const hasReassignPoolAction = actions.some((a) => a.id === "reassign-pool");
   const regularActions = actions.filter(
-    (a) => a.id !== "change-priority" && a.id !== "resolve-escalation",
+    (a) => a.id !== "change-priority" && a.id !== "resolve-escalation" && a.id !== "reassign-pool",
   );
 
   return (
@@ -212,8 +239,21 @@ export function TaskActionBar({ task }: TaskActionBarProps) {
         )}
 
         {/* Divider between priority and action buttons */}
-        {hasPriorityAction && regularActions.length > 0 && (
+        {hasPriorityAction && (regularActions.length > 0 || hasReassignPoolAction) && (
           <div className="mx-1 h-6 w-px bg-border" />
+        )}
+
+        {/* Reassign Pool button */}
+        {hasReassignPoolAction && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowReassignPool(true)}
+            disabled={anyPending}
+            data-testid="action-btn-reassign-pool"
+          >
+            Reassign Pool
+          </Button>
         )}
 
         {/* Regular action buttons */}
@@ -252,6 +292,14 @@ export function TaskActionBar({ task }: TaskActionBarProps) {
           }
         />
       )}
+
+      {/* Reassign Pool dialog */}
+      <ReassignPoolDialog
+        open={showReassignPool}
+        onClose={() => setShowReassignPool(false)}
+        onConfirm={handleReassignPool}
+        isPending={reassignPoolMutation.isPending}
+      />
     </div>
   );
 }

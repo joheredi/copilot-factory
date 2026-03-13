@@ -41,18 +41,18 @@ afterEach(cleanup);
 
 describe("getActionsForStatus", () => {
   /**
-   * Validates that BACKLOG tasks only get change-priority and cancel.
+   * Validates that BACKLOG tasks only get change-priority, reassign-pool, and cancel.
    * BACKLOG is an early state where most actions don't apply.
    */
-  it("returns change-priority and cancel for BACKLOG", () => {
+  it("returns change-priority, reassign-pool, and cancel for BACKLOG", () => {
     const actions = getActionsForStatus("BACKLOG");
     const ids = actions.map((a) => a.id);
-    expect(ids).toEqual(["change-priority", "cancel"]);
+    expect(ids).toEqual(["change-priority", "reassign-pool", "cancel"]);
   });
 
   /**
    * Validates that BLOCKED tasks get force-unblock (the key action),
-   * plus change-priority and cancel.
+   * plus change-priority, reassign-pool, and cancel.
    */
   it("returns force-unblock for BLOCKED tasks", () => {
     const actions = getActionsForStatus("BLOCKED");
@@ -60,19 +60,21 @@ describe("getActionsForStatus", () => {
     expect(ids).toContain("force-unblock");
     expect(ids).toContain("cancel");
     expect(ids).toContain("change-priority");
+    expect(ids).toContain("reassign-pool");
   });
 
   /**
-   * Validates that IN_DEVELOPMENT tasks get pause, requeue, and cancel.
+   * Validates that IN_DEVELOPMENT tasks get pause, requeue, reassign-pool, and cancel.
    * These are the most common operator interventions during active work.
    */
-  it("returns pause, requeue, cancel for IN_DEVELOPMENT", () => {
+  it("returns pause, requeue, reassign-pool, cancel for IN_DEVELOPMENT", () => {
     const actions = getActionsForStatus("IN_DEVELOPMENT");
     const ids = actions.map((a) => a.id);
     expect(ids).toContain("pause");
     expect(ids).toContain("requeue");
     expect(ids).toContain("cancel");
     expect(ids).toContain("change-priority");
+    expect(ids).toContain("reassign-pool");
   });
 
   /**
@@ -95,13 +97,13 @@ describe("getActionsForStatus", () => {
   });
 
   /**
-   * Validates that ESCALATED tasks show the resolve-escalation action.
-   * This is the dedicated escalation resolution path.
+   * Validates that ESCALATED tasks show reassign-pool and resolve-escalation.
+   * This allows pool reassignment alongside the dedicated escalation resolution path.
    */
-  it("returns resolve-escalation for ESCALATED", () => {
+  it("returns reassign-pool and resolve-escalation for ESCALATED", () => {
     const actions = getActionsForStatus("ESCALATED");
     const ids = actions.map((a) => a.id);
-    expect(ids).toEqual(["resolve-escalation"]);
+    expect(ids).toEqual(["reassign-pool", "resolve-escalation"]);
   });
 
   /**
@@ -157,6 +159,47 @@ describe("getActionsForStatus", () => {
     const actions = getActionsForStatus("READY");
     const changePriority = actions.find((a) => a.id === "change-priority");
     expect(changePriority?.requiresConfirmation).toBe(false);
+  });
+
+  /**
+   * Validates that reassign-pool does not require confirmation
+   * (it opens its own dialog with pool selector).
+   */
+  it("marks reassign-pool as not requiring confirmation", () => {
+    const actions = getActionsForStatus("ASSIGNED");
+    const reassignPool = actions.find((a) => a.id === "reassign-pool");
+    expect(reassignPool?.requiresConfirmation).toBe(false);
+    expect(reassignPool?.variant).toBe("outline");
+  });
+
+  /**
+   * Validates that reassign-pool appears for non-terminal states
+   * (BACKLOG, READY, BLOCKED, ASSIGNED, IN_DEVELOPMENT, ESCALATED)
+   * but not for terminal or review/merge states.
+   */
+  it("includes reassign-pool for non-terminal assignable statuses", () => {
+    const withReassign = ["BACKLOG", "READY", "BLOCKED", "ASSIGNED", "IN_DEVELOPMENT", "ESCALATED"];
+    for (const status of withReassign) {
+      const actions = getActionsForStatus(status);
+      const ids = actions.map((a) => a.id);
+      expect(ids).toContain("reassign-pool");
+    }
+
+    const withoutReassign = [
+      "DEV_COMPLETE",
+      "IN_REVIEW",
+      "APPROVED",
+      "QUEUED_FOR_MERGE",
+      "MERGING",
+      "DONE",
+      "FAILED",
+      "CANCELLED",
+    ];
+    for (const status of withoutReassign) {
+      const actions = getActionsForStatus(status);
+      const ids = actions.map((a) => a.id);
+      expect(ids).not.toContain("reassign-pool");
+    }
   });
 });
 

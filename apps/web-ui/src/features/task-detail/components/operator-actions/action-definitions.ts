@@ -18,6 +18,7 @@ export type OperatorActionId =
   | "force-unblock"
   | "cancel"
   | "change-priority"
+  | "reassign-pool"
   | "rerun-review"
   | "override-merge-order"
   | "reopen"
@@ -82,6 +83,13 @@ const ACTION_DEFS: Record<OperatorActionId, OperatorActionDef> = {
     variant: "outline",
     description: "Update the scheduling priority for this task.",
   },
+  "reassign-pool": {
+    id: "reassign-pool",
+    label: "Reassign Pool",
+    requiresConfirmation: false,
+    variant: "outline",
+    description: "Move this task to a different worker pool.",
+  },
   "rerun-review": {
     id: "rerun-review",
     label: "Rerun Review",
@@ -120,11 +128,11 @@ const ACTION_DEFS: Record<OperatorActionId, OperatorActionDef> = {
  * are placed after non-destructive actions.
  */
 const STATUS_ACTIONS: Record<string, OperatorActionId[]> = {
-  BACKLOG: ["change-priority", "cancel"],
-  READY: ["change-priority", "cancel"],
-  BLOCKED: ["force-unblock", "change-priority", "cancel"],
-  ASSIGNED: ["change-priority", "pause", "requeue", "cancel"],
-  IN_DEVELOPMENT: ["change-priority", "pause", "requeue", "cancel"],
+  BACKLOG: ["change-priority", "reassign-pool", "cancel"],
+  READY: ["change-priority", "reassign-pool", "cancel"],
+  BLOCKED: ["force-unblock", "change-priority", "reassign-pool", "cancel"],
+  ASSIGNED: ["change-priority", "reassign-pool", "pause", "requeue", "cancel"],
+  IN_DEVELOPMENT: ["change-priority", "reassign-pool", "pause", "requeue", "cancel"],
   DEV_COMPLETE: ["change-priority", "pause", "cancel"],
   IN_REVIEW: ["change-priority", "rerun-review", "pause", "cancel"],
   CHANGES_REQUESTED: ["change-priority", "pause", "cancel"],
@@ -135,7 +143,7 @@ const STATUS_ACTIONS: Record<string, OperatorActionId[]> = {
   DONE: ["reopen"],
   FAILED: ["reopen"],
   CANCELLED: ["reopen"],
-  ESCALATED: ["resolve-escalation"],
+  ESCALATED: ["reassign-pool", "resolve-escalation"],
 };
 
 /**

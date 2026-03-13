@@ -6,6 +6,7 @@
 export { TaskActionBar } from "./TaskActionBar";
 export { ConfirmActionDialog } from "./ConfirmActionDialog";
 export { EscalationResolutionPanel } from "./EscalationResolutionPanel";
+export { ReassignPoolDialog } from "./ReassignPoolDialog";
 export { PriorityChangeSelect } from "./PriorityChangeSelect";
 export { ActionFeedbackBanner } from "./ActionFeedbackBanner";
 export { useActionFeedback } from "./use-action-feedback";

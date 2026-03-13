@@ -174,7 +174,7 @@ afterEach(() => {
 describe("TaskActionBar integration", () => {
   /**
    * Validates that the action bar renders for an IN_DEVELOPMENT task
-   * with the expected buttons: Pause, Requeue, Cancel, and priority selector.
+   * with the expected buttons: Reassign Pool, Pause, Requeue, Cancel, and priority selector.
    */
   it("renders action buttons for IN_DEVELOPMENT task", async () => {
     setupResponses(makeTaskDetail({ status: "IN_DEVELOPMENT" }));
@@ -183,6 +183,9 @@ describe("TaskActionBar integration", () => {
     const actionBar = await screen.findByTestId("task-action-bar");
     expect(actionBar).toBeInTheDocument();
 
+    expect(within(actionBar).getByTestId("action-btn-reassign-pool")).toHaveTextContent(
+      "Reassign Pool",
+    );
     expect(within(actionBar).getByTestId("action-btn-pause")).toHaveTextContent("Pause");
     expect(within(actionBar).getByTestId("action-btn-requeue")).toHaveTextContent("Requeue");
     expect(within(actionBar).getByTestId("action-btn-cancel")).toHaveTextContent("Cancel");
@@ -203,12 +206,15 @@ describe("TaskActionBar integration", () => {
   });
 
   /**
-   * Validates that ESCALATED tasks show the escalation resolution panel
-   * with Retry, Cancel Task, and Mark Done buttons.
+   * Validates that ESCALATED tasks show the reassign pool button and
+   * the escalation resolution panel with Retry, Cancel Task, and Mark Done buttons.
    */
   it("renders escalation resolution panel for ESCALATED task", async () => {
     setupResponses(makeTaskDetail({ status: "ESCALATED" }));
     renderTaskDetail();
+
+    const actionBar = await screen.findByTestId("task-action-bar");
+    expect(within(actionBar).getByTestId("action-btn-reassign-pool")).toBeInTheDocument();
 
     const panel = await screen.findByTestId("escalation-resolution-panel");
     expect(panel).toBeInTheDocument();
@@ -421,5 +427,137 @@ describe("TaskActionBar integration", () => {
     expect(within(actionBar).getByTestId("action-btn-override-merge-order")).toHaveTextContent(
       "Override Merge Order",
     );
+  });
+
+  /**
+   * Validates that clicking "Reassign Pool" opens the reassign pool dialog
+   * with a pool selector and reason input, and that confirming dispatches
+   * the reassign-pool API call.
+   */
+  it("opens reassign pool dialog and submits", async () => {
+    const user = userEvent.setup();
+    setupResponses(makeTaskDetail({ status: "ASSIGNED" }));
+
+    // Override fetch to also handle pools list and reassign-pool action
+    fetchSpy.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input.toString();
+      const method = init?.method ?? "GET";
+
+      if (method === "POST" && url.includes("/actions/reassign-pool")) {
+        return Promise.resolve(fakeResponse(makeActionResult()));
+      }
+      if (url.includes("/pools")) {
+        return Promise.resolve(
+          fakeResponse({
+            data: [
+              {
+                id: "pool-1",
+                name: "Dev Pool",
+                poolType: "developer",
+                provider: null,
+                runtime: null,
+                model: null,
+                maxConcurrency: 4,
+                defaultTimeoutSec: null,
+                defaultTokenBudget: null,
+                costProfile: null,
+                capabilities: null,
+                repoScopeRules: null,
+                enabled: true,
+                createdAt: "2026-03-01T00:00:00Z",
+                updatedAt: "2026-03-01T00:00:00Z",
+              },
+              {
+                id: "pool-2",
+                name: "Review Pool",
+                poolType: "reviewer",
+                provider: null,
+                runtime: null,
+                model: null,
+                maxConcurrency: 2,
+                defaultTimeoutSec: null,
+                defaultTokenBudget: null,
+                costProfile: null,
+                capabilities: null,
+                repoScopeRules: null,
+                enabled: true,
+                createdAt: "2026-03-01T00:00:00Z",
+                updatedAt: "2026-03-01T00:00:00Z",
+              },
+            ],
+            meta: { page: 1, limit: 100, total: 2, totalPages: 1 },
+          }),
+        );
+      }
+      if (url.includes("/timeline")) return Promise.resolve(fakeResponse(makeEmptyTimeline()));
+      if (url.includes("/reviews")) return Promise.resolve(fakeResponse(makeEmptyReviewHistory()));
+      if (url.includes("/artifacts")) return Promise.resolve(fakeResponse(makeEmptyArtifactTree()));
+      if (url.includes("/tasks/"))
+        return Promise.resolve(fakeResponse(makeTaskDetail({ status: "ASSIGNED" })));
+
+      return Promise.resolve(fakeResponse({}));
+    });
+
+    renderTaskDetail();
+
+    const actionBar = await screen.findByTestId("task-action-bar");
+    await user.click(within(actionBar).getByTestId("action-btn-reassign-pool"));
+
+    // Dialog should be open
+    const dialog = await screen.findByTestId("reassign-pool-dialog");
+    expect(dialog).toBeInTheDocument();
+
+    // Submit should be disabled without pool selection and reason
+    expect(screen.getByTestId("reassign-pool-submit")).toBeDisabled();
+
+    // Select a pool
+    const select = screen.getByTestId("reassign-pool-select") as HTMLSelectElement;
+    await user.selectOptions(select, "pool-2");
+
+    // Still disabled without reason
+    expect(screen.getByTestId("reassign-pool-submit")).toBeDisabled();
+
+    // Type a reason
+    await user.type(
+      screen.getByTestId("reassign-pool-reason"),
+      "Moving to review pool for capacity",
+    );
+
+    // Submit should be enabled now
+    expect(screen.getByTestId("reassign-pool-submit")).not.toBeDisabled();
+
+    // Click confirm
+    await user.click(screen.getByTestId("reassign-pool-submit"));
+
+    // Verify the API call was made to the correct endpoint
+    await waitFor(() => {
+      const postCalls = fetchSpy.mock.calls.filter(
+        ([, init]) => (init as RequestInit | undefined)?.method === "POST",
+      );
+      const reassignCall = postCalls.find(([url]) =>
+        (url as string).includes("/actions/reassign-pool"),
+      );
+      expect(reassignCall).toBeDefined();
+
+      // Verify the body contains the pool ID
+      const body = JSON.parse((reassignCall![1] as RequestInit).body as string);
+      expect(body.poolId).toBe("pool-2");
+      expect(body.reason).toBe("Moving to review pool for capacity");
+    });
+
+    // Feedback banner should appear
+    await screen.findByTestId("action-feedback");
+  });
+
+  /**
+   * Validates that the reassign pool button does not appear for terminal
+   * states (DONE, FAILED, CANCELLED).
+   */
+  it("does not render reassign-pool for DONE task", async () => {
+    setupResponses(makeTaskDetail({ status: "DONE" }));
+    renderTaskDetail();
+
+    const actionBar = await screen.findByTestId("task-action-bar");
+    expect(within(actionBar).queryByTestId("action-btn-reassign-pool")).not.toBeInTheDocument();
   });
 });

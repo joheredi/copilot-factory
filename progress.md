@@ -1,5 +1,42 @@
 # Progress Log
 
+## T131 — Add Reassign Pool operator action to Task detail
+
+### Task
+
+T131 - Add Reassign Pool operator action to Task detail (Epic E025: Web UI Creation & Editing Forms)
+
+### What was done
+
+- Added `reassign-pool` to `OperatorActionId` type, `ACTION_DEFS`, and `STATUS_ACTIONS` in `action-definitions.ts`
+- Added `reassign-pool` to statuses: BACKLOG, READY, BLOCKED, ASSIGNED, IN_DEVELOPMENT, ESCALATED
+- Created `ReassignPoolDialog.tsx` component with pool selector dropdown + reason textarea
+  - Fetches pools via existing `usePools({ limit: 100 })` hook
+  - Shows loading state while pools load; empty state when no pools available
+  - Validates: both pool selection and reason required before submit enabled
+  - Resets form on close
+- Updated `TaskActionBar.tsx` to wire in `useReassignPool` mutation and `ReassignPoolDialog`
+  - Reassign Pool button rendered as a special action (like PriorityChangeSelect and EscalationResolutionPanel)
+  - Filtered from regular actions to avoid the generic ConfirmActionDialog
+- Updated `index.ts` to export `ReassignPoolDialog`
+- Updated existing tests in `operator-actions.test.tsx` for new status action mappings
+- Added 3 new unit tests: reassign-pool no confirmation, reassign-pool status coverage across all statuses
+- Added 2 integration tests: full dialog submit flow with pool fetch + API call verification, terminal state exclusion
+
+### Patterns used
+
+- Followed the "special action" pattern from PriorityChangeSelect and EscalationResolutionPanel
+- Dialog with form state (pool selector + reason) — same Dialog/DialogContent/DialogFooter component pattern
+- Native `<select>` for pool dropdown matching CreateTaskDialog's project selector pattern
+- Pool data fetched via `usePools` and extracted with `poolsData?.data ?? []`
+- `data-testid` attributes on all interactive elements for testing
+
+### Notes for next loop
+
+- Remaining E025 tasks: T128 (Create Profile dialog), T130 (Batch Task Import UI)
+- Documentation tasks still ready: T122, T123, T151
+- All tasks are P2 with no dependencies
+
 ## T129 — Add Edit Task form to Task detail page
 
 ### Task
