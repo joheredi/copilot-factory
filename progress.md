@@ -28,6 +28,32 @@
 - T151 (CLI hero docs) needs both T144 (done) and T149 — available after T149
 - Remaining P1 tasks: T118 (import dialog), T126 (create repo dialog), T127 (create pool dialog)
 
+## T118: Build Import Tasks multi-step dialog — DONE
+
+**What was done:**
+
+- Created `apps/web-ui/src/features/tasks/components/ImportTasksDialog.tsx` — 4-step wizard dialog (Path Input → Preview → Confirm → Result) using shadcn Dialog, Table, Card, Input, Label, Badge, Button components
+- Created `apps/web-ui/src/features/tasks/components/ImportTasksDialog.test.tsx` — 22 tests covering all steps, state transitions, API payloads, error handling, and cross-cutting concerns
+- Modified `apps/web-ui/src/features/tasks/page.tsx` — added "Import Tasks" button to page header and wired ImportTasksDialog
+
+**Key patterns:**
+
+- Single-file multi-step dialog matching existing patterns (CreateTaskDialog, CreateProjectDialog)
+- Step state managed via `useState<DialogState>` with full reset on close
+- Native HTML checkboxes (no shadcn Checkbox component exists yet) with `accent-primary` styling
+- Destructive border pattern for warnings/errors (no shadcn Alert component exists yet)
+- `useDiscoverTasks()` and `useExecuteImport()` hooks from `use-import.ts`
+- Dialog uses `max-w-3xl` to accommodate preview table
+- Parse warnings rendered with severity-specific icons and color schemes
+- Select-all checkbox and individual task toggle via Set<number>
+- Repository name is optional in execute payload (omitted when empty)
+
+**Next loop notes:**
+
+- E023 (Task Import) is now 7/8 complete — only T123 (docs, P2) remains
+- Remaining P1 tasks: T126 (create repo dialog), T127 (create pool dialog)
+- Remaining P2 tasks: T123 (import docs), T122 (CLI readme), T128-T131 (web UI forms), T149 (workspace cleanup), T151 (CLI hero docs)
+
 ## T117: Create TanStack Query import hooks — DONE
 
 **What was done:**
