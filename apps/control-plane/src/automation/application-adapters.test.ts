@@ -148,14 +148,15 @@ describe("createWorkerDispatchUnitOfWork", () => {
 
     // Task packet should contain all task metadata
     const packet = result!.runContext.taskPacket;
-    expect(packet.taskId).toBe(taskId);
-    expect(packet.title).toBe("Implement login page");
-    expect(packet.taskType).toBe("feature");
-    expect(packet.priority).toBe("high");
-    expect(packet.branchName).toBe("feat/login");
-    expect(packet.acceptanceCriteria).toEqual(["Login form renders", "JWT token stored"]);
-    expect(packet.definitionOfDone).toEqual(["Tests pass", "Code reviewed"]);
-    expect(packet.suggestedFileScope).toEqual(["src/auth/**"]);
+    expect(packet.task_id).toBe(taskId);
+    const task = packet.task as Record<string, unknown>;
+    expect(task.title).toBe("Implement login page");
+    expect(task.task_type).toBe("feature");
+    expect(task.priority).toBe("high");
+    expect(task.branch_name).toBe("feat/login");
+    expect(task.acceptance_criteria).toEqual(["Login form renders", "JWT token stored"]);
+    expect(task.definition_of_done).toEqual(["Tests pass", "Code reviewed"]);
+    expect(task.suggested_file_scope).toEqual(["src/auth/**"]);
 
     // Workspace paths should be task-scoped
     const paths = result!.runContext.workspacePaths;
@@ -250,7 +251,7 @@ describe("createWorkerDispatchUnitOfWork", () => {
     const result = uow.runInTransaction((repos) => repos.dispatch.resolveSpawnContext(taskId));
 
     expect(result).not.toBeNull();
-    expect(result!.runContext.taskPacket.taskId).toBe(taskId);
+    expect(result!.runContext.taskPacket.task_id).toBe(taskId);
   });
 
   /**
@@ -340,10 +341,11 @@ describe("createWorkerDispatchUnitOfWork", () => {
 
     expect(result).not.toBeNull();
     const packet = result!.runContext.taskPacket;
-    expect(packet.acceptanceCriteria).toEqual(["AC1", "AC2"]);
-    expect(packet.definitionOfDone).toEqual(["DoD1"]);
-    expect(packet.suggestedFileScope).toEqual(["src/**/*.ts", "lib/**"]);
-    expect(packet.requiredCapabilities).toEqual(["typescript"]);
+    const taskData = packet.task as Record<string, unknown>;
+    expect(taskData.acceptance_criteria).toEqual(["AC1", "AC2"]);
+    expect(taskData.definition_of_done).toEqual(["DoD1"]);
+    expect(taskData.suggested_file_scope).toEqual(["src/**/*.ts", "lib/**"]);
+    expect(taskData.required_capabilities).toEqual(["typescript"]);
   });
 });
 
