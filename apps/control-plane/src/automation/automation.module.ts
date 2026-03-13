@@ -12,5 +12,6 @@ import { AutomationService } from "./automation.service.js";
 @Module({
   imports: [EventsModule],
   providers: [AutomationService],
+  exports: [AutomationService],
 })
 export class AutomationModule {}

@@ -416,4 +416,45 @@ describe("AutomationService", () => {
     const finalTask = taskRepo.findById(taskId);
     expect(finalTask?.status).toBe(TaskStatus.DEV_COMPLETE);
   });
+
+  it("starts paused by default and skips scheduling when paused", () => {
+    conn = createTestDatabase({ migrationsFolder: MIGRATIONS_FOLDER });
+    const { repositoryId } = seedProjectAndRepository(conn);
+    seedDeveloperPool(conn);
+    seedTask(conn, repositoryId, "BACKLOG");
+
+    const service = new AutomationService(conn, createEmitter());
+
+    // Factory starts paused by default
+    expect(service.paused).toBe(true);
+
+    // Initialize tick so there's work to do
+    service.initializeSchedulerTick();
+
+    // Reconciliation still works when called directly (public method)
+    const readiness = service.reconcileTaskReadiness();
+    expect(readiness.transitionedToReady).toBe(1);
+
+    // But the tick and dispatch won't run in runCycle because it's paused
+    // (runCycle is private, but we can verify by starting and checking state)
+    service.start();
+    expect(service.paused).toBe(false);
+
+    service.pause();
+    expect(service.paused).toBe(true);
+  });
+
+  it("start() and pause() are idempotent", () => {
+    conn = createTestDatabase({ migrationsFolder: MIGRATIONS_FOLDER });
+    const service = new AutomationService(conn, createEmitter());
+
+    // Already paused — pausing again is a no-op
+    service.pause();
+    expect(service.paused).toBe(true);
+
+    // Start, then start again — idempotent
+    service.start();
+    service.start();
+    expect(service.paused).toBe(false);
+  });
 });

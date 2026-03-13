@@ -31,7 +31,12 @@ import { EventChannel } from "./types";
 const CHANNEL_INVALIDATION_MAP: Record<EventChannel, readonly unknown[][]> = {
   [EventChannel.Tasks]: [queryKeys.tasks.all, queryKeys.reviews.all, queryKeys.audit.all],
   [EventChannel.Workers]: [queryKeys.pools.all, queryKeys.audit.all],
-  [EventChannel.Queue]: [queryKeys.tasks.all, queryKeys.audit.all, queryKeys.mergeQueue.all],
+  [EventChannel.Queue]: [
+    queryKeys.tasks.all,
+    queryKeys.audit.all,
+    queryKeys.mergeQueue.all,
+    queryKeys.factoryState.all,
+  ],
 };
 
 /**

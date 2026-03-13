@@ -115,6 +115,11 @@ export const queryKeys = {
       [...queryKeys.mergeQueue.all, "list", params ?? {}] as const,
   },
 
+  /** Factory state (running/paused) query keys. */
+  factoryState: {
+    all: ["factoryState"] as const,
+  },
+
   /** Task import pipeline query keys. */
   import: {
     all: ["import"] as const,

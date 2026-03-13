@@ -74,3 +74,5 @@ export { usePolicies, usePolicy, useEffectiveConfig, useUpdatePolicy } from "./u
 export { useMergeQueue } from "./use-merge-queue";
 
 export { useDiscoverTasks, useExecuteImport } from "./use-import";
+
+export { useFactoryState, useStartFactory, usePauseFactory } from "./use-factory-state";

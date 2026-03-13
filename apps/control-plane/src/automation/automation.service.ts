@@ -89,6 +89,36 @@ export class AutomationService implements OnModuleInit, OnModuleDestroy {
   private timer: ReturnType<typeof setInterval> | null = null;
 
   /**
+   * Global factory pause flag. When true, `runCycle()` skips readiness
+   * reconciliation, scheduler ticks, and worker dispatch — effectively
+   * stopping the production line. Active workers already dispatched
+   * continue to completion.
+   *
+   * Starts paused by default so the operator must explicitly start the
+   * factory after reviewing the imported backlog.
+   */
+  private _paused = true;
+
+  /** Returns the current factory running state. */
+  get paused(): boolean {
+    return this._paused;
+  }
+
+  /** Resume the factory production line. */
+  start(): void {
+    if (!this._paused) return;
+    this._paused = false;
+    this.logger.info("Factory production line started");
+  }
+
+  /** Pause the factory — stops scheduling new tasks but active workers continue. */
+  pause(): void {
+    if (this._paused) return;
+    this._paused = true;
+    this.logger.info("Factory production line paused");
+  }
+
+  /**
    * Tracks in-flight dispatch promises so we can await them during shutdown
    * and report concurrency in logs.
    */
@@ -291,6 +321,8 @@ export class AutomationService implements OnModuleInit, OnModuleDestroy {
   }
 
   private runCycle(): void {
+    if (this._paused) return;
+
     try {
       const readiness = this.reconcileTaskReadiness();
       const tickResult = this.processSchedulerTick();

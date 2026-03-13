@@ -13,6 +13,7 @@ import { Module } from "@nestjs/common";
 import { AuditModule } from "./audit/audit.module.js";
 import { AutomationModule } from "./automation/automation.module.js";
 import { EventsModule } from "./events/events.module.js";
+import { FactoryStateModule } from "./factory-state/factory-state.module.js";
 import { HealthModule } from "./health/health.module.js";
 import { ImportModule } from "./import/import.module.js";
 import { DatabaseModule } from "./infrastructure/database/database.module.js";
@@ -55,6 +56,7 @@ import { WorkspaceCleanupModule } from "./workspace-cleanup/workspace-cleanup.mo
     DatabaseModule,
     EventsModule,
     AutomationModule,
+    FactoryStateModule,
     HealthModule,
     MetricsModule,
     ProjectsModule,

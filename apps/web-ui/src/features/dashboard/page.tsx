@@ -3,6 +3,7 @@ import { Badge } from "../../components/ui/badge.js";
 import { Button } from "../../components/ui/button.js";
 import { useDashboardData } from "./hooks/use-dashboard-data.js";
 import { useProjectFilter } from "./hooks/use-project-filter.js";
+import { useFactoryState, useStartFactory, usePauseFactory } from "../../api/hooks/index.js";
 import { TaskSummaryCards } from "./components/task-summary-cards.js";
 import { WorkerPoolSummaryCard } from "./components/worker-pool-summary.js";
 import { RecentActivityFeed } from "./components/recent-activity-feed.js";
@@ -39,14 +40,50 @@ export default function DashboardPage() {
   const [showCreateProject, setShowCreateProject] = useState(false);
   const [showCreateRepository, setShowCreateRepository] = useState(false);
 
+  const { data: factoryState } = useFactoryState();
+  const startFactory = useStartFactory();
+  const pauseFactory = usePauseFactory();
+  const isRunning = factoryState?.state === "running";
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">System overview and health status</p>
+        <div className="flex items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+            <p className="text-muted-foreground">System overview and health status</p>
+          </div>
+          {factoryState && (
+            <Badge
+              variant={isRunning ? "default" : "secondary"}
+              data-testid="factory-state-badge"
+              className={isRunning ? "bg-green-600 hover:bg-green-700" : ""}
+            >
+              {isRunning ? "● Running" : "● Paused"}
+            </Badge>
+          )}
         </div>
         <div className="flex items-center gap-3">
+          {factoryState &&
+            (isRunning ? (
+              <Button
+                variant="outline"
+                onClick={() => pauseFactory.mutate()}
+                disabled={pauseFactory.isPending}
+                data-testid="pause-factory-button"
+              >
+                ⏸ Pause
+              </Button>
+            ) : (
+              <Button
+                onClick={() => startFactory.mutate()}
+                disabled={startFactory.isPending}
+                data-testid="start-factory-button"
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                ▶ Start
+              </Button>
+            ))}
           <ProjectSelector filterState={projectFilter} filterActions={projectActions} />
           {projectFilter.selectedProjectId && (
             <Button
