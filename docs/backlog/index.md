@@ -90,7 +90,7 @@ See [index-archive.md](index-archive.md) for the 21 completed epics: E001–E008
 | [T135](tasks/T135-heartbeat-forwarder-adapter.md)   | Implement HeartbeatForwarderPort adapter                    | P0       | infrastructure | done    |
 | [T136](tasks/T136-infrastructure-adapter-wiring.md) | Wire workspace, runtime, and packet infrastructure adapters | P0       | infrastructure | pending |
 | [T137](tasks/T137-wire-dispatch-automation.md)      | Integrate WorkerDispatchService into AutomationService      | P0       | feature        | pending |
-| [T138](tasks/T138-dispatch-integration-test.md)     | End-to-end dispatch integration test                        | P0       | feature        | pending |
+| [T138](tasks/T138-dispatch-integration-test.md)     | End-to-end dispatch integration test                        | P0       | feature        | done    |
 | [T139](tasks/T139-worker-runner-exports.md)         | Update worker-runner package to re-export dispatch types    | P1       | refactor       | pending |
 
 ### E023: Task Import Pipeline
