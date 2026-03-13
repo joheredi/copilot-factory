@@ -5,7 +5,7 @@
 | **ID**                    | T125                                                                   |
 | **Epic**                  | [E025: Web UI Creation & Editing Forms](../epics/E025-web-ui-forms.md) |
 | **Type**                  | feature                                                                |
-| **Status**                | pending                                                                |
+| **Status**                | done                                                                   |
 | **Priority**              | P1                                                                     |
 | **Owner**                 | frontend-engineer                                                      |
 | **AI Executable**         | Yes                                                                    |

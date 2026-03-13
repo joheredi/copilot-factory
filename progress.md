@@ -1,5 +1,26 @@
 # Progress Log
 
+## T125: Add Create Project dialog — DONE
+
+**What was done:**
+
+- Created `apps/web-ui/src/features/projects/components/CreateProjectDialog.tsx` — modal dialog with name (required), owner (required), and description (optional) fields
+- Created `apps/web-ui/src/features/projects/components/CreateProjectDialog.test.tsx` — 15 tests covering rendering, validation, submission, error display, whitespace trimming, and dialog lifecycle
+- Added "Create Project" button to the Dashboard page (`features/dashboard/page.tsx`) for initial setup flow access
+- Wired to existing `useCreateProject` hook with automatic cache invalidation on success
+
+**Key patterns:**
+
+- Follows the same architecture as `CreateTaskDialog`: controlled open/close via props, `useState` form state, client-side validation, mutation error display, form reset on close
+- Uses shadcn/ui Dialog, Input, Label, Textarea, Button components
+- Tests use fetch-spy + QueryClientProvider pattern (no MSW), matching existing test conventions
+- `fetchSpy.mockReset()` in `beforeEach` prevents cross-test call accumulation
+
+**Next loop notes:**
+
+- T126 (Create Repository dialog) and T127 (Create Worker Pool dialog) are ready and follow the same pattern
+- A dedicated `/projects` route could be added later if project management grows beyond creation
+
 ## T139: Update worker-runner package to re-export dispatch types — DONE
 
 **What was done:**

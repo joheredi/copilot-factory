@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { Badge } from "../../components/ui/badge.js";
+import { Button } from "../../components/ui/button.js";
 import { useDashboardData } from "./hooks/use-dashboard-data.js";
 import { TaskSummaryCards } from "./components/task-summary-cards.js";
 import { WorkerPoolSummaryCard } from "./components/worker-pool-summary.js";
 import { RecentActivityFeed } from "./components/recent-activity-feed.js";
+import { CreateProjectDialog } from "../projects/components/CreateProjectDialog.js";
 
 /**
  * Dashboard overview page.
@@ -22,13 +25,21 @@ import { RecentActivityFeed } from "./components/recent-activity-feed.js";
  */
 export default function DashboardPage() {
   const { taskCounts, poolSummary, recentActivity, isLoading, isError } = useDashboardData();
+  const [showCreateProject, setShowCreateProject] = useState(false);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">System overview and health status</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground">System overview and health status</p>
+        </div>
+        <Button onClick={() => setShowCreateProject(true)} data-testid="create-project-button">
+          Create Project
+        </Button>
       </div>
+
+      <CreateProjectDialog open={showCreateProject} onOpenChange={setShowCreateProject} />
 
       {isError && (
         <div
