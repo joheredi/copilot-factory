@@ -5,7 +5,7 @@
 | **ID**                    | T150                                                                     |
 | **Epic**                  | [E027: Factory Lifecycle & Recovery](../epics/E027-factory-lifecycle.md) |
 | **Type**                  | feature                                                                  |
-| **Status**                | pending                                                                  |
+| **Status**                | done                                                                     |
 | **Priority**              | P1                                                                       |
 | **Owner**                 | frontend-engineer                                                        |
 | **AI Executable**         | Yes                                                                      |

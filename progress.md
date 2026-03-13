@@ -1,5 +1,33 @@
 # Progress Log
 
+## T150: Add multi-project filter to dashboard — DONE
+
+**What was done:**
+
+- Created `apps/web-ui/src/components/ui/select.tsx` — shadcn/ui Select component built on `@radix-ui/react-select`
+- Created `apps/web-ui/src/features/dashboard/hooks/use-project-filter.ts` — URL-synced project filter hook (stores `projectId` in search params, resolves project's repositories)
+- Created `apps/web-ui/src/features/dashboard/components/project-selector.tsx` — dropdown component showing "All Projects" + registered projects
+- Modified `apps/web-ui/src/features/dashboard/hooks/use-dashboard-data.ts` — accepts optional `repositoryIds` filter, scopes task count queries per-repo, filters audit events client-side
+- Modified `apps/web-ui/src/features/dashboard/page.tsx` — integrated ProjectSelector in header, passes repositoryIds to useDashboardData
+- Created `apps/web-ui/src/features/tasks/hooks/use-repository-name-map.ts` — builds Map<repositoryId, "ProjectName / RepoName"> from API data
+- Modified `apps/web-ui/src/features/tasks/components/task-table.tsx` — added optional Project column with Badge when repositoryNames map is provided
+- Modified `apps/web-ui/src/features/tasks/page.tsx` — wired useRepositoryNameMap into TaskTable
+- Created 3 test files: project-selector, use-project-filter, use-repository-name-map (12 tests total)
+
+**Key patterns:**
+
+- Project filter stored in URL `?projectId=...` for bookmarkability
+- Multi-repo projects handled by making one count query per status per repo and summing
+- Audit events filtered client-side: fetch larger batch, match entityIds to project tasks/repos, slice to 10
+- Repository name map built by fetching all projects + their repos, memoized via useMemo
+- TaskTable shows Project column conditionally only when repositoryNames map is non-empty
+
+**Next loop notes:**
+
+- T149 (workspace cleanup) is now unblocked (depends on T148 which is done)
+- T151 (CLI hero docs) needs both T144 (done) and T149 — available after T149
+- Remaining P1 tasks: T118 (import dialog), T126 (create repo dialog), T127 (create pool dialog)
+
 ## T117: Create TanStack Query import hooks — DONE
 
 **What was done:**

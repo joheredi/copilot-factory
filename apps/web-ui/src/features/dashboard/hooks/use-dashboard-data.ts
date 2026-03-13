@@ -81,19 +81,39 @@ export interface DashboardData {
  * Fetches a task list with limit=1 for a single status value,
  * extracting only the total count from the paginated response.
  *
+ * When `repositoryId` is provided, scopes the count to tasks in
+ * that repository (used for per-project filtering).
+ *
  * @param status - Task status string to filter by.
+ * @param repositoryId - Optional repository ID to filter by.
  * @returns Query options that resolve to the total count.
  */
-function taskCountQuery(status: string) {
-  const params = { status, limit: 1, page: 1 };
+function taskCountQuery(status: string, repositoryId?: string) {
+  const params: Record<string, unknown> = { status, limit: 1, page: 1 };
+  if (repositoryId) {
+    params["repositoryId"] = repositoryId;
+  }
   return {
-    queryKey: [...queryKeys.tasks.all, "dashboard-count", status] as const,
+    queryKey: [...queryKeys.tasks.all, "dashboard-count", status, repositoryId ?? "all"] as const,
     queryFn: async () => {
       const response = await apiGet<PaginatedResponse<Task>>("/tasks", params);
       return response.meta.total;
     },
     staleTime: 15_000,
   };
+}
+
+/**
+ * Options for the dashboard data hook.
+ *
+ * @see T150 — Add multi-project filter to dashboard
+ */
+export interface DashboardDataOptions {
+  /**
+   * When provided, task counts and activity are scoped to these repositories.
+   * Pass an empty array or omit to show aggregate data across all projects.
+   */
+  readonly repositoryIds?: readonly string[];
 }
 
 /**
@@ -104,10 +124,18 @@ function taskCountQuery(status: string) {
  * - Pool list uses a small page size
  * - Audit feed fetches only the 10 most recent events
  *
+ * When `repositoryIds` are provided, task counts are scoped to those
+ * repositories by making a separate count query per repository per
+ * status and summing the results.
+ *
+ * @param options - Optional filtering options (e.g. repositoryIds for project scoping).
  * @returns Aggregated dashboard data with loading/error states.
  */
-export function useDashboardData(): DashboardData {
-  // --- Task counts (one query per status, in parallel) -----------------------
+export function useDashboardData(options?: DashboardDataOptions): DashboardData {
+  const repositoryIds = options?.repositoryIds;
+  const hasRepoFilter = repositoryIds && repositoryIds.length > 0;
+
+  // --- Task counts (one query per status × repository, in parallel) ----------
   const allStatuses = [
     ...ACTIVE_STATES,
     ...QUEUED_STATES,
@@ -115,17 +143,38 @@ export function useDashboardData(): DashboardData {
     ...ATTENTION_STATES,
   ];
 
-  const taskCountQueries = useQueries({
-    queries: allStatuses.map((status) => taskCountQuery(status)),
-  });
+  // Build query list: when filtering by repos, make one query per status per repo.
+  // When not filtering, make one query per status (existing behavior).
+  const taskCountQueryList = hasRepoFilter
+    ? allStatuses.flatMap((status) => repositoryIds.map((repoId) => taskCountQuery(status, repoId)))
+    : allStatuses.map((status) => taskCountQuery(status));
+
+  const taskCountQueries = useQueries({ queries: taskCountQueryList });
 
   const taskCountsByStatus = new Map<string, number>();
-  allStatuses.forEach((status, idx) => {
-    const query = taskCountQueries[idx];
-    if (query && query.isSuccess) {
-      taskCountsByStatus.set(status, query.data);
-    }
-  });
+
+  if (hasRepoFilter) {
+    // Results are [status0-repo0, status0-repo1, ..., status1-repo0, status1-repo1, ...]
+    const repoCount = repositoryIds.length;
+    allStatuses.forEach((status, statusIdx) => {
+      let sum = 0;
+      for (let repoIdx = 0; repoIdx < repoCount; repoIdx++) {
+        const queryIdx = statusIdx * repoCount + repoIdx;
+        const query = taskCountQueries[queryIdx];
+        if (query && query.isSuccess) {
+          sum += query.data;
+        }
+      }
+      taskCountsByStatus.set(status, sum);
+    });
+  } else {
+    allStatuses.forEach((status, idx) => {
+      const query = taskCountQueries[idx];
+      if (query && query.isSuccess) {
+        taskCountsByStatus.set(status, query.data);
+      }
+    });
+  }
 
   const sumCategory = (states: readonly string[]): number =>
     states.reduce((sum, s) => sum + (taskCountsByStatus.get(s) ?? 0), 0);
@@ -158,17 +207,62 @@ export function useDashboardData(): DashboardData {
   };
 
   // --- Recent activity -------------------------------------------------------
+  // When filtering by project, fetch more audit events so we can filter
+  // client-side to those related to the project's repositories.
+  const auditFetchLimit = hasRepoFilter ? 50 : 10;
   const auditQuery = useQuery({
-    queryKey: queryKeys.audit.lists({ limit: 10 }),
-    queryFn: () => apiGet<PaginatedResponse<AuditEvent>>("/audit", { limit: 10 }),
+    queryKey: [
+      ...queryKeys.audit.all,
+      "dashboard",
+      auditFetchLimit,
+      ...(repositoryIds ?? []),
+    ] as const,
+    queryFn: () => apiGet<PaginatedResponse<AuditEvent>>("/audit", { limit: auditFetchLimit }),
     staleTime: 10_000,
   });
 
-  const recentActivity = auditQuery.data?.data ?? [];
+  // When filtering by project, also fetch tasks for those repos so we can
+  // match audit event entityIds to task repositoryIds. We fetch a page of
+  // tasks for each repo and collect their IDs into a Set.
+  const repoTaskQueries = useQueries({
+    queries: hasRepoFilter
+      ? repositoryIds.map((repoId) => ({
+          queryKey: [...queryKeys.tasks.all, "dashboard-repo-tasks", repoId] as const,
+          queryFn: async () => {
+            const resp = await apiGet<PaginatedResponse<Task>>("/tasks", {
+              repositoryId: repoId,
+              limit: 100,
+              page: 1,
+            });
+            return resp.data.map((t) => t.id);
+          },
+          staleTime: 15_000,
+        }))
+      : [],
+  });
+
+  const projectTaskIds = hasRepoFilter
+    ? new Set(repoTaskQueries.flatMap((q) => (q.isSuccess ? q.data : [])))
+    : null;
+
+  const allAuditEvents = auditQuery.data?.data ?? [];
+  const recentActivity = projectTaskIds
+    ? allAuditEvents
+        .filter(
+          (evt) =>
+            // Include events directly on the project's repos or tasks
+            (evt.entityType === "repository" && repositoryIds!.includes(evt.entityId)) ||
+            (evt.entityType === "task" && projectTaskIds.has(evt.entityId)),
+        )
+        .slice(0, 10)
+    : allAuditEvents;
 
   // --- Aggregate loading/error state -----------------------------------------
   const isLoading =
-    taskCountQueries.some((q) => q.isLoading) || poolsQuery.isLoading || auditQuery.isLoading;
+    taskCountQueries.some((q) => q.isLoading) ||
+    poolsQuery.isLoading ||
+    auditQuery.isLoading ||
+    repoTaskQueries.some((q) => q.isLoading);
 
   const isError =
     taskCountQueries.some((q) => q.isError) || poolsQuery.isError || auditQuery.isError;

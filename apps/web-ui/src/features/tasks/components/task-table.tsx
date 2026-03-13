@@ -2,13 +2,14 @@
  * Task data table component.
  *
  * Renders a table of tasks with columns: Title, Status, Priority, Type,
- * and Updated. Supports click-through to task detail (future T095 route),
- * loading skeleton, and empty state.
+ * Project, and Updated. Supports click-through to task detail, loading
+ * skeleton, empty state, and optional project name badges.
  *
  * The table supports client-side sorting for the current page. Server-side
  * sorting is not available in the API, so we sort locally after fetching.
  *
  * @see T094 — Build task board with status filtering and pagination
+ * @see T150 — Add project name badges to task rows
  */
 
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
@@ -22,6 +23,7 @@ import {
   TableRow,
 } from "../../../components/ui/table.js";
 import { Button } from "../../../components/ui/button.js";
+import { Badge } from "../../../components/ui/badge.js";
 import type { Task } from "../../../api/types.js";
 import { TaskStatusBadge } from "./task-status-badge.js";
 import { TaskPriorityBadge } from "./task-priority-badge.js";
@@ -35,6 +37,14 @@ const PRIORITY_ORDER: Record<string, number> = {
   low: 3,
 };
 
+/**
+ * Lookup map from repositoryId to a display label.
+ * Built by the parent component from project and repository data.
+ *
+ * @see T150
+ */
+export type RepositoryNameMap = ReadonlyMap<string, string>;
+
 export interface TaskTableProps {
   /** The tasks to display. */
   readonly tasks: readonly Task[];
@@ -46,6 +56,11 @@ export interface TaskTableProps {
   readonly sortDirection: SortDirection;
   /** Callback when the user clicks a column header to sort. */
   readonly onSort: (field: TaskSortField, direction: SortDirection) => void;
+  /**
+   * Optional map from repositoryId → display name (e.g. "ProjectName / RepoName").
+   * When provided, a Project column with badges is shown in the table.
+   */
+  readonly repositoryNames?: RepositoryNameMap;
 }
 
 /**
@@ -123,8 +138,16 @@ const TYPE_LABELS: Record<string, string> = {
  * to toggle sort direction. Loading state shows skeleton rows.
  * Empty state shows an informative message.
  */
-export function TaskTable({ tasks, isLoading, sortField, sortDirection, onSort }: TaskTableProps) {
+export function TaskTable({
+  tasks,
+  isLoading,
+  sortField,
+  sortDirection,
+  onSort,
+  repositoryNames,
+}: TaskTableProps) {
   const sortedTasks = sortTasks(tasks, sortField, sortDirection);
+  const showProjectColumn = !!repositoryNames && repositoryNames.size > 0;
 
   const handleSort = (field: TaskSortField) => {
     if (field === sortField) {
@@ -150,6 +173,7 @@ export function TaskTable({ tasks, isLoading, sortField, sortDirection, onSort }
           <TableHeader>
             <TableRow>
               <TableHead className="w-[40%]">Title</TableHead>
+              {showProjectColumn && <TableHead>Project</TableHead>}
               <TableHead>Status</TableHead>
               <TableHead>Priority</TableHead>
               <TableHead>Type</TableHead>
@@ -162,6 +186,11 @@ export function TaskTable({ tasks, isLoading, sortField, sortDirection, onSort }
                 <TableCell>
                   <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />
                 </TableCell>
+                {showProjectColumn && (
+                  <TableCell>
+                    <div className="h-5 w-20 animate-pulse rounded-full bg-muted" />
+                  </TableCell>
+                )}
                 <TableCell>
                   <div className="h-5 w-24 animate-pulse rounded-full bg-muted" />
                 </TableCell>
@@ -213,6 +242,7 @@ export function TaskTable({ tasks, isLoading, sortField, sortDirection, onSort }
                 <SortIcon field="title" />
               </Button>
             </TableHead>
+            {showProjectColumn && <TableHead>Project</TableHead>}
             <TableHead>
               <Button
                 variant="ghost"
@@ -264,6 +294,17 @@ export function TaskTable({ tasks, isLoading, sortField, sortDirection, onSort }
                   {task.title}
                 </Link>
               </TableCell>
+              {showProjectColumn && (
+                <TableCell>
+                  <Badge
+                    variant="outline"
+                    className="text-xs font-normal"
+                    data-testid={`task-project-badge-${task.id}`}
+                  >
+                    {repositoryNames!.get(task.repositoryId) ?? "Unknown"}
+                  </Badge>
+                </TableCell>
+              )}
               <TableCell>
                 <TaskStatusBadge status={task.status} />
               </TableCell>

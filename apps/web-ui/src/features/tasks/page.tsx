@@ -3,7 +3,7 @@
  *
  * Displays a filterable, paginated table of tasks with color-coded status
  * and priority badges, sortable columns, and URL-synced filter state for
- * shareable links.
+ * shareable links. Includes project name badges on each task row.
  *
  * Architecture:
  * - Filter state is stored in URL search params via `useTaskFilters` hook
@@ -11,9 +11,11 @@
  *   cache invalidation for real-time updates
  * - Client-side sorting on the current page (API does not support sort params)
  * - Server-side filtering and pagination via query params
+ * - Repository name lookup built from projects and repositories data
  *
  * @see docs/prd/007-technical-architecture.md §7.16 — Task Board screen
  * @see T094 — Build task board with status filtering and pagination
+ * @see T150 — Add project name badges to task rows
  */
 
 import { Filter, Plus } from "lucide-react";
@@ -26,6 +28,7 @@ import { PaginationControls } from "./components/pagination-controls.js";
 import { TaskFilters } from "./components/task-filters.js";
 import { TaskTable } from "./components/task-table.js";
 import { useTaskFilters } from "./hooks/use-task-filters.js";
+import { useRepositoryNameMap } from "./hooks/use-repository-name-map.js";
 
 export default function TasksPage() {
   const [filterState, filterActions] = useTaskFilters();
@@ -33,6 +36,7 @@ export default function TasksPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   const { data, isLoading, isError } = useTasks(filterState.params);
+  const repositoryNames = useRepositoryNameMap();
 
   const tasks = data?.data ?? [];
   const total = data?.meta?.total ?? 0;
@@ -98,6 +102,7 @@ export default function TasksPage() {
         sortField={filterState.sortField}
         sortDirection={filterState.sortDirection}
         onSort={filterActions.setSort}
+        repositoryNames={repositoryNames}
       />
 
       {/* Pagination */}
