@@ -36,13 +36,13 @@ The Autonomous Software Factory is a local-first orchestration platform for soft
 
 ### Progress
 
-23 of 27 epics are complete (E001–E010, E010–E022, E027). See [index-archive.md](index-archive.md) for details.
+24 of 27 epics are complete (E001–E010, E010–E022, E024, E027). See [index-archive.md](index-archive.md) for details.
 
 ### Active Workstreams
 
 1. **Worker Runtime** (E009) — Worker dispatch service, infrastructure adapters, integration wiring (5/13 tasks done)
 2. **Task Import Pipeline** (E023) — Import schemas, parsers, API, UI dialog (0/8 tasks done)
-3. **CLI Package** (E024) — Scaffold workspace, entry point (0/4 tasks done)
+3. **CLI Package** (E024) — Scaffold workspace, entry point (4/4 tasks done) ✅
 4. **Web UI Forms** (E025) — Creation/editing dialogs for all entities (0/8 tasks done)
 5. **CLI Init & Onboarding** (E026) — Global data dir, project auto-detection, interactive init (0/5 tasks done)
 6. **Factory Lifecycle & Recovery** (E027) — Start command, static serving, two-phase shutdown, recovery logging (7/7 tasks done) ✅
@@ -62,7 +62,7 @@ The Autonomous Software Factory is a local-first orchestration platform for soft
 | --------------------------------------- | ------------------------------------ | ---------------------------- | ----------- | ---- | ------- |
 | [E009](epics/E009-worker-runtime.md)    | Worker Runtime & Execution           | E004, E005, E006, E008, E010 | 13          | 13   | 0       |
 | [E023](epics/E023-task-import.md)       | Task Import Pipeline                 | E001, E002, E017, E019, E020 | 8           | 8    | 0       |
-| [E024](epics/E024-cli-package.md)       | CLI Package & Single-Command Startup | E001, E017, E019             | 4           | 0    | 4       |
+| [E024](epics/E024-cli-package.md)       | CLI Package & Single-Command Startup | E001, E017, E019             | 4           | 4    | 0       |
 | [E025](epics/E025-web-ui-forms.md)      | Web UI Creation & Editing Forms      | E019, E020, E021             | 8           | 8    | 0       |
 | [E026](epics/E026-cli-init.md)          | CLI Init & Project Onboarding        | E001, E002, E023             | 5           | 5    | 0       |
 | [E027](epics/E027-factory-lifecycle.md) | Factory Lifecycle & Recovery         | E024, E026                   | 7           | 7    | 0       |
@@ -108,12 +108,12 @@ See [index-archive.md](index-archive.md) for the 21 completed epics: E001–E008
 
 ### E024: CLI Package & Single-Command Startup
 
-| ID                                           | Title                                        | Priority | Type          | Status  |
-| -------------------------------------------- | -------------------------------------------- | -------- | ------------- | ------- |
-| [T119](tasks/T119-scaffold-cli-workspace.md) | Scaffold apps/cli workspace                  | P0       | foundation    | done    |
-| [T120](tasks/T120-bundle-web-ui.md)          | Serve web-ui static files from control-plane | P0       | feature       | done    |
-| [T121](tasks/T121-cli-entry-point.md)        | Build CLI entry point command                | P0       | feature       | done    |
-| [T122](tasks/T122-cli-readme.md)             | Write CLI and import documentation           | P2       | documentation | pending |
+| ID                                           | Title                                        | Priority | Type          | Status |
+| -------------------------------------------- | -------------------------------------------- | -------- | ------------- | ------ |
+| [T119](tasks/T119-scaffold-cli-workspace.md) | Scaffold apps/cli workspace                  | P0       | foundation    | done   |
+| [T120](tasks/T120-bundle-web-ui.md)          | Serve web-ui static files from control-plane | P0       | feature       | done   |
+| [T121](tasks/T121-cli-entry-point.md)        | Build CLI entry point command                | P0       | feature       | done   |
+| [T122](tasks/T122-cli-readme.md)             | Write CLI and import documentation           | P2       | documentation | done   |
 
 ### E025: Web UI Creation & Editing Forms
 
@@ -183,9 +183,7 @@ E027 (Factory Lifecycle) — depends on T140/T141 (from E026)
 
 ### Ready-Now Tasks
 
-Pending tasks whose dependencies are all satisfied (can start immediately):
-
-- [T122](tasks/T122-cli-readme.md): Write CLI and import documentation (E024)
+All tasks are complete. No pending tasks remain.
 
 ### High-Priority (P1) Pending Tasks
 

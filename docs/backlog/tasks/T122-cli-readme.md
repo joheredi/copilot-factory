@@ -5,7 +5,7 @@
 | **ID**                    | T122                                                                       |
 | **Epic**                  | [E024: CLI Package & Single-Command Startup](../epics/E024-cli-package.md) |
 | **Type**                  | documentation                                                              |
-| **Status**                | pending                                                                    |
+| **Status**                | done                                                                       |
 | **Priority**              | P2                                                                         |
 | **Owner**                 | technical-writer                                                           |
 | **AI Executable**         | Yes                                                                        |

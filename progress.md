@@ -1,5 +1,29 @@
 # Progress Log
 
+## T122 — Write CLI and import documentation
+
+### Task
+
+T122 - Write CLI and import documentation (Epic E024: CLI Package & Single-Command Startup)
+
+### What was done
+
+- Created `apps/cli/README.md` — comprehensive CLI reference documenting both commands (`factory init` and `factory start`), all flags, environment variables, data directory layout, shutdown behavior, the `.copilot-factory.json` marker file, troubleshooting, and links to further reading.
+- Added "Importing Tasks" subsection to `docs/user-guide.md` §5 (Managing Tasks) covering:
+  - The 4-step web UI import dialog flow (path input → preview/select → confirm → results)
+  - CLI init task import flow
+  - Supported formats table (JSON and Markdown) with link to `TASK_FORMAT.md`
+  - Import REST API endpoints (`POST /import/discover`, `POST /import/execute`) with curl examples
+  - Import behavior notes (deduplication by externalRef, dependency wiring, atomic transactions, BACKLOG status)
+- Updated `docs/backlog/tasks/T122-cli-readme.md` status to `done`
+- Updated `docs/backlog/index.md` — E024 now 4/4 done, 24/27 epics complete, no pending tasks remain
+
+### Notes for next loop
+
+- All 27 epics have active tasks fully complete. The backlog has no remaining `pending` tasks.
+- E024 (CLI Package) is now fully complete (T119, T120, T121, T122 all done).
+- The README Quick Start and user-guide CLI sections were already written by T151 — T122 only needed the CLI README and import docs.
+
 ## T121 — Build CLI entry point command
 
 ### Task

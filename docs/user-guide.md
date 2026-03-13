@@ -496,6 +496,83 @@ Click any task to open its detail view (`/tasks/:id`), which shows:
 - **Artifacts** — development packets, review packets, diffs, logs
 - **Audit events** — every state transition and operator action on this task
 
+### Importing Tasks
+
+The factory supports bulk-importing tasks from local files — ideal for migrating an existing backlog or bootstrapping a new project with pre-defined work items. Tasks can be imported through the **web UI dialog** or the **CLI init command**.
+
+#### Web UI Import Dialog
+
+On the **Tasks** page (`/tasks`), click **Import Tasks** to open the multi-step import wizard.
+
+**Step 1 — Enter path.** Provide the filesystem path to your task files (e.g., `docs/backlog/tasks`) and an optional glob pattern to filter files. Click **Scan** to discover tasks.
+
+**Step 2 — Preview and select.** The dialog displays all discovered tasks in a table with checkboxes. You can:
+
+- Select or deselect individual tasks, or toggle all at once
+- Review parse warnings (missing fields, unsupported values) shown above the table
+- Edit the suggested **project name** and **repository name** (auto-detected from the directory name)
+
+Each row shows the task title, type, priority, and external reference ID.
+
+**Step 3 — Confirm.** Review a summary of what will be imported: the number of selected tasks, target project name, repository name, and source path. Click **Import** to proceed.
+
+**Step 4 — Results.** The dialog reports how many tasks were created, how many were skipped (duplicates matched by external reference), and any errors encountered. Click **Close** to dismiss.
+
+#### CLI Init Import
+
+During `factory init`, after registering the project, the CLI offers to import tasks:
+
+```
+Import tasks from a local directory? (y/N) y
+Path to scan for tasks: docs/backlog/tasks
+```
+
+This uses the same discovery and execution pipeline as the web UI dialog. Tasks are imported atomically — all succeed or all roll back.
+
+#### Supported Formats
+
+The import system auto-detects the format from the source directory:
+
+| Format       | Detection                   | Description                                                              |
+| ------------ | --------------------------- | ------------------------------------------------------------------------ |
+| **JSON**     | `backlog.json` file present | Structured task list with optional epic groupings. Preferred for tooling |
+| **Markdown** | `*.md` files scanned        | One task per file with a metadata table and headed sections              |
+
+Both formats are validated through the same Zod schemas before import. For complete format specifications, field mappings, and examples, see the [Task Format Reference](TASK_FORMAT.md).
+
+#### Import API Endpoints
+
+The import feature is also available via the REST API:
+
+```bash
+# Step 1: Discover tasks in a directory (read-only preview)
+curl -X POST http://localhost:4100/import/discover \
+  -H "Content-Type: application/json" \
+  -d '{ "path": "/home/user/my-project/docs/tasks" }'
+
+# Response includes: tasks[], warnings[], suggestedProjectName, format
+```
+
+```bash
+# Step 2: Execute the import (creates records in the database)
+curl -X POST http://localhost:4100/import/execute \
+  -H "Content-Type: application/json" \
+  -d '{
+    "path": "/home/user/my-project/docs/tasks",
+    "tasks": [ ... ],
+    "projectName": "my-project"
+  }'
+
+# Response includes: projectId, repositoryId, created, skipped, errors[]
+```
+
+#### Import Behavior
+
+- **Deduplication** — tasks with the same `externalRef` as an existing task are skipped, not duplicated.
+- **Dependency wiring** — if imported tasks reference each other via `dependencies` (by external reference), those relationships are created automatically.
+- **Atomic transactions** — the entire import succeeds or rolls back. No partial imports.
+- **Status** — all imported tasks are created in `BACKLOG` status with source `automated`.
+
 ---
 
 ## 6. The Task Lifecycle
