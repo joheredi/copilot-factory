@@ -63,7 +63,7 @@ The Autonomous Software Factory is a local-first orchestration platform for soft
 | [E009](epics/E009-worker-runtime.md)    | Worker Runtime & Execution           | E004, E005, E006, E008, E010 | 13          | 13   | 0       |
 | [E023](epics/E023-task-import.md)       | Task Import Pipeline                 | E001, E002, E017, E019, E020 | 8           | 7    | 1       |
 | [E024](epics/E024-cli-package.md)       | CLI Package & Single-Command Startup | E001, E017, E019             | 4           | 0    | 4       |
-| [E025](epics/E025-web-ui-forms.md)      | Web UI Creation & Editing Forms      | E019, E020, E021             | 8           | 6    | 2       |
+| [E025](epics/E025-web-ui-forms.md)      | Web UI Creation & Editing Forms      | E019, E020, E021             | 8           | 7    | 1       |
 | [E026](epics/E026-cli-init.md)          | CLI Init & Project Onboarding        | E001, E002, E023             | 5           | 5    | 0       |
 | [E027](epics/E027-factory-lifecycle.md) | Factory Lifecycle & Recovery         | E024, E026                   | 7           | 6    | 1       |
 
@@ -123,7 +123,7 @@ See [index-archive.md](index-archive.md) for the 21 completed epics: E001–E008
 | [T125](tasks/T125-create-project-dialog.md)    | Add Create Project dialog                        | P1       | feature | done     |
 | [T126](tasks/T126-create-repository-dialog.md) | Add Create Repository dialog to Project detail   | P1       | feature | done     |
 | [T127](tasks/T127-create-pool-dialog.md)       | Add Create Worker Pool dialog to Pools page      | P1       | feature | done     |
-| [T128](tasks/T128-create-profile-dialog.md)    | Add Create Agent Profile dialog to Pool detail   | P2       | feature | pending  |
+| [T128](tasks/T128-create-profile-dialog.md)    | Add Create Agent Profile dialog to Pool detail   | P2       | feature | done     |
 | [T129](tasks/T129-edit-task-form.md)           | Add Edit Task form to Task detail page           | P2       | feature | **done** |
 | [T130](tasks/T130-batch-task-import-ui.md)     | Add Batch Task Import UI to Tasks page           | P2       | feature | pending  |
 | [T131](tasks/T131-reassign-pool-action.md)     | Add Reassign Pool operator action to Task detail | P2       | feature | done     |
@@ -185,7 +185,6 @@ E027 (Factory Lifecycle) — depends on T140/T141 (from E026)
 
 Pending tasks whose dependencies are all satisfied (can start immediately):
 
-- [T128](tasks/T128-create-profile-dialog.md): Add Create Agent Profile dialog to Pool detail (E025)
 - [T130](tasks/T130-batch-task-import-ui.md): Add Batch Task Import UI to Tasks page (E025)
 - [T151](tasks/T151-cli-hero-docs.md): Document the CLI hero experience (E027)
 - [T122](tasks/T122-cli-readme.md): Write CLI and import documentation (E024)

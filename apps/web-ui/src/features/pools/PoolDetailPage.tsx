@@ -16,8 +16,9 @@
  * @see T105 — Integrate operator controls into pool and merge queue UI
  */
 
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Plus } from "lucide-react";
 import { usePool, usePoolWorkers, useAgentProfiles } from "../../api/hooks/use-pools.js";
 import { Button } from "../../components/ui/button.js";
 import {
@@ -37,6 +38,7 @@ import type { WorkerRecord } from "./components/worker-table.js";
 import type { AgentProfile } from "../../api/types.js";
 import { ActionFeedbackBanner } from "../task-detail/components/operator-actions/ActionFeedbackBanner.js";
 import { useActionFeedback } from "../task-detail/components/operator-actions/use-action-feedback.js";
+import { CreateProfileDialog } from "./components/CreateProfileDialog.js";
 
 /**
  * Formats an ISO timestamp to a readable date string.
@@ -58,6 +60,7 @@ export default function PoolDetailPage() {
   const { data: rawWorkers, isLoading: workersLoading } = usePoolWorkers(id);
   const { data: profiles, isLoading: profilesLoading } = useAgentProfiles(id);
   const { feedback, showSuccess, showError, clearFeedback } = useActionFeedback();
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
 
   const workers = (rawWorkers ?? []) as WorkerRecord[];
   const profileList = (profiles ?? []) as AgentProfile[];
@@ -239,12 +242,24 @@ export default function PoolDetailPage() {
       {/* Agent profiles section */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">
-            Agent Profiles
-            <Badge variant="secondary" className="ml-2">
-              {profileList.length}
-            </Badge>
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">
+              Agent Profiles
+              <Badge variant="secondary" className="ml-2">
+                {profileList.length}
+              </Badge>
+            </CardTitle>
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1"
+              onClick={() => setProfileDialogOpen(true)}
+              data-testid="add-profile-button"
+            >
+              <Plus className="h-4 w-4" />
+              Add Agent Profile
+            </Button>
+          </div>
           <CardDescription>Configured agent profiles for this pool</CardDescription>
         </CardHeader>
         <CardContent>
@@ -326,6 +341,13 @@ export default function PoolDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Create Agent Profile dialog */}
+      <CreateProfileDialog
+        poolId={pool.id}
+        open={profileDialogOpen}
+        onOpenChange={setProfileDialogOpen}
+      />
     </div>
   );
 }

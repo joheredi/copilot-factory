@@ -1,5 +1,41 @@
 # Progress Log
 
+## T128 — Add Create Agent Profile dialog to Pool detail
+
+### Task
+
+T128 - Add Create Agent Profile dialog to Pool detail (Epic E025: Web UI Creation & Editing Forms)
+
+### What was done
+
+- Created `CreateProfileDialog.tsx` following the established CreatePoolDialog pattern
+  - 8 optional policy/template ID text input fields (all fields are optional)
+  - Form state management with `useState` and `useCallback`
+  - Error display in dialog with auto-clear on field edit
+  - Form reset on close, submit disabled while pending
+  - Scrollable content area for the 8 fields (`max-h-[60vh] overflow-y-auto`)
+  - Wired to existing `useCreateAgentProfile(poolId)` mutation hook
+  - Empty fields omitted from API payload (whitespace-only treated as empty)
+- Created comprehensive test suite (`CreateProfileDialog.test.tsx`, 12 tests)
+  - Uses fetch-spy + QueryClientProvider pattern from other dialog tests
+  - Tests: rendering, empty submission, partial fill, full fill, whitespace handling,
+    API errors, cancel, form reset, error clearing, closed state, endpoint URL
+- Modified `PoolDetailPage.tsx` to add "Add Agent Profile" button
+  - Button placed in Agent Profiles CardHeader with Plus icon
+  - Dialog state managed via `useState`
+  - `CreateProfileDialog` rendered with pool ID from URL params
+
+### Patterns
+
+- All dialog components follow the same pattern: `open`/`onOpenChange` props, controlled form
+  state, `useCallback` handlers, `data-testid` attributes, error display with auto-clear
+- Test pattern: fetch spy, fakeResponse helper, QueryClient+WebSocketProvider+MemoryRouter wrapper
+
+### Notes for next loop
+
+- 4 pending tasks remain (all P2): T130 (batch import UI), T151 (CLI docs), T122 (CLI README), T123 (import format docs)
+- E025 is now 7/8 complete (only T130 remains)
+
 ## T131 — Add Reassign Pool operator action to Task detail
 
 ### Task
