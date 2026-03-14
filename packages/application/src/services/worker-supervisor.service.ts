@@ -380,16 +380,12 @@ export function createWorkerSupervisorService(
           toStatus: "completing",
         });
 
-        // Send a non-terminal heartbeat to ensure the lease has advanced
-        // past STARTING before we send the terminal one. Fast-completing
-        // workers may emit zero heartbeat events, leaving the lease in
-        // STARTING. This bridges STARTING → RUNNING; if the lease is
-        // already in RUNNING or HEARTBEATING, the heartbeat service
-        // handles it as a normal heartbeat (RUNNING → HEARTBEATING or
-        // HEARTBEATING → HEARTBEATING self-loop).
-        heartbeatForwarder.forwardHeartbeat(leaseId, workerId, false);
-
-        // Send terminal heartbeat to signal completion
+        // Send terminal heartbeat to signal completion. This goes through the
+        // heartbeat service which validates the state machine transition and
+        // sets heartbeatAt atomically. For fast workers with zero stream
+        // heartbeats, this transitions STARTING → COMPLETING directly.
+        // For workers that emitted heartbeats, it transitions from
+        // RUNNING/HEARTBEATING → COMPLETING.
         heartbeatForwarder.forwardHeartbeat(leaseId, workerId, true);
 
         // Step 9: Collect artifacts and finalize

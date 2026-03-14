@@ -519,18 +519,18 @@ describe("WorkerSupervisorService", () => {
 
       await service.spawnWorker(params);
 
-      // One heartbeat from the stream + one bridge heartbeat before terminal
+      // One heartbeat from the stream + one terminal heartbeat
       const nonTerminalHeartbeats = heartbeatForwarder.calls.filter((c) => !c.isTerminal);
       const terminalHeartbeats = heartbeatForwarder.calls.filter((c) => c.isTerminal);
 
-      expect(nonTerminalHeartbeats).toHaveLength(2);
+      expect(nonTerminalHeartbeats).toHaveLength(1);
       expect(nonTerminalHeartbeats[0]).toEqual({
         leaseId: "lease-001",
         workerId: "worker-001",
         isTerminal: false,
       });
 
-      // Terminal heartbeat sent after bridge heartbeat
+      // Terminal heartbeat sent after stream ends
       expect(terminalHeartbeats).toHaveLength(1);
       expect(terminalHeartbeats[0]).toEqual({
         leaseId: "lease-001",
@@ -565,7 +565,7 @@ describe("WorkerSupervisorService", () => {
      * fails (STARTING → COMPLETING is not a valid transition). The bridge
      * heartbeat advances the lease to RUNNING first.
      */
-    it("should send bridge heartbeat for fast workers with no stream heartbeats", async () => {
+    it("should send only terminal heartbeat for fast workers with no stream heartbeats", async () => {
       const heartbeatForwarder = createMockHeartbeatForwarder();
       const runtimeAdapter = createMockRuntimeAdapter({
         outputEvents: [
@@ -587,14 +587,9 @@ describe("WorkerSupervisorService", () => {
       await service.spawnWorker(createTestSpawnParams());
 
       const allCalls = heartbeatForwarder.calls;
-      // Bridge (non-terminal) + terminal = 2 total
-      expect(allCalls).toHaveLength(2);
+      // Only terminal heartbeat — lease transitions STARTING → COMPLETING
+      expect(allCalls).toHaveLength(1);
       expect(allCalls[0]).toEqual({
-        leaseId: "lease-001",
-        workerId: "worker-001",
-        isTerminal: false,
-      });
-      expect(allCalls[1]).toEqual({
         leaseId: "lease-001",
         workerId: "worker-001",
         isTerminal: true,
@@ -831,11 +826,11 @@ describe("WorkerSupervisorService", () => {
 
       const result = await service.spawnWorker(createTestSpawnParams());
 
-      // Bridge heartbeat ensures the lease advances past STARTING
+      // No stream heartbeats — only the terminal heartbeat forwarded
       const nonTerminal = heartbeatForwarder.calls.filter((c) => !c.isTerminal);
-      expect(nonTerminal).toHaveLength(1);
+      expect(nonTerminal).toHaveLength(0);
 
-      // Terminal heartbeat still sent
+      // Terminal heartbeat still sent (STARTING → COMPLETING via state machine)
       const terminal = heartbeatForwarder.calls.filter((c) => c.isTerminal);
       expect(terminal).toHaveLength(1);
 
@@ -872,9 +867,9 @@ describe("WorkerSupervisorService", () => {
 
       await service.spawnWorker(createTestSpawnParams());
 
-      // 3 stream heartbeats + 1 bridge heartbeat
+      // 3 stream heartbeats (no bridge heartbeat)
       const nonTerminal = heartbeatForwarder.calls.filter((c) => !c.isTerminal);
-      expect(nonTerminal).toHaveLength(4);
+      expect(nonTerminal).toHaveLength(3);
     });
 
     /**

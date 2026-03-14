@@ -120,6 +120,15 @@ describe("Worker Lease State Machine — Happy Path", () => {
     expect(result.valid).toBe(true);
   });
 
+  it("STARTING → COMPLETING: accepts for fast-completing workers", () => {
+    const result = validateWorkerLeaseTransition(
+      WorkerLeaseStatus.STARTING,
+      WorkerLeaseStatus.COMPLETING,
+      { completionSignalReceived: true },
+    );
+    expect(result.valid).toBe(true);
+  });
+
   it("→ COMPLETING: rejects when completion signal not received", () => {
     const result = validateWorkerLeaseTransition(
       WorkerLeaseStatus.RUNNING,
@@ -363,12 +372,13 @@ describe("Worker Lease State Machine — Utility Functions", () => {
     it("returns all transitions including the self-loop", () => {
       const transitions = getAllValidWorkerLeaseTransitions();
       // Happy path: IDLE→LEASED, LEASED→STARTING, STARTING→RUNNING, RUNNING→HEARTBEATING,
-      //   HEARTBEATING→HEARTBEATING (self-loop), RUNNING→COMPLETING, HEARTBEATING→COMPLETING = 7
+      //   HEARTBEATING→HEARTBEATING (self-loop), RUNNING→COMPLETING, HEARTBEATING→COMPLETING,
+      //   STARTING→COMPLETING (fast worker) = 8
       // Timeout: STARTING→TIMED_OUT, RUNNING→TIMED_OUT, HEARTBEATING→TIMED_OUT = 3
       // Crash: STARTING→CRASHED, RUNNING→CRASHED, HEARTBEATING→CRASHED = 3
       // Reclaim: TIMED_OUT→RECLAIMED, CRASHED→RECLAIMED = 2
-      // Total = 15
-      expect(transitions.length).toBe(15);
+      // Total = 16
+      expect(transitions.length).toBe(16);
     });
 
     it("includes HEARTBEATING self-loop", () => {

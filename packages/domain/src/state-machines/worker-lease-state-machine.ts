@@ -232,6 +232,7 @@ type TransitionKey = `${WorkerLeaseStatus}→${WorkerLeaseStatus}`;
  * Complete transition map for the Worker Lease state machine.
  *
  * The happy path is: IDLE → LEASED → STARTING → RUNNING → HEARTBEATING → COMPLETING.
+ * Fast-completing workers may skip RUNNING/HEARTBEATING: STARTING → COMPLETING.
  * Abnormal paths branch to TIMED_OUT, CRASHED, or RECLAIMED.
  *
  * HEARTBEATING → HEARTBEATING is a self-loop representing continuous heartbeats.
@@ -250,6 +251,7 @@ const TRANSITION_GUARDS: ReadonlyMap<TransitionKey, GuardFn> = new Map<Transitio
   ],
   [`${WorkerLeaseStatus.RUNNING}→${WorkerLeaseStatus.COMPLETING}`, guardToCompleting],
   [`${WorkerLeaseStatus.HEARTBEATING}→${WorkerLeaseStatus.COMPLETING}`, guardToCompleting],
+  [`${WorkerLeaseStatus.STARTING}→${WorkerLeaseStatus.COMPLETING}`, guardToCompleting],
 
   // Timeout paths
   [`${WorkerLeaseStatus.STARTING}→${WorkerLeaseStatus.TIMED_OUT}`, guardToTimedOut],

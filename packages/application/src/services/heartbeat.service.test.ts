@@ -43,12 +43,7 @@ import type { AuditEventRepositoryPort } from "../ports/repository.ports.js";
 import type { DomainEventEmitter } from "../ports/event-emitter.port.js";
 import type { DomainEvent, ActorInfo } from "../events/domain-events.js";
 
-import {
-  EntityNotFoundError,
-  LeaseNotActiveError,
-  InvalidTransitionError,
-  VersionConflictError,
-} from "../errors.js";
+import { EntityNotFoundError, LeaseNotActiveError, VersionConflictError } from "../errors.js";
 
 // ─── Test Helpers ───────────────────────────────────────────────────────────
 
@@ -352,24 +347,25 @@ describe("HeartbeatService.receiveHeartbeat", () => {
     });
 
     /**
-     * Validates that a terminal heartbeat from STARTING is rejected.
-     * The state machine does not define a STARTING → COMPLETING transition,
-     * so the worker must send at least one regular heartbeat before completing.
+     * Validates that a terminal heartbeat from STARTING succeeds.
+     * Fast-completing workers (~1s) may emit zero regular heartbeats.
+     * The STARTING → COMPLETING transition allows them to complete cleanly.
      */
-    it("should reject terminal heartbeat from STARTING state", () => {
+    it("should accept terminal heartbeat from STARTING state (fast worker)", () => {
       const lease = createTestLease({
         status: WorkerLeaseStatus.STARTING,
         heartbeatAt: null,
       });
       const { service } = createHarness([lease]);
 
-      expect(() =>
-        service.receiveHeartbeat({
-          leaseId: "lease-001",
-          completing: true,
-          actor: WORKER_ACTOR,
-        }),
-      ).toThrow(InvalidTransitionError);
+      const result = service.receiveHeartbeat({
+        leaseId: "lease-001",
+        completing: true,
+        actor: WORKER_ACTOR,
+      });
+
+      expect(result.previousStatus).toBe(WorkerLeaseStatus.STARTING);
+      expect(result.lease.status).toBe(WorkerLeaseStatus.COMPLETING);
     });
   });
 
