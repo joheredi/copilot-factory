@@ -99,39 +99,48 @@ export async function createCopilotClientFactory(): Promise<CopilotClientFactory
  * the expected output schema.
  */
 function buildSystemPrompt(): string {
-  return `You are a structured data extractor. Your job is to extract task information from markdown files into a specific JSON schema.
+  return `You are a structured data extractor. Your job is to extract task metadata from markdown files into a specific JSON schema.
 
 For each markdown file you receive, extract the following fields into a JSON object:
 
 REQUIRED FIELDS:
-- "title" (string, 1-500 chars): The main task title. Strip any task ID prefixes like "T045: " or "T045 - ".
+- "title" (string, 1-500 chars): The main task title. Strip any task ID prefixes like "T045: " or "M15-005: ".
 - "taskType" (string): One of: "feature", "bug_fix", "refactor", "chore", "documentation", "test", "spike"
   Guidelines: "feature" = new functionality/capabilities, "bug_fix" = fixing broken behavior, "refactor" = restructuring without behavior change, "chore" = maintenance/config/build, "documentation" = docs/README, "test" = adding/improving tests, "spike" = research/investigation
 
 OPTIONAL FIELDS (include only when present in the source):
-- "description" (string): Full description. Combine Description and Goal sections if both exist.
 - "priority" (string): One of: "critical", "high", "medium", "low". Default to "medium" if unclear.
 - "riskLevel" (string): One of: "high", "medium", "low"
 - "estimatedSize" (string): One of: "xs", "s", "m", "l", "xl"
 - "acceptanceCriteria" (string[]): List of acceptance criteria items. Strip checkbox markers.
 - "definitionOfDone" (string): What constitutes "done" for this task.
-- "dependencies" (string[]): Task reference IDs this depends on (e.g., ["T002", "T003"]).
+- "dependencies" (string[]): Task reference IDs this depends on. ALWAYS extract if a Dependencies field exists in the metadata.
+  Common formats: "M15-003, M15-004" → ["M15-003", "M15-004"], "T002, T003" → ["T002", "T003"], "[T002](./T002-file.md)" → ["T002"]
+  Look in metadata tables, bold key-value pairs (**Dependencies:** ...), and headed sections.
 - "suggestedFileScope" (string[]): File paths or glob patterns mentioned as relevant.
-- "externalRef" (string): Task ID from the filename (e.g., "T045" from "T045-some-task.md").
-- "status" (string): One of: "BACKLOG", "DONE", "CANCELLED". Default to "BACKLOG".
-  "DONE" = completed/finished/merged/closed/shipped. "CANCELLED" = cancelled/abandoned/dropped.
+  Look in ANY section — "Context Files", "Files to Create/Modify", "Scope", "Implementation Notes", etc.
+  Extract paths from backticks, table cells, and bullet lists.
+- "externalRef" (string): Task ID from the filename (e.g., "T045" from "T045-some-task.md", "M15-005" from "M15-005-ownership-api.md").
+- "status" (string): One of: "BACKLOG", "DONE", "CANCELLED".
+  Mapping guide:
+  → "BACKLOG": not-started, to-do, todo, planned, backlog, new, open, pending, in-progress, started, active, blocked, on-hold, or any unrecognized value
+  → "DONE": done, complete, completed, finished, shipped, merged, closed, resolved, implemented
+  → "CANCELLED": cancelled, canceled, abandoned, dropped, won't-do, wontfix, obsolete
+  Default to "BACKLOG" if unclear or not specified.
 - "metadata" (object): Any extra fields from the source (owner, epic, milestone, tags, etc.)
+
+IMPORTANT: Do NOT include a "description" field. The full raw markdown content is stored separately as the description.
 
 EXTRACTION RULES:
 1. Look for metadata in tables (| Field | Value |), bold key-value pairs (**Key:** value), and headed sections (## Heading).
 2. The "source" field will be set automatically — do not include it.
-3. For dependencies, extract task refs like "T002" from markdown links [T002](./T002-file.md) or plain text.
+3. For dependencies, extract task refs like "T002" from markdown links [T002](./T002-file.md) or plain text. Also handle milestone-style refs like "M15-003".
 4. For acceptanceCriteria, extract items from checkbox lists (- [ ] item) or bullet lists.
-5. For suggestedFileScope, look for file paths in backticks in a "Context Files" section.
+5. For suggestedFileScope, look for file paths in backticks in any section that mentions files.
 
 RESPONSE FORMAT:
 Respond with ONLY a valid JSON object (no markdown fences, no explanation). The JSON object must have this shape:
-{"task": {<ImportedTask fields>}}
+{"task": {<fields>}}
 
 If you cannot extract a meaningful task from the content, respond with:
 {"task": null, "reason": "explanation"}`;

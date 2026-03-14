@@ -360,4 +360,69 @@ describe("extractTasksWithLlm", () => {
     expect(result.failedFiles).toEqual(["T001.md"]);
     expect(result.warnings.length).toBeGreaterThan(0);
   });
+
+  /**
+   * Validates that LLM responses without a description field still produce valid
+   * tasks, since the description is now injected as raw markdown by the caller.
+   */
+  it("accepts LLM response without description field", async () => {
+    const noDescResponse = JSON.stringify({
+      task: {
+        title: "Ownership API",
+        taskType: "feature",
+        priority: "high",
+        status: "BACKLOG",
+        dependencies: ["M15-003", "M15-004"],
+        externalRef: "M15-005",
+        acceptanceCriteria: ["Customer owner can be assigned", "Ownership history is queryable"],
+      },
+    });
+
+    const responses = new Map([["M15-005-ownership-api.md", noDescResponse]]);
+    const session = createMockSession(responses);
+    const client = createMockClient(session);
+    const factory = createMockFactory(client);
+
+    const files: MarkdownFileInput[] = [
+      {
+        filename: "M15-005-ownership-api.md",
+        content: "# M15-005: Ownership API\n\nFull content.",
+      },
+    ];
+
+    const result = await extractTasksWithLlm(files, factory);
+
+    expect(result.tasks).toHaveLength(1);
+    expect(result.tasks[0]!.title).toBe("Ownership API");
+    expect(result.tasks[0]!.dependencies).toEqual(["M15-003", "M15-004"]);
+    expect(result.tasks[0]!.status).toBe("BACKLOG");
+    expect(result.failedFiles).toHaveLength(0);
+  });
+
+  /**
+   * Validates that M-style dependency references (e.g., M15-003) are properly
+   * handled by the LLM extraction path.
+   */
+  it("handles milestone-style dependency references from LLM", async () => {
+    const response = JSON.stringify({
+      task: {
+        title: "Sales Attribution",
+        taskType: "feature",
+        dependencies: ["M15-003", "M15-004", "GH#42"],
+        externalRef: "M15-005",
+      },
+    });
+
+    const responses = new Map([["M15-005.md", response]]);
+    const session = createMockSession(responses);
+    const client = createMockClient(session);
+    const factory = createMockFactory(client);
+
+    const files: MarkdownFileInput[] = [{ filename: "M15-005.md", content: "# Task" }];
+
+    const result = await extractTasksWithLlm(files, factory);
+
+    expect(result.tasks).toHaveLength(1);
+    expect(result.tasks[0]!.dependencies).toEqual(["M15-003", "M15-004", "GH#42"]);
+  });
 });

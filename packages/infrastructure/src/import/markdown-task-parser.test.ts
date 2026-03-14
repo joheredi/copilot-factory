@@ -792,9 +792,9 @@ describe("parseTaskFile", () => {
     expect(task!.priority).toBe("high"); // P1 maps to high
     expect(task!.externalRef).toBe("T045");
 
-    // Description should include both Description and Goal sections
+    // Description is now the full raw markdown content
     expect(task!.description).toContain("Copilot CLI adapter");
-    expect(task!.description).toContain("Goal:");
+    expect(task!.description).toContain("## Goal");
 
     // Acceptance criteria extracted from checkboxes
     expect(task!.acceptanceCriteria).toHaveLength(3);
@@ -871,6 +871,55 @@ describe("parseTaskFile", () => {
     const errorWarnings = warnings.filter((w) => w.severity === "error");
     expect(errorWarnings.length).toBeGreaterThan(0);
     expect(errorWarnings[0].field).toBe("title");
+  });
+
+  /**
+   * Validates that the full raw markdown content is stored as the description,
+   * preserving all sections including non-standard ones like Objective,
+   * Implementation Notes, etc.
+   */
+  it("preserves full raw markdown as description", () => {
+    const richMd = `# M15-005: Sales Ownership API
+**Status:** \`not-started\`
+**Dependencies:** M15-003, M15-004
+**Priority:** high
+**Tag:** 🤖 agent
+
+## Objective
+
+Expose sales ownership assignment through REST endpoints.
+
+## Implementation Notes
+
+### Endpoints
+
+\`\`\`
+PATCH /v1/sales/customers/{id}/owner
+\`\`\`
+
+## Non-Goals
+
+- Commission-related endpoints
+
+## Acceptance Criteria
+
+- [ ] Customer owner can be assigned
+- [ ] Ownership history is queryable
+`;
+
+    const { task } = parseTaskFile(richMd, "M15-005-ownership-api.md");
+
+    expect(task).not.toBeNull();
+    // Full markdown is the description — all sections preserved
+    expect(task!.description).toContain("## Objective");
+    expect(task!.description).toContain("## Implementation Notes");
+    expect(task!.description).toContain("## Non-Goals");
+    expect(task!.description).toContain("PATCH /v1/sales/customers/{id}/owner");
+    expect(task!.description).toContain("Commission-related endpoints");
+    // Dependencies extracted from bold metadata
+    expect(task!.dependencies).toEqual(["M15-003", "M15-004"]);
+    // External ref from filename
+    expect(task!.externalRef).toBe("M15-005");
   });
 });
 
@@ -1071,5 +1120,53 @@ describe("discoverMarkdownTasks", () => {
 
     const manifest = await discoverMarkdownTasks("/flat", flatFs);
     expect(manifest.tasks).toHaveLength(1);
+  });
+
+  /**
+   * Validates that description contains the full raw markdown content,
+   * including non-standard sections like Objective and Implementation Notes.
+   */
+  it("stores full raw markdown as description for deterministic-parsed tasks", async () => {
+    const richMd = `# M15-005: Sales Ownership API
+**Status:** \`not-started\`
+**Dependencies:** M15-003, M15-004
+**Priority:** high
+**Tag:** feature
+
+## Objective
+
+Expose sales ownership endpoints.
+
+## Implementation Notes
+
+PATCH /v1/sales/customers/{id}/owner
+
+## Acceptance Criteria
+
+- [ ] Customer owner can be assigned
+`;
+
+    const richFs = createFakeFs(
+      {
+        "/backlog/tasks/M15-005-ownership-api.md": richMd,
+      },
+      {
+        "/backlog": [{ name: "tasks", isDirectory: true }],
+        "/backlog/tasks": [{ name: "M15-005-ownership-api.md", isDirectory: false }],
+      },
+    );
+
+    const manifest = await discoverMarkdownTasks("/backlog", richFs);
+
+    expect(manifest.tasks).toHaveLength(1);
+    const task = manifest.tasks[0]!;
+    // Description is the full raw markdown — all sections preserved
+    expect(task.description).toContain("## Objective");
+    expect(task.description).toContain("## Implementation Notes");
+    expect(task.description).toContain("PATCH /v1/sales/customers/{id}/owner");
+    // Structured fields still extracted
+    expect(task.dependencies).toEqual(["M15-003", "M15-004"]);
+    expect(task.priority).toBe("high");
+    expect(task.acceptanceCriteria).toContain("Customer owner can be assigned");
   });
 });

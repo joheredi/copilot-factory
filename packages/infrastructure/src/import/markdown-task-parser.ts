@@ -108,6 +108,9 @@ export async function discoverMarkdownTasks(
   // Track which files were successfully handled by LLM.
   const llmHandledFiles = new Set<string>();
 
+  // Build filename → raw content map for injecting full markdown as description.
+  const contentByFilename = new Map(fileContents.map((f) => [f.filename, f.content]));
+
   // ── LLM extraction (when available) ────────────────────────────────────
   if (llmExtractor && fileContents.length > 0) {
     const llmInputs = fileContents.map((f) => ({
@@ -121,6 +124,18 @@ export async function discoverMarkdownTasks(
       llmExtractor.config,
     );
     warnings.push(...llmResult.warnings);
+
+    // Inject the full raw markdown as description for each LLM-extracted task.
+    // The LLM extracts structured fields (status, dependencies, etc.) but we
+    // preserve the complete markdown to avoid losing any information.
+    for (const task of llmResult.tasks) {
+      if (task.source) {
+        const rawContent = contentByFilename.get(task.source);
+        if (rawContent) {
+          (task as { description: string }).description = rawContent;
+        }
+      }
+    }
     tasks.push(...llmResult.tasks);
 
     // Mark successfully extracted files so we skip them in deterministic parsing.
@@ -276,13 +291,11 @@ export function parseTaskFile(content: string, filename: string): ParseTaskFileR
   }
 
   // --- Description ---
-  const description = extractSection(content, "Description");
-
-  // --- Goal ---
-  const goal = extractSection(content, "Goal");
-  const fullDescription = [description, goal ? `**Goal:** ${goal}` : ""]
-    .filter(Boolean)
-    .join("\n\n");
+  // Store the full raw markdown as the description to preserve all content
+  // (endpoints, DTOs, implementation notes, scope, non-goals, etc.).
+  // Structured fields (title, taskType, etc.) are extracted separately for
+  // filtering/display.
+  const fullDescription = content;
 
   // --- Acceptance criteria ---
   const acSection = extractSection(content, "Acceptance Criteria");
