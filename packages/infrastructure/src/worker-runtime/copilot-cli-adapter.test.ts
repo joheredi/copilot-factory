@@ -257,6 +257,7 @@ class FakeCliProcess implements CliProcess {
   private stdoutListeners: Array<(data: string) => void> = [];
   private stderrListeners: Array<(data: string) => void> = [];
   private exitListeners: Array<(code: number | null) => void> = [];
+  private errorListeners: Array<(err: Error) => void> = [];
   private killed = false;
 
   onStdout(listener: (data: string) => void): void {
@@ -269,6 +270,10 @@ class FakeCliProcess implements CliProcess {
 
   onExit(listener: (code: number | null) => void): void {
     this.exitListeners.push(listener);
+  }
+
+  onError(listener: (err: Error) => void): void {
+    this.errorListeners.push(listener);
   }
 
   kill(_signal?: NodeJS.Signals): boolean {
@@ -295,6 +300,13 @@ class FakeCliProcess implements CliProcess {
   emitExit(code: number | null): void {
     for (const listener of this.exitListeners) {
       listener(code);
+    }
+  }
+
+  /** Simulate a spawn error (e.g. ENOENT). */
+  emitError(err: Error): void {
+    for (const listener of this.errorListeners) {
+      listener(err);
     }
   }
 }
@@ -488,6 +500,43 @@ describe("CopilotCliAdapter", () => {
       const { adapter } = createTestAdapter();
 
       await expect(adapter.startRun("nonexistent")).rejects.toThrow(/Unknown run ID/);
+    });
+
+    /**
+     * Validates that a spawn error (e.g. ENOENT when binary is missing) is
+     * handled gracefully instead of crashing the process. The error should
+     * be captured as stderr output and the run should complete with failure.
+     */
+    it("handles spawn ENOENT error without crashing", async () => {
+      const { adapter, processSpawner } = createTestAdapter();
+      const prepared = await adapter.prepareRun(createTestRunContext());
+
+      await adapter.startRun(prepared.runId);
+
+      const process = processSpawner.getProcess();
+
+      // Simulate ENOENT error (binary not found)
+      const enoentError = new Error("spawn gh ENOENT") as NodeJS.ErrnoException;
+      enoentError.code = "ENOENT";
+      process.emitError(enoentError);
+
+      // Stream should complete (not hang)
+      const events: RunOutputStream[] = [];
+      for await (const event of adapter.streamRun(prepared.runId)) {
+        events.push(event);
+      }
+
+      // Error captured as stderr event
+      expect(events.some((e) => e.type === "stderr" && e.content.includes("ENOENT"))).toBe(true);
+
+      // Finalize produces a failed result
+      const artifacts = await adapter.collectArtifacts(prepared.runId);
+      expect(artifacts.packetValid).toBe(false);
+
+      const result = await adapter.finalizeRun(prepared.runId);
+      expect(result.status).toBe("failed");
+      expect(result.exitCode).toBe(-1);
+      expect(result.logs.some((l) => l.content.includes("spawn gh ENOENT"))).toBe(true);
     });
   });
 

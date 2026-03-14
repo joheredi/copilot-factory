@@ -117,6 +117,9 @@ export interface CliProcess {
   /** Register a listener for process exit. Code is null if killed by signal. */
   onExit(listener: (code: number | null) => void): void;
 
+  /** Register a listener for spawn errors (e.g. ENOENT when binary not found). */
+  onError(listener: (err: Error) => void): void;
+
   /** Send a signal to terminate the process. Returns true if signal was sent. */
   kill(signal?: NodeJS.Signals): boolean;
 }
@@ -429,6 +432,9 @@ export function createDefaultProcessSpawner(): CliProcessSpawner {
       onExit(listener: (code: number | null) => void) {
         child.on("exit", (code) => listener(code));
       },
+      onError(listener: (err: Error) => void) {
+        child.on("error", (err) => listener(err));
+      },
       kill(signal?: NodeJS.Signals) {
         return child.kill(signal ?? "SIGTERM");
       },
@@ -571,6 +577,41 @@ export class CopilotCliAdapter implements WorkerRuntime {
     state.phase = "running";
     state.startedAt = new Date();
 
+    // Handle process exit. The exit promise resolves when either the process
+    // exits normally or a spawn error occurs (e.g. binary not found).
+    let resolveExit: (code: number | null) => void;
+    state.exitPromise = new Promise<number | null>((resolve) => {
+      resolveExit = resolve;
+    });
+
+    // Handle process spawn errors (e.g. ENOENT when binary not found).
+    // Treat spawn errors as immediate process failure to prevent unhandled
+    // 'error' events from crashing the Node.js process.
+    process.onError((err: Error) => {
+      const errorMsg = `Process spawn error: ${err.message}`;
+      state.stderrBuffer += errorMsg;
+
+      const event: RunOutputStream = {
+        type: "stderr",
+        content: errorMsg,
+        timestamp: new Date().toISOString(),
+      };
+      state.outputEvents.push(event);
+      state.logEntries.push({
+        timestamp: event.timestamp,
+        stream: "stderr",
+        content: errorMsg,
+      });
+
+      // Transition to completed with failure if still running
+      if (state.phase === "running") {
+        state.phase = "completed";
+        state.exitCode = -1;
+        state.completedAt = new Date();
+        resolveExit(-1);
+      }
+    });
+
     // Capture stdout
     process.onStdout((data: string) => {
       state.stdoutBuffer += data;
@@ -621,15 +662,13 @@ export class CopilotCliAdapter implements WorkerRuntime {
     });
 
     // Handle process exit
-    state.exitPromise = new Promise<number | null>((resolve) => {
-      process.onExit((code: number | null) => {
-        if (state.phase === "running") {
-          state.phase = "completed";
-        }
-        state.exitCode = code;
-        state.completedAt = new Date();
-        resolve(code);
-      });
+    process.onExit((code: number | null) => {
+      if (state.phase === "running") {
+        state.phase = "completed";
+      }
+      state.exitCode = code;
+      state.completedAt = new Date();
+      resolveExit(code);
     });
   }
 
