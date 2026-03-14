@@ -519,18 +519,18 @@ describe("WorkerSupervisorService", () => {
 
       await service.spawnWorker(params);
 
-      // One heartbeat event in the mock stream + one terminal heartbeat
+      // One heartbeat from the stream + one bridge heartbeat before terminal
       const nonTerminalHeartbeats = heartbeatForwarder.calls.filter((c) => !c.isTerminal);
       const terminalHeartbeats = heartbeatForwarder.calls.filter((c) => c.isTerminal);
 
-      expect(nonTerminalHeartbeats).toHaveLength(1);
+      expect(nonTerminalHeartbeats).toHaveLength(2);
       expect(nonTerminalHeartbeats[0]).toEqual({
         leaseId: "lease-001",
         workerId: "worker-001",
         isTerminal: false,
       });
 
-      // Terminal heartbeat sent after stream ends
+      // Terminal heartbeat sent after bridge heartbeat
       expect(terminalHeartbeats).toHaveLength(1);
       expect(terminalHeartbeats[0]).toEqual({
         leaseId: "lease-001",
@@ -559,10 +559,49 @@ describe("WorkerSupervisorService", () => {
     });
 
     /**
-     * @why Verifies the Worker entity's lastHeartbeatAt is updated when
-     * heartbeats are received. This timestamp is used by staleness detection
-     * to determine if a worker is still alive.
+     * @why Fast-completing workers (e.g., Copilot CLI finishing in ~1s) may
+     * emit zero heartbeat events during the stream. Without the bridge
+     * heartbeat, the lease stays in STARTING and the terminal heartbeat
+     * fails (STARTING → COMPLETING is not a valid transition). The bridge
+     * heartbeat advances the lease to RUNNING first.
      */
+    it("should send bridge heartbeat for fast workers with no stream heartbeats", async () => {
+      const heartbeatForwarder = createMockHeartbeatForwarder();
+      const runtimeAdapter = createMockRuntimeAdapter({
+        outputEvents: [
+          { type: "stdout", content: "Done instantly.", timestamp: FIXED_TIME.toISOString() },
+        ],
+      });
+
+      const service = createWorkerSupervisorService({
+        unitOfWork: createMockUnitOfWork(createMockWorkerRepo()),
+        eventEmitter: createMockEventEmitter(),
+        workspaceProvider: createMockWorkspaceProvider(),
+        packetMounter: createMockPacketMounter(),
+        runtimeAdapter,
+        heartbeatForwarder,
+        leaseTransitioner: createMockLeaseTransitioner(),
+        clock: () => FIXED_TIME,
+      });
+
+      await service.spawnWorker(createTestSpawnParams());
+
+      const allCalls = heartbeatForwarder.calls;
+      // Bridge (non-terminal) + terminal = 2 total
+      expect(allCalls).toHaveLength(2);
+      expect(allCalls[0]).toEqual({
+        leaseId: "lease-001",
+        workerId: "worker-001",
+        isTerminal: false,
+      });
+      expect(allCalls[1]).toEqual({
+        leaseId: "lease-001",
+        workerId: "worker-001",
+        isTerminal: true,
+      });
+    });
+
+    /**
     it("should update Worker lastHeartbeatAt on heartbeat events", async () => {
       const { service, workerRepo } = createTestHarness();
       const params = createTestSpawnParams();
@@ -792,9 +831,9 @@ describe("WorkerSupervisorService", () => {
 
       const result = await service.spawnWorker(createTestSpawnParams());
 
-      // Only the terminal heartbeat should be forwarded
+      // Bridge heartbeat ensures the lease advances past STARTING
       const nonTerminal = heartbeatForwarder.calls.filter((c) => !c.isTerminal);
-      expect(nonTerminal).toHaveLength(0);
+      expect(nonTerminal).toHaveLength(1);
 
       // Terminal heartbeat still sent
       const terminal = heartbeatForwarder.calls.filter((c) => c.isTerminal);
@@ -833,8 +872,9 @@ describe("WorkerSupervisorService", () => {
 
       await service.spawnWorker(createTestSpawnParams());
 
+      // 3 stream heartbeats + 1 bridge heartbeat
       const nonTerminal = heartbeatForwarder.calls.filter((c) => !c.isTerminal);
-      expect(nonTerminal).toHaveLength(3);
+      expect(nonTerminal).toHaveLength(4);
     });
 
     /**
