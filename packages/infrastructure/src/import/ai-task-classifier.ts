@@ -42,6 +42,16 @@ export interface TaskClassificationResult {
   status: ImportedTaskStatus;
 }
 
+/** Retry configuration for rate-limit resilience. */
+export interface RetryOptions {
+  /** Maximum number of retries per batch (default: 3). */
+  maxRetries?: number;
+  /** Initial backoff delay in ms when Retry-After is absent (default: 2000). */
+  initialDelayMs?: number;
+  /** Delay in ms between consecutive batches to avoid hitting rate limits (default: 500). */
+  interBatchDelayMs?: number;
+}
+
 /** Dependencies injectable for testing. */
 export interface AiClassifierDeps {
   /** Function that returns a GitHub token. Override in tests. */
@@ -50,6 +60,12 @@ export interface AiClassifierDeps {
   fetchFn: typeof fetch;
   /** Optional progress callback invoked after each batch completes. */
   onProgress?: (classified: number, total: number) => void;
+  /** Optional callback when a batch is being retried after a rate limit. */
+  onRetry?: (batchNumber: number, waitMs: number, attempt: number, maxRetries: number) => void;
+  /** Retry configuration. */
+  retryOptions?: RetryOptions;
+  /** Sleep function — injectable for testing. Defaults to real setTimeout-based sleep. */
+  sleep?: (ms: number) => Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -61,6 +77,12 @@ const MODEL = "gpt-4o-mini";
 /** Max tasks per API call to stay under the 8K token limit. */
 const BATCH_SIZE = 20;
 
+const DEFAULT_MAX_RETRIES = 3;
+const DEFAULT_INITIAL_DELAY_MS = 2_000;
+const DEFAULT_INTER_BATCH_DELAY_MS = 500;
+/** Never wait longer than 2 minutes for a single retry. */
+const MAX_WAIT_MS = 120_000;
+
 const VALID_TASK_TYPES = [
   "feature",
   "bug_fix",
@@ -71,6 +93,49 @@ const VALID_TASK_TYPES = [
   "spike",
 ] as const;
 const VALID_STATUSES = ["BACKLOG", "DONE", "CANCELLED"] as const;
+
+/** Status codes that indicate a transient/rate-limit error worth retrying. */
+const RETRYABLE_STATUS_CODES = new Set([429, 503]);
+
+// ---------------------------------------------------------------------------
+// Sleep & rate-limit helpers
+// ---------------------------------------------------------------------------
+
+function defaultSleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Extract the number of seconds to wait from a 429 response.
+ *
+ * Checks (in order):
+ * 1. `Retry-After` response header (seconds)
+ * 2. `"Please wait N seconds"` pattern in the response body
+ *
+ * Returns the wait time in milliseconds, clamped to {@link MAX_WAIT_MS},
+ * or `undefined` if no hint is found.
+ */
+function parseRetryAfter(response: Response, body: string): number | undefined {
+  // 1. Standard Retry-After header
+  const headerVal = response.headers.get("retry-after");
+  if (headerVal) {
+    const seconds = Number(headerVal);
+    if (Number.isFinite(seconds) && seconds > 0) {
+      return Math.min(seconds * 1_000, MAX_WAIT_MS);
+    }
+  }
+
+  // 2. Body pattern: "Please wait N seconds"
+  const match = body.match(/wait\s+(\d+)\s+second/i);
+  if (match?.[1]) {
+    const seconds = Number(match[1]);
+    if (Number.isFinite(seconds) && seconds > 0) {
+      return Math.min(seconds * 1_000, MAX_WAIT_MS);
+    }
+  }
+
+  return undefined;
+}
 
 // ---------------------------------------------------------------------------
 // Prompt
@@ -139,12 +204,32 @@ export async function getGitHubToken(): Promise<string | null> {
 // Core classifier
 // ---------------------------------------------------------------------------
 
+/** Error subclass that carries the HTTP status and response body for retryable errors. */
+class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly response: Response,
+    readonly body: string,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 /**
  * Classify an array of imported tasks using GitHub Models API.
  *
  * Splits tasks into batches of {@link BATCH_SIZE} to stay under the
  * API token limit, then merges results back in order. Falls back to
  * deterministic defaults when AI is unavailable.
+ *
+ * Rate-limit resilience:
+ * - Adds a configurable inter-batch delay to spread token usage.
+ * - Retries 429/503 errors with exponential backoff, honouring the
+ *   `Retry-After` header or the body's "wait N seconds" hint.
+ * - Falls back to deterministic classification only after retries
+ *   are exhausted.
  *
  * @param tasks - Tasks to classify.
  * @param deps - Injectable dependencies (token resolution, fetch).
@@ -163,6 +248,10 @@ export async function classifyImportedTasks(
 
   const getToken = deps.getToken ?? getGitHubToken;
   const fetchFn = deps.fetchFn ?? globalThis.fetch;
+  const sleepFn = deps.sleep ?? defaultSleep;
+  const maxRetries = deps.retryOptions?.maxRetries ?? DEFAULT_MAX_RETRIES;
+  const initialDelayMs = deps.retryOptions?.initialDelayMs ?? DEFAULT_INITIAL_DELAY_MS;
+  const interBatchDelayMs = deps.retryOptions?.interBatchDelayMs ?? DEFAULT_INTER_BATCH_DELAY_MS;
 
   // ── Check token availability ───────────────────────────────────────────
   const token = await getToken();
@@ -178,29 +267,64 @@ export async function classifyImportedTasks(
     return { results: tasks.map(deterministicFallback), warnings };
   }
 
-  // ── Classify in batches ────────────────────────────────────────────────
+  // ── Classify in batches with retry ─────────────────────────────────────
   const allResults: TaskClassificationResult[] = [];
   const onProgress = deps.onProgress;
+  const totalBatches = Math.ceil(tasks.length / BATCH_SIZE);
 
   for (let i = 0; i < tasks.length; i += BATCH_SIZE) {
     const batch = tasks.slice(i, i + BATCH_SIZE);
+    const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
+    let succeeded = false;
 
-    try {
-      const batchResults = await classifyBatch(batch, token, fetchFn);
-      allResults.push(...batchResults);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      warnings.push({
-        file: "ai-classifier",
-        field: "classification",
-        message: `AI classification failed for batch ${Math.floor(i / BATCH_SIZE) + 1}: ${msg}. Using deterministic fallback for this batch.`,
-        severity: "warning",
-      });
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const batchResults = await classifyBatch(batch, token, fetchFn);
+        allResults.push(...batchResults);
+        succeeded = true;
+        break;
+      } catch (err: unknown) {
+        const isRetryable = err instanceof ApiError && RETRYABLE_STATUS_CODES.has(err.status);
+
+        if (!isRetryable || attempt === maxRetries) {
+          // Non-retryable or retries exhausted → deterministic fallback
+          const msg = err instanceof Error ? err.message : String(err);
+          warnings.push({
+            file: "ai-classifier",
+            field: "classification",
+            message: `AI classification failed for batch ${batchNumber}: ${msg}. Using deterministic fallback for this batch.`,
+            severity: "warning",
+          });
+          allResults.push(...batch.map(deterministicFallback));
+          succeeded = true; // Mark as handled (via fallback)
+          break;
+        }
+
+        // Compute wait time: prefer API hint, fall back to exponential backoff
+        const apiHintMs = parseRetryAfter(err.response, err.body);
+        const backoffMs = initialDelayMs * Math.pow(2, attempt);
+        const waitMs = Math.min(apiHintMs ?? backoffMs, MAX_WAIT_MS);
+
+        if (deps.onRetry) {
+          deps.onRetry(batchNumber, waitMs, attempt + 1, maxRetries);
+        }
+
+        await sleepFn(waitMs);
+      }
+    }
+
+    // Defensive: should never happen, but ensures allResults stays aligned
+    if (!succeeded) {
       allResults.push(...batch.map(deterministicFallback));
     }
 
     if (onProgress) {
       onProgress(Math.min(i + BATCH_SIZE, tasks.length), tasks.length);
+    }
+
+    // Inter-batch delay to proactively avoid rate limits (skip after last batch)
+    if (batchNumber < totalBatches) {
+      await sleepFn(interBatchDelayMs);
     }
   }
 
@@ -209,6 +333,10 @@ export async function classifyImportedTasks(
 
 /**
  * Classify a single batch of tasks via the GitHub Models API.
+ *
+ * Throws {@link ApiError} for non-OK responses so the caller can
+ * distinguish retryable from non-retryable failures.
+ *
  * @internal
  */
 async function classifyBatch(
@@ -235,7 +363,12 @@ async function classifyBatch(
 
   if (!response.ok) {
     const body = await response.text().catch(() => "");
-    throw new Error(`GitHub Models API returned ${response.status}: ${body.slice(0, 200)}`);
+    throw new ApiError(
+      `GitHub Models API returned ${response.status}: ${body.slice(0, 200)}`,
+      response.status,
+      response,
+      body,
+    );
   }
 
   const data = (await response.json()) as {

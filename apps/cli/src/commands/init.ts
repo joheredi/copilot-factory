@@ -725,6 +725,12 @@ async function loadDefaultDiscoverer(
       onProgress: (done, total) => {
         log(`  🤖 Classifying tasks... ${done}/${total}`);
       },
+      onRetry: (batchNumber, waitMs, attempt, maxRetries) => {
+        const waitSec = Math.ceil(waitMs / 1000);
+        log(
+          `  ⏳ Rate limited on batch ${batchNumber}, retrying in ${waitSec}s (attempt ${attempt}/${maxRetries})...`,
+        );
+      },
     });
 
   return async (inputPath: string): Promise<DiscoveryResult> => {

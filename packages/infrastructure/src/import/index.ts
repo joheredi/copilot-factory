@@ -45,6 +45,7 @@ export type {
   TaskClassificationInput,
   TaskClassificationResult,
   AiClassifierDeps,
+  RetryOptions,
 } from "./ai-task-classifier.js";
 
 export {

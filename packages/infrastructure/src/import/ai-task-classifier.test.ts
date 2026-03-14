@@ -41,18 +41,32 @@ const sampleTasks: TaskClassificationInput[] = [
   },
 ];
 
-function mockFetch(responseBody: unknown, status = 200): typeof fetch {
+function mockFetch(
+  responseBody: unknown,
+  status = 200,
+  headers?: Record<string, string>,
+): typeof fetch {
+  const headersMap = new Map(Object.entries(headers ?? {}));
   return vi.fn().mockResolvedValue({
     ok: status >= 200 && status < 300,
     status,
     json: async () => responseBody,
     text: async () => JSON.stringify(responseBody),
+    headers: { get: (name: string) => headersMap.get(name.toLowerCase()) ?? null },
   }) as unknown as typeof fetch;
 }
+
+/** No-op sleep to keep tests instant. */
+const instantSleep = vi.fn().mockResolvedValue(undefined) as unknown as (
+  ms: number,
+) => Promise<void>;
 
 function makeDeps(overrides: Partial<AiClassifierDeps> = {}): Partial<AiClassifierDeps> {
   return {
     getToken: overrides.getToken ?? (async () => "fake-token"),
+    sleep: overrides.sleep ?? instantSleep,
+    retryOptions: overrides.retryOptions ?? { interBatchDelayMs: 0 },
+    onRetry: overrides.onRetry,
     fetchFn:
       overrides.fetchFn ??
       mockFetch({
@@ -209,6 +223,8 @@ describe("classifyImportedTasks", () => {
     await classifyImportedTasks(sampleTasks, {
       getToken: async () => "test-token-123",
       fetchFn: fetchSpy,
+      sleep: instantSleep,
+      retryOptions: { interBatchDelayMs: 0 },
     });
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
@@ -225,5 +241,312 @@ describe("classifyImportedTasks", () => {
     const body = JSON.parse(options.body as string) as { model: string; temperature: number };
     expect(body.model).toBe("gpt-4o-mini");
     expect(body.temperature).toBe(0);
+  });
+});
+
+// ─── Retry and rate-limit behaviour ─────────────────────────────────────────
+
+describe("classifyImportedTasks — retry on rate limit", () => {
+  /** Helper to build a 429 response with optional Retry-After header and body. */
+  function make429Response(
+    bodyText: string,
+    retryAfterHeader?: string,
+  ): {
+    ok: false;
+    status: 429;
+    text: () => Promise<string>;
+    headers: { get: (n: string) => string | null };
+  } {
+    const headers = new Map<string, string>();
+    if (retryAfterHeader) headers.set("retry-after", retryAfterHeader);
+    return {
+      ok: false as const,
+      status: 429,
+      text: async () => bodyText,
+      headers: { get: (name: string) => headers.get(name.toLowerCase()) ?? null },
+    };
+  }
+
+  /** Helper to build a successful response. */
+  function makeOkResponse(results: Array<{ taskType: string; status: string }>): {
+    ok: true;
+    status: 200;
+    json: () => Promise<unknown>;
+    headers: { get: () => null };
+  } {
+    return {
+      ok: true as const,
+      status: 200,
+      json: async () => ({
+        choices: [{ message: { content: JSON.stringify(results) } }],
+      }),
+      headers: { get: () => null },
+    };
+  }
+
+  it("retries on 429 and succeeds on second attempt", async () => {
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValueOnce(make429Response('{"error":"rate limited"}'))
+      .mockResolvedValueOnce(
+        makeOkResponse([
+          { taskType: "feature", status: "DONE" },
+          { taskType: "bug_fix", status: "BACKLOG" },
+          { taskType: "chore", status: "BACKLOG" },
+        ]),
+      ) as unknown as typeof fetch;
+
+    const sleepFn = vi.fn().mockResolvedValue(undefined) as unknown as (
+      ms: number,
+    ) => Promise<void>;
+
+    const { results, warnings } = await classifyImportedTasks(sampleTasks, {
+      ...makeDeps({ fetchFn }),
+      sleep: sleepFn,
+      retryOptions: { maxRetries: 3, initialDelayMs: 1000, interBatchDelayMs: 0 },
+    });
+
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+    expect(results).toHaveLength(3);
+    expect(results[0]).toEqual({ taskType: "feature", status: "DONE" });
+    expect(warnings).toHaveLength(0);
+    // Sleep was called for the retry backoff
+    expect(sleepFn).toHaveBeenCalled();
+  });
+
+  it("parses Retry-After header to determine wait time", async () => {
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValueOnce(make429Response('{"error":"rate limited"}', "30"))
+      .mockResolvedValueOnce(
+        makeOkResponse([
+          { taskType: "feature", status: "DONE" },
+          { taskType: "bug_fix", status: "BACKLOG" },
+          { taskType: "chore", status: "BACKLOG" },
+        ]),
+      ) as unknown as typeof fetch;
+
+    const sleepFn = vi.fn().mockResolvedValue(undefined) as unknown as (
+      ms: number,
+    ) => Promise<void>;
+
+    await classifyImportedTasks(sampleTasks, {
+      ...makeDeps({ fetchFn }),
+      sleep: sleepFn,
+      retryOptions: { maxRetries: 3, initialDelayMs: 1000, interBatchDelayMs: 0 },
+    });
+
+    // Should have waited 30s (30000ms) from the Retry-After header
+    expect(sleepFn).toHaveBeenCalledWith(30_000);
+  });
+
+  it("parses 'Please wait N seconds' from response body", async () => {
+    const bodyText =
+      '{"error":{"message":"Rate limit exceeded. Please wait 60 seconds before retrying."}}';
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValueOnce(make429Response(bodyText))
+      .mockResolvedValueOnce(
+        makeOkResponse([
+          { taskType: "feature", status: "DONE" },
+          { taskType: "bug_fix", status: "BACKLOG" },
+          { taskType: "chore", status: "BACKLOG" },
+        ]),
+      ) as unknown as typeof fetch;
+
+    const sleepFn = vi.fn().mockResolvedValue(undefined) as unknown as (
+      ms: number,
+    ) => Promise<void>;
+
+    await classifyImportedTasks(sampleTasks, {
+      ...makeDeps({ fetchFn }),
+      sleep: sleepFn,
+      retryOptions: { maxRetries: 3, initialDelayMs: 1000, interBatchDelayMs: 0 },
+    });
+
+    // Should have waited 60s (60000ms) parsed from the body
+    expect(sleepFn).toHaveBeenCalledWith(60_000);
+  });
+
+  it("falls back to deterministic after exhausting retries", async () => {
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValue(make429Response('{"error":"rate limited"}')) as unknown as typeof fetch;
+
+    const sleepFn = vi.fn().mockResolvedValue(undefined) as unknown as (
+      ms: number,
+    ) => Promise<void>;
+
+    const { results, warnings } = await classifyImportedTasks(sampleTasks, {
+      ...makeDeps({ fetchFn }),
+      sleep: sleepFn,
+      retryOptions: { maxRetries: 2, initialDelayMs: 100, interBatchDelayMs: 0 },
+    });
+
+    // 1 initial + 2 retries = 3 calls
+    expect(fetchFn).toHaveBeenCalledTimes(3);
+    expect(results).toHaveLength(3);
+    // Deterministic fallback
+    expect(results[0]).toEqual({ taskType: "feature", status: "DONE" });
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]!.message).toContain("AI classification failed");
+  });
+
+  it("does not retry on non-retryable errors (400)", async () => {
+    const headersMap = new Map<string, string>();
+    const fetchFn = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      text: async () => '{"error":"bad request"}',
+      headers: { get: (name: string) => headersMap.get(name.toLowerCase()) ?? null },
+    }) as unknown as typeof fetch;
+
+    const sleepFn = vi.fn().mockResolvedValue(undefined) as unknown as (
+      ms: number,
+    ) => Promise<void>;
+
+    const { results, warnings } = await classifyImportedTasks(sampleTasks, {
+      ...makeDeps({ fetchFn }),
+      sleep: sleepFn,
+      retryOptions: { maxRetries: 3, initialDelayMs: 100, interBatchDelayMs: 0 },
+    });
+
+    // Only 1 call — no retries for 400
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    expect(results).toHaveLength(3);
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]!.message).toContain("AI classification failed");
+    // Sleep should not have been called for retry (may be called for inter-batch)
+  });
+
+  it("calls onRetry callback with correct parameters", async () => {
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValueOnce(make429Response('{"error":"rate limited"}'))
+      .mockResolvedValueOnce(make429Response('{"error":"rate limited"}'))
+      .mockResolvedValueOnce(
+        makeOkResponse([
+          { taskType: "feature", status: "DONE" },
+          { taskType: "bug_fix", status: "BACKLOG" },
+          { taskType: "chore", status: "BACKLOG" },
+        ]),
+      ) as unknown as typeof fetch;
+
+    const sleepFn = vi.fn().mockResolvedValue(undefined) as unknown as (
+      ms: number,
+    ) => Promise<void>;
+    const onRetry = vi.fn();
+
+    await classifyImportedTasks(sampleTasks, {
+      ...makeDeps({ fetchFn }),
+      sleep: sleepFn,
+      onRetry,
+      retryOptions: { maxRetries: 3, initialDelayMs: 1000, interBatchDelayMs: 0 },
+    });
+
+    expect(onRetry).toHaveBeenCalledTimes(2);
+    // First retry: batch 1, attempt 1
+    expect(onRetry).toHaveBeenNthCalledWith(1, 1, expect.any(Number), 1, 3);
+    // Second retry: batch 1, attempt 2
+    expect(onRetry).toHaveBeenNthCalledWith(2, 1, expect.any(Number), 2, 3);
+  });
+
+  it("applies inter-batch delay between batches", async () => {
+    // Generate 25 tasks to force 2 batches (batch size = 20)
+    const manyTasks: TaskClassificationInput[] = Array.from({ length: 25 }, (_, i) => ({
+      title: `Task ${i}`,
+      rawType: "chore",
+    }));
+
+    const batch1Results = Array.from({ length: 20 }, () => ({
+      taskType: "chore",
+      status: "BACKLOG",
+    }));
+    const batch2Results = Array.from({ length: 5 }, () => ({
+      taskType: "chore",
+      status: "BACKLOG",
+    }));
+
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValueOnce(makeOkResponse(batch1Results))
+      .mockResolvedValueOnce(makeOkResponse(batch2Results)) as unknown as typeof fetch;
+
+    const sleepFn = vi.fn().mockResolvedValue(undefined) as unknown as (
+      ms: number,
+    ) => Promise<void>;
+
+    await classifyImportedTasks(manyTasks, {
+      ...makeDeps({ fetchFn }),
+      sleep: sleepFn,
+      retryOptions: { interBatchDelayMs: 750 },
+    });
+
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+    // Inter-batch delay should be called once (between batch 1 and 2, not after batch 2)
+    expect(sleepFn).toHaveBeenCalledWith(750);
+  });
+
+  it("retries on 503 service unavailable", async () => {
+    const headersMap = new Map<string, string>();
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+        text: async () => "Service Unavailable",
+        headers: { get: (name: string) => headersMap.get(name.toLowerCase()) ?? null },
+      })
+      .mockResolvedValueOnce(
+        makeOkResponse([
+          { taskType: "feature", status: "DONE" },
+          { taskType: "bug_fix", status: "BACKLOG" },
+          { taskType: "chore", status: "BACKLOG" },
+        ]),
+      ) as unknown as typeof fetch;
+
+    const sleepFn = vi.fn().mockResolvedValue(undefined) as unknown as (
+      ms: number,
+    ) => Promise<void>;
+
+    const { results, warnings } = await classifyImportedTasks(sampleTasks, {
+      ...makeDeps({ fetchFn }),
+      sleep: sleepFn,
+      retryOptions: { maxRetries: 3, initialDelayMs: 100, interBatchDelayMs: 0 },
+    });
+
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+    expect(results).toHaveLength(3);
+    expect(results[0]).toEqual({ taskType: "feature", status: "DONE" });
+    expect(warnings).toHaveLength(0);
+  });
+
+  it("uses exponential backoff when no Retry-After hint is available", async () => {
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValueOnce(make429Response('{"error":"rate limited"}'))
+      .mockResolvedValueOnce(make429Response('{"error":"rate limited"}'))
+      .mockResolvedValueOnce(
+        makeOkResponse([
+          { taskType: "feature", status: "DONE" },
+          { taskType: "bug_fix", status: "BACKLOG" },
+          { taskType: "chore", status: "BACKLOG" },
+        ]),
+      ) as unknown as typeof fetch;
+
+    const sleepFn = vi.fn().mockResolvedValue(undefined) as unknown as (
+      ms: number,
+    ) => Promise<void>;
+
+    await classifyImportedTasks(sampleTasks, {
+      ...makeDeps({ fetchFn }),
+      sleep: sleepFn,
+      retryOptions: { maxRetries: 3, initialDelayMs: 1000, interBatchDelayMs: 0 },
+    });
+
+    // Attempt 0 backoff: 1000 * 2^0 = 1000
+    expect(sleepFn).toHaveBeenNthCalledWith(1, 1000);
+    // Attempt 1 backoff: 1000 * 2^1 = 2000
+    expect(sleepFn).toHaveBeenNthCalledWith(2, 2000);
   });
 });
