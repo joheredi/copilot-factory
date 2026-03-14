@@ -41,6 +41,7 @@ import {
   type StaleLeaseRecord,
 } from "@factory/application";
 import {
+  AgentRole,
   JobStatus,
   TaskPriority,
   TaskStatus,
@@ -51,6 +52,7 @@ import {
   type TaskStatus as DomainTaskStatus,
   type WorkerPoolType,
 } from "@factory/domain";
+import type { TaskPacket } from "@factory/schemas";
 
 import type { DatabaseConnection } from "../infrastructure/database/connection.js";
 import { createAuditEventPortAdapter } from "../infrastructure/unit-of-work/repository-adapters.js";
@@ -427,6 +429,13 @@ const DEFAULT_GRACE_PERIOD_SECONDS = 60;
 /** Schema version for output packet expectations. */
 const OUTPUT_SCHEMA_VERSION = "1.0.0";
 
+/** Default stop conditions applied to all worker runs. */
+const DEFAULT_STOP_CONDITIONS: readonly string[] = [
+  "Stop when the task is complete and all acceptance criteria are met.",
+  "Stop if you encounter an unrecoverable error.",
+  "Stop when the time budget is exhausted.",
+];
+
 /**
  * Map a task type to the expected output packet type.
  *
@@ -455,51 +464,131 @@ function mapTaskTypeToPacketType(taskType: string): string {
 }
 
 /**
- * Build a task packet from the raw task database record.
+ * Map a task type to the agent role that should execute it.
  *
- * The task packet is a flat record containing all task metadata that the
- * worker needs to understand its assignment. It is mounted into the
- * workspace as part of the run context.
+ * Currently all dispatched tasks are development tasks so this defaults
+ * to "developer". As the system evolves this will map review, planning,
+ * and merge-assist task types to their respective roles.
  *
- * @param task - The task row from the database.
- * @returns A serializable record of task metadata.
+ * @param taskType - The task's classification type from the DB.
+ * @returns The agent role for the task.
  */
-function buildTaskPacket(task: {
-  taskId: string;
-  repositoryId: string;
-  externalRef: string | null;
-  title: string;
-  description: string | null;
-  taskType: string;
-  priority: string;
-  severity: string | null;
-  status: string;
-  source: string;
-  acceptanceCriteria: unknown;
-  definitionOfDone: unknown;
-  requiredCapabilities: unknown;
-  suggestedFileScope: unknown;
-  branchName: string | null;
-}): Record<string, unknown> {
+function mapTaskTypeToRole(taskType: string): string {
+  switch (taskType) {
+    case "feature":
+    case "bug_fix":
+    case "refactor":
+    case "chore":
+    case "documentation":
+    case "test":
+    case "spike":
+      return AgentRole.DEVELOPER;
+    default:
+      return AgentRole.DEVELOPER;
+  }
+}
+
+/**
+ * Build a complete task packet from the task database record and resolved
+ * dispatch context.
+ *
+ * Produces a full {@link TaskPacket} containing all fields required by the
+ * worker runtime adapter. Fields not yet stored in the database (e.g.
+ * policy references, relational context) are populated with sensible
+ * defaults.
+ *
+ * @param params - All data needed to construct the packet.
+ * @returns A complete task packet ready for the worker.
+ */
+function buildTaskPacket(params: {
+  task: {
+    taskId: string;
+    repositoryId: string;
+    externalRef: string | null;
+    title: string;
+    description: string | null;
+    taskType: string;
+    priority: string;
+    severity: string | null;
+    status: string;
+    source: string;
+    acceptanceCriteria: unknown;
+    definitionOfDone: unknown;
+    requiredCapabilities: unknown;
+    suggestedFileScope: unknown;
+    branchName: string | null;
+  };
+  repository: {
+    name: string;
+    defaultBranch: string;
+  };
+  workspacePaths: SupervisorWorkspacePaths;
+  timeBudgetSeconds: number;
+  expiresAt: string;
+  outputSchemaExpectation: SupervisorOutputSchemaExpectation;
+}): TaskPacket {
+  const {
+    task,
+    repository,
+    workspacePaths,
+    timeBudgetSeconds,
+    expiresAt,
+    outputSchemaExpectation,
+  } = params;
+  const role = mapTaskTypeToRole(task.taskType);
+
   return {
+    packet_type: "task_packet",
+    schema_version: "1.0",
+    created_at: new Date().toISOString(),
     task_id: task.taskId,
     repository_id: task.repositoryId,
+    role,
+    time_budget_seconds: timeBudgetSeconds,
+    expires_at: expiresAt,
     task: {
       title: task.title,
-      description: task.description ?? "",
+      description: task.description ?? "(no description)",
       task_type: task.taskType,
       priority: task.priority ?? "medium",
-      severity: task.severity ?? null,
-      status: task.status,
-      source: task.source ?? null,
-      external_ref: task.externalRef ?? null,
+      severity: task.severity ?? "medium",
       acceptance_criteria: toStringArray(task.acceptanceCriteria),
       definition_of_done: toStringArray(task.definitionOfDone),
-      required_capabilities: toStringArray(task.requiredCapabilities),
+      risk_level: "medium",
       suggested_file_scope: toStringArray(task.suggestedFileScope),
-      branch_name: task.branchName ?? null,
+      branch_name: task.branchName ?? `task/${task.taskId}`,
     },
-  };
+    repository: {
+      name: repository.name,
+      default_branch: repository.defaultBranch,
+    },
+    workspace: {
+      worktree_path: workspacePaths.worktreePath,
+      artifact_root: workspacePaths.artifactRoot,
+    },
+    context: {
+      related_tasks: [],
+      dependencies: [],
+      rejection_context: null,
+      code_map_refs: [],
+      prior_partial_work: null,
+    },
+    repo_policy: {
+      policy_set_id: "default",
+    },
+    tool_policy: {
+      command_policy_id: "default",
+      file_scope_policy_id: "default",
+    },
+    validation_requirements: {
+      profile: "default",
+    },
+    stop_conditions: [...DEFAULT_STOP_CONDITIONS],
+    expected_output: {
+      packet_type: outputSchemaExpectation.packetType,
+      schema_version: outputSchemaExpectation.schemaVersion,
+    },
+  } as TaskPacket;
 }
 
 // ---------------------------------------------------------------------------
@@ -558,8 +647,6 @@ export function createWorkerDispatchUnitOfWork(
 
             const workerName = `worker-${task.taskId}`;
 
-            const taskPacket = buildTaskPacket(task);
-
             // Build absolute paths for artifacts and ensure directories exist
             const artifactRoot = join(resolvedArtifactsRoot, task.taskId);
             const packetInputDir = join(artifactRoot, "packets", "input");
@@ -588,6 +675,18 @@ export function createWorkerDispatchUnitOfWork(
               packetType: mapTaskTypeToPacketType(task.taskType),
               schemaVersion: OUTPUT_SCHEMA_VERSION,
             };
+
+            const taskPacket = buildTaskPacket({
+              task,
+              repository: {
+                name: repository.name,
+                defaultBranch: repository.defaultBranch,
+              },
+              workspacePaths,
+              timeBudgetSeconds,
+              expiresAt: timeoutSettings.expiresAt,
+              outputSchemaExpectation,
+            });
 
             // Resolve custom prompt template from pool's agent profile
             let customPrompt: string | undefined;

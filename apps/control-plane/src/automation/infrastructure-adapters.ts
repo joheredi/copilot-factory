@@ -172,10 +172,10 @@ export function createRuntimeAdapterBridge(adapter: CopilotCliAdapter): RuntimeA
     },
 
     async prepareRun(context: SupervisorRunContext) {
-      // The supervisor passes Record<string, unknown> for taskPacket and
-      // policySnapshot. At runtime these are valid TaskPacket and
-      // PolicySnapshot objects — the port just doesn't carry the nominal
-      // type. Cast through RunContext to satisfy the infrastructure type.
+      // SupervisorRunContext.taskPacket is now properly typed as TaskPacket,
+      // matching RunContext.taskPacket. The remaining structural difference
+      // (effectivePolicySnapshot as Record vs PolicySnapshot) is safe at
+      // runtime since both are plain JSON objects.
       const infraContext = context as unknown as RunContext;
       const result = await adapter.prepareRun(infraContext);
       return result;

@@ -11,6 +11,8 @@
  * @see docs/prd/010-integration-contracts.md §10.4 — Worker Lifecycle
  */
 
+import type { TaskPacket } from "@factory/schemas";
+
 // ─── Worker Entity ──────────────────────────────────────────────────────────
 
 /**
@@ -241,7 +243,7 @@ export interface SupervisorOutputSchemaExpectation {
  * Defined here so the application layer does not depend on infrastructure types.
  */
 export interface SupervisorRunContext {
-  readonly taskPacket: Record<string, unknown>;
+  readonly taskPacket: TaskPacket;
   readonly effectivePolicySnapshot: Record<string, unknown>;
   readonly workspacePaths: SupervisorWorkspacePaths;
   readonly outputSchemaExpectation: SupervisorOutputSchemaExpectation;

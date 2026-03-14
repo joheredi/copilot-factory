@@ -149,14 +149,35 @@ describe("createWorkerDispatchUnitOfWork", () => {
     // Task packet should contain all task metadata
     const packet = result!.runContext.taskPacket;
     expect(packet.task_id).toBe(taskId);
-    const task = packet.task as Record<string, unknown>;
-    expect(task.title).toBe("Implement login page");
-    expect(task.task_type).toBe("feature");
-    expect(task.priority).toBe("high");
-    expect(task.branch_name).toBe("feat/login");
-    expect(task.acceptance_criteria).toEqual(["Login form renders", "JWT token stored"]);
-    expect(task.definition_of_done).toEqual(["Tests pass", "Code reviewed"]);
-    expect(task.suggested_file_scope).toEqual(["src/auth/**"]);
+    expect(packet.packet_type).toBe("task_packet");
+    expect(packet.schema_version).toBe("1.0");
+    expect(packet.role).toBe("developer");
+    expect(packet.time_budget_seconds).toBeGreaterThan(0);
+    expect(packet.expires_at).toBeTruthy();
+
+    expect(packet.task.title).toBe("Implement login page");
+    expect(packet.task.task_type).toBe("feature");
+    expect(packet.task.priority).toBe("high");
+    expect(packet.task.branch_name).toBe("feat/login");
+    expect(packet.task.acceptance_criteria).toEqual(["Login form renders", "JWT token stored"]);
+    expect(packet.task.definition_of_done).toEqual(["Tests pass", "Code reviewed"]);
+    expect(packet.task.suggested_file_scope).toEqual(["src/auth/**"]);
+
+    // Repository info from the DB record
+    expect(packet.repository.name).toBeTruthy();
+    expect(packet.repository.default_branch).toBe("main");
+
+    // Workspace paths embedded in packet
+    expect(packet.workspace.worktree_path).toContain(taskId);
+    expect(packet.workspace.artifact_root).toContain(taskId);
+
+    // Stop conditions are always present
+    expect(packet.stop_conditions).toBeInstanceOf(Array);
+    expect(packet.stop_conditions.length).toBeGreaterThan(0);
+
+    // Expected output should mirror the outputSchemaExpectation
+    expect(packet.expected_output.packet_type).toBe("development_result");
+    expect(packet.expected_output.schema_version).toBe("1.0.0");
 
     // Workspace paths should be task-scoped
     const paths = result!.runContext.workspacePaths;
@@ -341,11 +362,9 @@ describe("createWorkerDispatchUnitOfWork", () => {
 
     expect(result).not.toBeNull();
     const packet = result!.runContext.taskPacket;
-    const taskData = packet.task as Record<string, unknown>;
-    expect(taskData.acceptance_criteria).toEqual(["AC1", "AC2"]);
-    expect(taskData.definition_of_done).toEqual(["DoD1"]);
-    expect(taskData.suggested_file_scope).toEqual(["src/**/*.ts", "lib/**"]);
-    expect(taskData.required_capabilities).toEqual(["typescript"]);
+    expect(packet.task.acceptance_criteria).toEqual(["AC1", "AC2"]);
+    expect(packet.task.definition_of_done).toEqual(["DoD1"]);
+    expect(packet.task.suggested_file_scope).toEqual(["src/**/*.ts", "lib/**"]);
   });
 });
 
