@@ -1105,6 +1105,63 @@ describe("discoverMarkdownTasks", () => {
   });
 
   /**
+   * Validates that tasks with DONE or CANCELLED status are excluded from
+   * the manifest, and an info-level warning is emitted for each.
+   */
+  it("excludes DONE and CANCELLED tasks from manifest", async () => {
+    const doneMd = `# T010: Already finished\n\n| Field | Value |\n| --- | --- |\n| **Type** | feature |\n| **Status** | done |\n| **Priority** | P2 |\n\n## Description\n\nThis is already done.`;
+    const cancelledMd = `# T011: Dropped task\n\n| Field | Value |\n| --- | --- |\n| **Type** | chore |\n| **Status** | cancelled |\n| **Priority** | P3 |\n\n## Description\n\nThis was cancelled.`;
+    const activeMd = `# T012: Active task\n\n| Field | Value |\n| --- | --- |\n| **Type** | feature |\n| **Status** | backlog |\n| **Priority** | P1 |\n\n## Description\n\nThis is active work.`;
+
+    const statusFs = createFakeFs(
+      {
+        "/backlog/tasks/T010-done.md": doneMd,
+        "/backlog/tasks/T011-cancelled.md": cancelledMd,
+        "/backlog/tasks/T012-active.md": activeMd,
+      },
+      {
+        "/backlog": [{ name: "tasks", isDirectory: true }],
+        "/backlog/tasks": [
+          { name: "T010-done.md", isDirectory: false },
+          { name: "T011-cancelled.md", isDirectory: false },
+          { name: "T012-active.md", isDirectory: false },
+        ],
+      },
+    );
+
+    // Use a classify function that maps raw statuses to proper values
+    const classify = async (inputs: { rawStatus?: string }[]) => ({
+      results: inputs.map((input) => {
+        const raw = (input.rawStatus ?? "").toLowerCase();
+        const statusMap: Record<string, string> = {
+          done: "DONE",
+          cancelled: "CANCELLED",
+          backlog: "BACKLOG",
+        };
+        return {
+          taskType: "feature" as const,
+          status: (statusMap[raw] ?? "BACKLOG") as "BACKLOG" | "DONE" | "CANCELLED",
+        };
+      }),
+      warnings: [],
+    });
+
+    const manifest = await discoverMarkdownTasks("/backlog", statusFs, classify);
+
+    // Only the active task should survive
+    expect(manifest.tasks).toHaveLength(1);
+    expect(manifest.tasks[0]!.externalRef).toBe("T012");
+
+    // Info warnings emitted for skipped tasks
+    const skipWarnings = manifest.warnings.filter(
+      (w) => w.severity === "info" && w.message.includes("Skipped"),
+    );
+    expect(skipWarnings).toHaveLength(2);
+    expect(skipWarnings.some((w) => w.message.includes("DONE"))).toBe(true);
+    expect(skipWarnings.some((w) => w.message.includes("CANCELLED"))).toBe(true);
+  });
+
+  /**
    * Validates that when no tasks/ subdirectory exists, the parser falls
    * back to searching the sourcePath directly.
    */

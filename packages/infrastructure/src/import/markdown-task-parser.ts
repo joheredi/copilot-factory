@@ -201,10 +201,28 @@ export async function discoverMarkdownTasks(
     });
   }
 
+  // Filter out tasks in terminal states (DONE, CANCELLED) so the import
+  // only includes actionable work. Emit an info-level warning for each
+  // skipped task so callers know what was excluded.
+  const terminalStatuses = new Set(["DONE", "CANCELLED"]);
+  const activeTasks: ImportedTask[] = [];
+  for (const task of classifiedTasks) {
+    if (task.status && terminalStatuses.has(task.status)) {
+      warnings.push({
+        file: task.source ?? "unknown",
+        field: "status",
+        message: `Skipped task "${task.title}" — status is ${task.status}.`,
+        severity: "info",
+      });
+      continue;
+    }
+    activeTasks.push(task);
+  }
+
   const manifest: ImportManifest = ImportManifestSchema.parse({
     sourcePath,
     formatVersion: "1.0",
-    tasks: classifiedTasks,
+    tasks: activeTasks,
     warnings,
     discoveredProjectName,
   });
