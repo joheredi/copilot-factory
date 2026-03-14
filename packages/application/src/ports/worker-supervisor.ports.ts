@@ -12,6 +12,7 @@
  */
 
 import type { TaskPacket } from "@factory/schemas";
+import type { WorkerLeaseStatus, WorkerLeaseTransitionContext } from "@factory/domain";
 
 // ─── Worker Entity ──────────────────────────────────────────────────────────
 
@@ -366,4 +367,30 @@ export interface WorkerSupervisorTransactionRepositories {
  */
 export interface WorkerSupervisorUnitOfWork {
   runInTransaction<T>(fn: (repos: WorkerSupervisorTransactionRepositories) => T): T;
+}
+
+// ─── Lease Transitioner Port ────────────────────────────────────────────────
+
+/**
+ * Minimal port for transitioning a worker lease's status.
+ *
+ * The supervisor uses this to advance the lease from LEASED → STARTING
+ * after the worker process is spawned, so the heartbeat service can
+ * accept heartbeats (it requires STARTING, RUNNING, or HEARTBEATING).
+ *
+ * @see docs/prd/002-data-model.md §2.2 — Worker Lease State Machine
+ */
+export interface LeaseTransitionerPort {
+  /**
+   * Transition a lease to the given target status.
+   *
+   * @param leaseId - The lease to transition.
+   * @param targetStatus - The target lease status.
+   * @param context - Guard context for the state machine validation.
+   */
+  transitionLease(
+    leaseId: string,
+    targetStatus: WorkerLeaseStatus,
+    context: WorkerLeaseTransitionContext,
+  ): void;
 }

@@ -37,6 +37,7 @@ import {
   SpanAttributes,
   getStarterMetrics,
 } from "@factory/observability";
+import { WorkerLeaseStatus } from "@factory/domain";
 import type {
   WorkerEntityStatus,
   SupervisedWorker,
@@ -45,6 +46,7 @@ import type {
   PacketMounterPort,
   RuntimeAdapterPort,
   HeartbeatForwarderPort,
+  LeaseTransitionerPort,
   SupervisorRunContext,
   SupervisorFinalizeResult,
   SupervisorRunOutputStream,
@@ -176,6 +178,12 @@ export interface WorkerSupervisorDependencies {
   readonly runtimeAdapter: RuntimeAdapterPort;
   /** Heartbeat forwarding to the lease/heartbeat service. */
   readonly heartbeatForwarder: HeartbeatForwarderPort;
+  /**
+   * Lease state transitioner for advancing the lease lifecycle.
+   * When provided, the supervisor transitions the lease LEASED → STARTING
+   * after the worker process is spawned, enabling heartbeat reception.
+   */
+  readonly leaseTransitioner?: LeaseTransitionerPort;
   /** Clock function for timestamps (injectable for testing). */
   readonly clock?: () => Date;
 }
@@ -227,6 +235,7 @@ export function createWorkerSupervisorService(
     packetMounter,
     runtimeAdapter,
     heartbeatForwarder,
+    leaseTransitioner,
     clock = () => new Date(),
   } = deps;
 
@@ -311,6 +320,13 @@ export function createWorkerSupervisorService(
 
         // Step 5: Start the worker process
         await runtimeAdapter.startRun(prepared.runId);
+
+        // Step 5b: Transition lease LEASED → STARTING so heartbeats are accepted
+        if (leaseTransitioner) {
+          leaseTransitioner.transitionLease(leaseId, WorkerLeaseStatus.STARTING, {
+            workerProcessSpawned: true,
+          });
+        }
 
         // Step 6: Update Worker entity to "running"
         unitOfWork.runInTransaction((repos) => {

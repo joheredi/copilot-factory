@@ -18,6 +18,8 @@
 
 import { describe, it, expect } from "vitest";
 
+import { WorkerLeaseStatus } from "@factory/domain";
+
 import type { ActorInfo } from "../events/domain-events.js";
 import type { DomainEventEmitter } from "../ports/event-emitter.port.js";
 import type {
@@ -31,6 +33,7 @@ import type {
   PacketMounterPort,
   RuntimeAdapterPort,
   HeartbeatForwarderPort,
+  LeaseTransitionerPort,
   SupervisorRunContext,
   SupervisorPreparedRun,
   SupervisorRunOutputStream,
@@ -295,6 +298,32 @@ function createMockHeartbeatForwarder(): HeartbeatForwarderPort & {
 }
 
 /**
+ * Creates a mock lease transitioner that records transition calls.
+ *
+ * @why Verifies the supervisor transitions the lease LEASED → STARTING
+ * after the worker process is spawned, enabling heartbeat reception.
+ */
+function createMockLeaseTransitioner(): LeaseTransitionerPort & {
+  calls: Array<{
+    leaseId: string;
+    targetStatus: WorkerLeaseStatus;
+    context: Record<string, unknown>;
+  }>;
+} {
+  const calls: Array<{
+    leaseId: string;
+    targetStatus: WorkerLeaseStatus;
+    context: Record<string, unknown>;
+  }> = [];
+  return {
+    calls,
+    transitionLease(leaseId, targetStatus, context): void {
+      calls.push({ leaseId, targetStatus, context: context as Record<string, unknown> });
+    },
+  };
+}
+
+/**
  * Creates a standard RunContext for testing.
  */
 function createTestRunContext(): SupervisorRunContext {
@@ -358,6 +387,7 @@ function createTestHarness() {
   const packetMounter = createMockPacketMounter();
   const runtimeAdapter = createMockRuntimeAdapter();
   const heartbeatForwarder = createMockHeartbeatForwarder();
+  const leaseTransitioner = createMockLeaseTransitioner();
 
   const deps: WorkerSupervisorDependencies = {
     unitOfWork,
@@ -366,6 +396,7 @@ function createTestHarness() {
     packetMounter,
     runtimeAdapter,
     heartbeatForwarder,
+    leaseTransitioner,
     clock: () => FIXED_TIME,
   };
 
@@ -380,6 +411,7 @@ function createTestHarness() {
     packetMounter,
     runtimeAdapter,
     heartbeatForwarder,
+    leaseTransitioner,
   };
 }
 
@@ -504,6 +536,25 @@ describe("WorkerSupervisorService", () => {
         leaseId: "lease-001",
         workerId: "worker-001",
         isTerminal: true,
+      });
+    });
+
+    /**
+     * @why Verifies the supervisor transitions the lease from LEASED → STARTING
+     * after the worker process is spawned. Without this transition, the heartbeat
+     * service rejects heartbeats because LEASED is not a heartbeat-receivable state.
+     */
+    it("should transition lease LEASED → STARTING after spawning worker", async () => {
+      const { service, leaseTransitioner } = createTestHarness();
+      const params = createTestSpawnParams();
+
+      await service.spawnWorker(params);
+
+      expect(leaseTransitioner.calls).toHaveLength(1);
+      expect(leaseTransitioner.calls[0]).toEqual({
+        leaseId: "lease-001",
+        targetStatus: WorkerLeaseStatus.STARTING,
+        context: { workerProcessSpawned: true },
       });
     });
 

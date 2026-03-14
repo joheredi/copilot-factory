@@ -177,6 +177,11 @@ export class AutomationService implements OnModuleInit, OnModuleDestroy {
       packetMounter,
       runtimeAdapter,
       heartbeatForwarder,
+      leaseTransitioner: {
+        transitionLease: (leaseId, targetStatus, context) => {
+          this.transitionService.transitionLease(leaseId, targetStatus, context, AUTOMATION_ACTOR);
+        },
+      },
       clock,
     });
 

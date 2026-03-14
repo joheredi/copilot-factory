@@ -314,6 +314,7 @@ export type {
   HeartbeatForwarderPort,
   WorkerSupervisorTransactionRepositories,
   WorkerSupervisorUnitOfWork,
+  LeaseTransitionerPort,
 } from "./ports/worker-supervisor.ports.js";
 
 // Services — worker supervisor for process lifecycle management

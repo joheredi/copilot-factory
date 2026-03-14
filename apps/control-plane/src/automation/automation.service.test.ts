@@ -278,32 +278,22 @@ describe("AutomationService", () => {
       .filter((job) => job.jobType === JobType.WORKER_DISPATCH);
     expect(dispatchJobs).toHaveLength(1);
 
-    // ── Phase 2: Transition lease LEASED → STARTING ──────────────────────
-    // The dispatch pipeline does not currently automate this transition.
-    // The supervisor needs the lease in STARTING state for heartbeat
-    // forwarding to succeed (HEARTBEAT_RECEIVABLE_STATES does not include
-    // LEASED). We transition manually, mirroring the full-lifecycle
-    // integration test pattern.
-    const unitOfWork = createSqliteUnitOfWork(conn);
-    const transitionService = createTransitionService(unitOfWork, emitter);
-
-    transitionService.transitionLease(
-      leaseId!,
-      WorkerLeaseStatus.STARTING,
-      { workerProcessSpawned: true },
-      actor,
-    );
-
-    // ── Phase 3: Wire dispatch chain with fake infrastructure ────────────
+    // ── Phase 2: Wire dispatch chain with fake infrastructure ────────────
     // Build the same service chain that AutomationService's constructor
     // creates, but with FakeRunnerAdapter and FakeWorkspaceManager instead
     // of real infrastructure. All services read/write the same in-memory
     // SQLite database, so the dispatch job created by the scheduler tick
     // is visible to the manually-wired dispatch service.
+    //
+    // Note: The supervisor now transitions the lease LEASED → STARTING
+    // automatically — no manual workaround needed.
     const fakeRunner = new FakeRunnerAdapter({ name: "test-runner" });
     const fakeWorkspace = new FakeWorkspaceManager({ basePath: "/tmp/test-workspaces" });
     const fakePacketMounter = { mountPackets: vi.fn().mockResolvedValue(undefined) };
     const clock = () => new Date();
+
+    const unitOfWork = createSqliteUnitOfWork(conn);
+    const transitionService = createTransitionService(unitOfWork, emitter);
 
     const heartbeatService = createHeartbeatService(
       createHeartbeatUnitOfWork(conn),
@@ -322,6 +312,11 @@ describe("AutomationService", () => {
       packetMounter: fakePacketMounter,
       runtimeAdapter: fakeRunner,
       heartbeatForwarder,
+      leaseTransitioner: {
+        transitionLease: (lid, target, ctx) => {
+          transitionService.transitionLease(lid, target, ctx, actor);
+        },
+      },
       clock,
     });
 
@@ -338,7 +333,7 @@ describe("AutomationService", () => {
       clock,
     });
 
-    // ── Phase 4: Process dispatch ────────────────────────────────────────
+    // ── Phase 3: Process dispatch ────────────────────────────────────────
     const dispatchResult = await workerDispatchService.processDispatch();
 
     // Dispatch must succeed — job claimed, context resolved, worker spawned
@@ -351,15 +346,15 @@ describe("AutomationService", () => {
       }
     }
 
-    // ── Phase 5: Verify dispatch side effects ────────────────────────────
+    // ── Phase 4: Verify dispatch side effects ────────────────────────────
 
-    // 5a: The dispatch job should be completed (not pending)
+    // 4a: The dispatch job should be completed (not pending)
     const pendingJobs = jobRepo
       .findByStatus("pending")
       .filter((job) => job.jobType === JobType.WORKER_DISPATCH);
     expect(pendingJobs).toHaveLength(0);
 
-    // 5b: A worker entity should have been created and reached terminal status
+    // 4b: A worker entity should have been created and reached terminal status
     const workerRepo = createWorkerRepository(conn.db);
     if (dispatchResult.processed && dispatchResult.dispatched) {
       const worker = workerRepo.findById(dispatchResult.workerId);
@@ -369,24 +364,24 @@ describe("AutomationService", () => {
       expect(worker?.status).toBe("completed");
     }
 
-    // 5c: Lease should have progressed from STARTING → RUNNING (heartbeat)
+    // 4c: Lease should have progressed from STARTING → RUNNING (heartbeat)
     // → COMPLETING (terminal heartbeat). FakeRunnerAdapter emits one
     // heartbeat event, which transitions STARTING → RUNNING. The terminal
     // heartbeat after stream ends transitions RUNNING → COMPLETING.
     const lease = leaseRepo.findActiveByTaskId(taskId);
     expect(lease?.status).toBe(WorkerLeaseStatus.COMPLETING);
 
-    // 5d: FakeWorkspaceManager should have created a workspace.
+    // 4d: FakeWorkspaceManager should have created a workspace.
     // Note: The supervisor does not own workspace cleanup — that is a
     // separate orchestration concern. We only verify creation here.
     expect(fakeWorkspace.createdWorkspaces.length).toBe(1);
 
-    // 5e: PacketMounter should have been called exactly once
+    // 4e: PacketMounter should have been called exactly once
     expect(fakePacketMounter.mountPackets).toHaveBeenCalledOnce();
 
-    // ── Phase 6: Drive task through remaining transitions ────────────────
+    // ── Phase 5: Drive task through remaining transitions ────────────────
 
-    // 6a: ASSIGNED → IN_DEVELOPMENT
+    // 5a: ASSIGNED → IN_DEVELOPMENT
     // Guard: { hasHeartbeat: true } — satisfied because the dispatch
     // successfully forwarded heartbeats during the run.
     const inDevResult = transitionService.transitionTask(
@@ -397,7 +392,7 @@ describe("AutomationService", () => {
     );
     expect(inDevResult.entity.status).toBe(TaskStatus.IN_DEVELOPMENT);
 
-    // 6b: IN_DEVELOPMENT → DEV_COMPLETE
+    // 5b: IN_DEVELOPMENT → DEV_COMPLETE
     // Guard: { hasDevResultPacket: true, requiredValidationsPassed: true }
     // In a real flow, the worker would have produced a DevResultPacket.
     // Here we provide the guard context directly.
