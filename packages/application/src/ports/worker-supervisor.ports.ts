@@ -394,3 +394,27 @@ export interface LeaseTransitionerPort {
     context: WorkerLeaseTransitionContext,
   ): void;
 }
+
+// ─── Lease Reclaimer Port ───────────────────────────────────────────────────
+
+/**
+ * Minimal port for reclaiming a lease after worker failure.
+ *
+ * Wraps the {@link LeaseReclaimService} to atomically transition the lease
+ * to CRASHED → RECLAIMED, evaluate retry/escalation policy, and transition
+ * the task back to READY (if retries remain) or FAILED/ESCALATED.
+ *
+ * The supervisor calls this when `finalizeRun()` reports a non-success
+ * outcome or when the spawn process throws an exception.
+ *
+ * @see docs/prd/002-data-model.md §2.8 — Lease State → Task State Mapping
+ */
+export interface LeaseReclaimerPort {
+  /**
+   * Reclaim a lease due to worker failure and recover the task.
+   *
+   * @param leaseId - The lease to reclaim.
+   * @param metadata - Optional metadata for the audit trail (e.g., exit code, error).
+   */
+  reclaimLease(leaseId: string, metadata?: Record<string, unknown>): void;
+}

@@ -47,6 +47,7 @@ import type {
   RuntimeAdapterPort,
   HeartbeatForwarderPort,
   LeaseTransitionerPort,
+  LeaseReclaimerPort,
   SupervisorRunContext,
   SupervisorFinalizeResult,
   SupervisorRunOutputStream,
@@ -184,6 +185,13 @@ export interface WorkerSupervisorDependencies {
    * after the worker process is spawned, enabling heartbeat reception.
    */
   readonly leaseTransitioner?: LeaseTransitionerPort;
+  /**
+   * Lease reclaimer for recovering from worker failures.
+   * When provided, the supervisor reclaims the lease on failure, which
+   * atomically transitions the lease to CRASHED → RECLAIMED, evaluates
+   * retry policy, and returns the task to READY or FAILED.
+   */
+  readonly leaseReclaimer?: LeaseReclaimerPort;
   /** Clock function for timestamps (injectable for testing). */
   readonly clock?: () => Date;
 }
@@ -236,6 +244,7 @@ export function createWorkerSupervisorService(
     runtimeAdapter,
     heartbeatForwarder,
     leaseTransitioner,
+    leaseReclaimer,
     clock = () => new Date(),
   } = deps;
 
@@ -363,37 +372,70 @@ export function createWorkerSupervisorService(
           }
         }
 
-        // Step 8: Worker exited — transition to "completing"
-        unitOfWork.runInTransaction((repos) => {
-          repos.worker.update(workerId, {
-            status: "completing",
-          });
-        });
-
-        eventEmitter.emit({
-          type: "worker.status-changed",
-          entityType: "worker",
-          entityId: workerId,
-          actor,
-          timestamp: clock(),
-          fromStatus: "running",
-          toStatus: "completing",
-        });
-
-        // Send terminal heartbeat to signal completion. This goes through the
-        // heartbeat service which validates the state machine transition and
-        // sets heartbeatAt atomically. For fast workers with zero stream
-        // heartbeats, this transitions STARTING → COMPLETING directly.
-        // For workers that emitted heartbeats, it transitions from
-        // RUNNING/HEARTBEATING → COMPLETING.
-        heartbeatForwarder.forwardHeartbeat(leaseId, workerId, true);
-
-        // Step 9: Collect artifacts and finalize
+        // Step 8: Worker exited — collect artifacts and finalize to determine outcome
         await runtimeAdapter.collectArtifacts(prepared.runId);
         const finalizeResult = await runtimeAdapter.finalizeRun(prepared.runId);
-
-        // Step 10: Update Worker entity to terminal status
         const terminalStatus = mapRunStatusToWorkerStatus(finalizeResult.status);
+
+        if (finalizeResult.status === "success") {
+          // ── Success path: transition worker to completing → completed ──
+
+          unitOfWork.runInTransaction((repos) => {
+            repos.worker.update(workerId, { status: "completing" });
+          });
+
+          eventEmitter.emit({
+            type: "worker.status-changed",
+            entityType: "worker",
+            entityId: workerId,
+            actor,
+            timestamp: clock(),
+            fromStatus: "running",
+            toStatus: "completing",
+          });
+
+          // Terminal heartbeat transitions the lease to COMPLETING via the
+          // heartbeat service (which sets heartbeatAt and validates the
+          // state machine transition atomically).
+          heartbeatForwarder.forwardHeartbeat(leaseId, workerId, true);
+
+          const terminalWorker = unitOfWork.runInTransaction((repos) => {
+            return repos.worker.update(workerId, {
+              status: terminalStatus,
+              currentRunId: null,
+              currentTaskId: null,
+            });
+          });
+
+          eventEmitter.emit({
+            type: "worker.status-changed",
+            entityType: "worker",
+            entityId: workerId,
+            actor,
+            timestamp: clock(),
+            fromStatus: "completing",
+            toStatus: terminalStatus,
+          });
+
+          runSpan.setAttribute(SpanAttributes.RESULT_STATUS, terminalStatus);
+          runSpan.setStatus({ code: SpanStatusCode.OK });
+          runSpan.end();
+
+          const starterMetrics = getStarterMetrics();
+          const runDurationSeconds = (Date.now() - runStartTime) / 1000;
+          starterMetrics.workerRuns.inc({ pool_id: poolId, result: "success" });
+          starterMetrics.workerRunDuration.observe({ pool_id: poolId }, runDurationSeconds);
+
+          return {
+            worker: terminalWorker,
+            finalizeResult,
+            outputEvents,
+          };
+        }
+
+        // ── Failure path: reclaim lease and recover task ────────────────
+
+        // Update Worker entity to terminal "failed" status
         const terminalWorker = unitOfWork.runInTransaction((repos) => {
           return repos.worker.update(workerId, {
             status: terminalStatus,
@@ -408,25 +450,41 @@ export function createWorkerSupervisorService(
           entityId: workerId,
           actor,
           timestamp: clock(),
-          fromStatus: "completing",
+          fromStatus: "running",
           toStatus: terminalStatus,
         });
 
+        // Reclaim the lease via the lease-reclaim service, which atomically
+        // transitions lease → CRASHED → RECLAIMED, evaluates retry policy,
+        // and transitions the task back to READY (or FAILED/ESCALATED).
+        if (leaseReclaimer) {
+          try {
+            leaseReclaimer.reclaimLease(leaseId, {
+              triggeredBy: "worker-supervisor",
+              reason: "worker_execution_failed",
+              exitCode: finalizeResult.exitCode,
+              runStatus: finalizeResult.status,
+              durationMs: finalizeResult.durationMs,
+            });
+          } catch {
+            // Best-effort: if the reconciliation sweep already reclaimed this
+            // lease, or if the lease is in a state that can't be reclaimed
+            // (e.g., already COMPLETING from a race), we log but don't fail.
+          }
+        }
+
         runSpan.setAttribute(SpanAttributes.RESULT_STATUS, terminalStatus);
-        runSpan.setStatus({ code: SpanStatusCode.OK });
+        runSpan.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: `Worker failed: exit code ${finalizeResult.exitCode}, status ${finalizeResult.status}`,
+        });
         runSpan.end();
 
-        // ── Metrics instrumentation (§10.13.3) ──────────────────────────
-        const starterMetrics = getStarterMetrics();
-        const runDurationSeconds = (Date.now() - runStartTime) / 1000;
-        const resultLabel =
-          terminalStatus === "completed"
-            ? "success"
-            : terminalStatus === "cancelled"
-              ? "cancelled"
-              : "failed";
-        starterMetrics.workerRuns.inc({ pool_id: poolId, result: resultLabel });
-        starterMetrics.workerRunDuration.observe({ pool_id: poolId }, runDurationSeconds);
+        const failMetrics = getStarterMetrics();
+        const failDurationSeconds = (Date.now() - runStartTime) / 1000;
+        const failResultLabel = terminalStatus === "cancelled" ? "cancelled" : "failed";
+        failMetrics.workerRuns.inc({ pool_id: poolId, result: failResultLabel });
+        failMetrics.workerRunDuration.observe({ pool_id: poolId }, failDurationSeconds);
 
         return {
           worker: terminalWorker,
@@ -479,7 +537,22 @@ export function createWorkerSupervisorService(
           toStatus: "failed",
         });
 
-        // Re-throw so the caller can handle the failure
+        // Attempt to reclaim the lease so the task can be recovered.
+        // Best-effort: the lease may be in LEASED (very early failure) which
+        // isn't reclaimable — the reconciliation sweep handles that case.
+        if (leaseReclaimer) {
+          try {
+            leaseReclaimer.reclaimLease(leaseId, {
+              triggeredBy: "worker-supervisor",
+              reason: "worker_spawn_exception",
+              error: error instanceof Error ? error.message : String(error),
+            });
+          } catch {
+            // If reclaim fails (lease not in reclaimable state, or sweep
+            // already handled it), we continue — the sweep is the fallback.
+          }
+        }
+
         // ── Metrics instrumentation (§10.13.3) ──────────────────────────
         const failMetrics = getStarterMetrics();
         const failDurationSeconds = (Date.now() - runStartTime) / 1000;

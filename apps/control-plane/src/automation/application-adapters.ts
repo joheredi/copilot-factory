@@ -39,6 +39,12 @@ import {
   type HeartbeatLeaseRepositoryPort,
   type HeartbeatableLease,
   type StaleLeaseRecord,
+  type ReclaimUnitOfWork,
+  type ReclaimTransactionRepositories,
+  type ReclaimLeaseRepositoryPort,
+  type ReclaimableLease,
+  type ReclaimTaskRepositoryPort,
+  type ReclaimableTask,
 } from "@factory/application";
 import {
   AgentRole,
@@ -926,6 +932,109 @@ export function createHeartbeatUnitOfWork(conn: DatabaseConnection): HeartbeatUn
         };
 
         return fn({ lease: leasePort, auditEvent: auditEventPort });
+      });
+    },
+  };
+}
+
+// ─── Lease Reclaim UnitOfWork ───────────────────────────────────────────────
+
+/**
+ * Create a {@link ReclaimUnitOfWork} backed by SQLite.
+ *
+ * Provides transaction-scoped adapters for lease reclaim and task state
+ * updates, matching the port interface required by
+ * {@link createLeaseReclaimService}.
+ */
+export function createReclaimUnitOfWork(conn: DatabaseConnection): ReclaimUnitOfWork {
+  return {
+    runInTransaction<T>(fn: (repos: ReclaimTransactionRepositories) => T): T {
+      return conn.writeTransaction((db) => {
+        const leaseRepo = createTaskLeaseRepository(db);
+        const taskRepo = createTaskRepository(db);
+        const auditEventPort = createAuditEventPortAdapter(db);
+
+        const leasePort: ReclaimLeaseRepositoryPort = {
+          findById(leaseId: string): ReclaimableLease | undefined {
+            const lease = leaseRepo.findById(leaseId);
+            if (!lease) return undefined;
+            return {
+              leaseId: lease.leaseId,
+              taskId: lease.taskId,
+              workerId: lease.workerId,
+              poolId: lease.poolId,
+              status: lease.status as WorkerLeaseStatus,
+              reclaimReason: lease.reclaimReason,
+            };
+          },
+
+          updateStatusWithReason(
+            leaseId: string,
+            expectedStatus: WorkerLeaseStatus,
+            newStatus: WorkerLeaseStatus,
+            reclaimReason: string,
+          ): ReclaimableLease {
+            const current = leaseRepo.findById(leaseId);
+            if (!current || current.status !== expectedStatus) {
+              throw new VersionConflictError("TaskLease", leaseId, expectedStatus);
+            }
+            const updated = leaseRepo.update(leaseId, {
+              status: newStatus,
+              reclaimReason,
+            });
+            if (!updated) {
+              throw new VersionConflictError("TaskLease", leaseId, expectedStatus);
+            }
+            return {
+              leaseId: updated.leaseId,
+              taskId: updated.taskId,
+              workerId: updated.workerId,
+              poolId: updated.poolId,
+              status: updated.status as WorkerLeaseStatus,
+              reclaimReason: updated.reclaimReason,
+            };
+          },
+        };
+
+        const taskPort: ReclaimTaskRepositoryPort = {
+          findById(id: string): ReclaimableTask | undefined {
+            const task = taskRepo.findById(id);
+            if (!task) return undefined;
+            return {
+              id: task.taskId,
+              status: task.status as TaskStatus,
+              version: task.version,
+              retryCount: task.retryCount,
+              currentLeaseId: task.currentLeaseId,
+            };
+          },
+
+          updateStatusAndRetryCount(
+            id: string,
+            expectedVersion: number,
+            newStatus: TaskStatus,
+            retryCount: number,
+          ): ReclaimableTask {
+            const current = taskRepo.findById(id);
+            if (!current || current.version !== expectedVersion) {
+              throw new VersionConflictError("Task", id, expectedVersion);
+            }
+            const updated = taskRepo.update(id, expectedVersion, {
+              status: newStatus,
+              retryCount,
+              currentLeaseId: null,
+            });
+            return {
+              id: updated.taskId,
+              status: updated.status as TaskStatus,
+              version: updated.version,
+              retryCount: updated.retryCount,
+              currentLeaseId: updated.currentLeaseId,
+            };
+          },
+        };
+
+        return fn({ lease: leasePort, task: taskPort, auditEvent: auditEventPort });
       });
     },
   };

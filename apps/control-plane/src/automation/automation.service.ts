@@ -33,6 +33,7 @@ import {
   createWorkerDispatchService,
   createWorkerSupervisorService,
   createHeartbeatService,
+  createLeaseReclaimService,
   type DomainEventEmitter,
   type InitializeTickResult,
   type ProcessTickResult,
@@ -40,7 +41,12 @@ import {
   type ReadinessResult,
   type WorkerDispatchService,
 } from "@factory/application";
-import { TaskStatus, type TransitionContext } from "@factory/domain";
+import {
+  TaskStatus,
+  DEFAULT_RETRY_POLICY,
+  DEFAULT_ESCALATION_POLICY,
+  type TransitionContext,
+} from "@factory/domain";
 import { createLogger } from "@factory/observability";
 import type { Logger } from "@factory/observability";
 
@@ -58,6 +64,7 @@ import {
   createWorkerDispatchUnitOfWork,
   createWorkerSupervisorUnitOfWork,
   createHeartbeatUnitOfWork,
+  createReclaimUnitOfWork,
 } from "./application-adapters.js";
 import { createHeartbeatForwarderAdapter } from "./heartbeat-forwarder-adapter.js";
 import {
@@ -170,6 +177,11 @@ export class AutomationService implements OnModuleInit, OnModuleDestroy {
     const { workspaceProvider, packetMounter, runtimeAdapter } =
       createInfrastructureAdapters(infraConfig);
 
+    const leaseReclaimService = createLeaseReclaimService(
+      createReclaimUnitOfWork(conn),
+      eventEmitter,
+    );
+
     const workerSupervisorService = createWorkerSupervisorService({
       unitOfWork: createWorkerSupervisorUnitOfWork(conn),
       eventEmitter,
@@ -180,6 +192,18 @@ export class AutomationService implements OnModuleInit, OnModuleDestroy {
       leaseTransitioner: {
         transitionLease: (leaseId, targetStatus, context) => {
           this.transitionService.transitionLease(leaseId, targetStatus, context, AUTOMATION_ACTOR);
+        },
+      },
+      leaseReclaimer: {
+        reclaimLease: (leaseId, metadata) => {
+          leaseReclaimService.reclaimLease({
+            leaseId,
+            reason: "worker_crashed",
+            retryPolicy: DEFAULT_RETRY_POLICY,
+            escalationPolicy: DEFAULT_ESCALATION_POLICY,
+            actor: AUTOMATION_ACTOR,
+            metadata,
+          });
         },
       },
       clock,
