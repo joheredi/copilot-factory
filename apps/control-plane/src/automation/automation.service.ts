@@ -324,11 +324,23 @@ export class AutomationService implements OnModuleInit, OnModuleDestroy {
       .then((result) => {
         if (result.processed) {
           if (result.dispatched) {
+            const { finalizeResult } = result.spawnResult;
             this.logger.info("Worker dispatch succeeded", {
               jobId: result.jobId,
               taskId: result.taskId,
               workerId: result.workerId,
+              runStatus: finalizeResult.status,
+              exitCode: finalizeResult.exitCode,
+              durationMs: finalizeResult.durationMs,
             });
+
+            // Process the worker result — advance the task through
+            // the state machine when the worker completed successfully.
+            // Failure cases are already handled by the supervisor
+            // (lease reclaim → task back to READY or FAILED/ESCALATED).
+            if (finalizeResult.status === "success") {
+              this.processSuccessfulWorkerResult(result.taskId);
+            }
           } else {
             this.logger.warn("Worker dispatch failed", {
               jobId: result.jobId,
@@ -347,6 +359,75 @@ export class AutomationService implements OnModuleInit, OnModuleDestroy {
       .finally(() => {
         this.activeDispatches.delete(promise);
       });
+  }
+
+  /**
+   * Advance a task through the state machine after a successful worker run.
+   *
+   * Transitions the task from ASSIGNED → IN_DEVELOPMENT → DEV_COMPLETE.
+   * Each transition is guarded by the domain state machine and may fail
+   * if the task is already in the expected state (e.g., race with
+   * reconciliation). Failures are logged at debug level and do not
+   * propagate — the reconciliation sweep will catch stragglers.
+   */
+  private processSuccessfulWorkerResult(taskId: string): void {
+    // Step 1: ASSIGNED → IN_DEVELOPMENT
+    // Guard requires: hasHeartbeat: true (worker sent at least one heartbeat)
+    try {
+      this.transitionService.transitionTask(
+        taskId,
+        TaskStatus.IN_DEVELOPMENT,
+        { hasHeartbeat: true },
+        AUTOMATION_ACTOR,
+        { triggeredBy: "worker-result-processing" },
+      );
+    } catch (error: unknown) {
+      if (
+        error instanceof InvalidTransitionError ||
+        error instanceof VersionConflictError ||
+        error instanceof EntityNotFoundError
+      ) {
+        // Task may already be in IN_DEVELOPMENT or beyond — continue
+        this.logger.debug("Skipped ASSIGNED → IN_DEVELOPMENT transition", {
+          taskId,
+          error: error.message,
+        });
+      } else {
+        this.logger.error("Failed ASSIGNED → IN_DEVELOPMENT transition", {
+          taskId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return;
+      }
+    }
+
+    // Step 2: IN_DEVELOPMENT → DEV_COMPLETE
+    // Guard requires: hasDevResultPacket: true AND requiredValidationsPassed: true
+    try {
+      this.transitionService.transitionTask(
+        taskId,
+        TaskStatus.DEV_COMPLETE,
+        { hasDevResultPacket: true, requiredValidationsPassed: true },
+        AUTOMATION_ACTOR,
+        { triggeredBy: "worker-result-processing" },
+      );
+    } catch (error: unknown) {
+      if (
+        error instanceof InvalidTransitionError ||
+        error instanceof VersionConflictError ||
+        error instanceof EntityNotFoundError
+      ) {
+        this.logger.debug("Skipped IN_DEVELOPMENT → DEV_COMPLETE transition", {
+          taskId,
+          error: error.message,
+        });
+      } else {
+        this.logger.error("Failed IN_DEVELOPMENT → DEV_COMPLETE transition", {
+          taskId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
   }
 
   private runCycle(): void {

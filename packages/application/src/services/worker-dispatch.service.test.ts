@@ -27,7 +27,11 @@ import { JobType, JobStatus } from "@factory/domain";
 import type { WorkerDispatchUnitOfWork } from "../ports/worker-dispatch.ports.js";
 import type { WorkerSpawnContext } from "../ports/worker-dispatch.ports.js";
 import type { JobQueueService, ClaimJobResult } from "./job-queue.service.js";
-import type { WorkerSupervisorService, SpawnWorkerParams } from "./worker-supervisor.service.js";
+import type {
+  WorkerSupervisorService,
+  SpawnWorkerParams,
+  SpawnWorkerResult,
+} from "./worker-supervisor.service.js";
 import type { QueuedJob } from "../ports/job-queue.ports.js";
 
 import {
@@ -219,12 +223,45 @@ interface SupervisorCalls {
 }
 
 /**
+ * Creates a mock SpawnWorkerResult with default success values.
+ */
+function createMockSpawnResult(overrides: Partial<SpawnWorkerResult> = {}): SpawnWorkerResult {
+  return {
+    worker: {
+      workerId: "worker-001",
+      poolId: "pool-001",
+      name: "test-worker",
+      status: "completed",
+      currentTaskId: null,
+      currentRunId: null,
+      lastHeartbeatAt: null,
+    },
+    finalizeResult: {
+      runId: "run-001",
+      status: "success",
+      packetOutput: { packet_type: "dev_result_packet" },
+      artifactPaths: [],
+      logs: [],
+      exitCode: 0,
+      durationMs: 1500,
+      finalizedAt: "2025-01-01T00:00:01.500Z",
+    },
+    outputEvents: [],
+    ...overrides,
+  };
+}
+
+/**
  * Creates a mock WorkerSupervisorService that resolves immediately
- * with a minimal result, or rejects with a configured error.
+ * with a configurable result, or rejects with a configured error.
  *
  * @param throwError - If provided, spawnWorker will reject with this error
+ * @param spawnResult - The SpawnWorkerResult to return on success
  */
-function createMockSupervisor(throwError?: Error): {
+function createMockSupervisor(
+  throwError?: Error,
+  spawnResult: SpawnWorkerResult = createMockSpawnResult(),
+): {
   service: WorkerSupervisorService;
   calls: SupervisorCalls;
 } {
@@ -238,12 +275,7 @@ function createMockSupervisor(throwError?: Error): {
       if (throwError) {
         throw throwError;
       }
-      // Return a minimal result — the dispatch service doesn't inspect it
-      return {
-        worker: {} as never,
-        finalizeResult: {} as never,
-        outputEvents: [],
-      };
+      return spawnResult;
     },
     async cancelWorker() {
       throw new Error("cancelWorker not expected in dispatch tests");
@@ -262,6 +294,7 @@ function createDeps(
     claimResult?: ClaimJobResult | null;
     spawnContext?: WorkerSpawnContext | null;
     spawnError?: Error;
+    spawnResult?: SpawnWorkerResult;
   } = {},
 ): {
   deps: WorkerDispatchDependencies;
@@ -277,6 +310,7 @@ function createDeps(
   );
   const { service: workerSupervisorService, calls: supervisorCalls } = createMockSupervisor(
     overrides.spawnError,
+    overrides.spawnResult,
   );
 
   return {
@@ -350,20 +384,30 @@ describe("WorkerDispatchService", () => {
      */
     it("claims job, resolves context, spawns worker, and completes job", async () => {
       const mockJob = createMockJob();
+      const mockSpawnResult = createMockSpawnResult();
       const { deps, jobQueueCalls, supervisorCalls } = createDeps({
         claimResult: { job: mockJob },
+        spawnResult: mockSpawnResult,
       });
       const service = createWorkerDispatchService(deps);
 
       const result = await service.processDispatch();
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         processed: true,
         dispatched: true,
         jobId: mockJob.jobId,
         taskId: "task-001",
         workerId: "worker-001",
+        leaseId: "lease-001",
       });
+
+      // Verify spawnResult is included and contains finalize data
+      expect(result.processed && result.dispatched && result.spawnResult).toBeTruthy();
+      if (result.processed && result.dispatched) {
+        expect(result.spawnResult.finalizeResult.status).toBe("success");
+        expect(result.spawnResult.finalizeResult.exitCode).toBe(0);
+      }
 
       // Verify job was completed
       expect(jobQueueCalls.completeJob).toEqual([{ jobId: mockJob.jobId }]);
@@ -431,6 +475,41 @@ describe("WorkerDispatchService", () => {
       await service.processDispatch();
 
       expect(unitOfWorkCalls.resolveSpawnContext).toEqual(["task-99"]);
+    });
+
+    /**
+     * Validates that the dispatch result includes the SpawnWorkerResult
+     * even when the worker process returned a non-success status.
+     * The supervisor handles failure recovery (lease reclaim), but the
+     * caller still needs visibility into the finalize data.
+     */
+    it("includes spawnResult with failed worker status", async () => {
+      const mockJob = createMockJob();
+      const failedSpawnResult = createMockSpawnResult({
+        finalizeResult: {
+          runId: "run-fail",
+          status: "failed",
+          packetOutput: null,
+          artifactPaths: [],
+          logs: [],
+          exitCode: 1,
+          durationMs: 500,
+          finalizedAt: "2025-01-01T00:00:00.500Z",
+        },
+      });
+      const { deps } = createDeps({
+        claimResult: { job: mockJob },
+        spawnResult: failedSpawnResult,
+      });
+      const service = createWorkerDispatchService(deps);
+
+      const result = await service.processDispatch();
+
+      expect(result.processed).toBe(true);
+      if (result.processed && result.dispatched) {
+        expect(result.spawnResult.finalizeResult.status).toBe("failed");
+        expect(result.spawnResult.finalizeResult.exitCode).toBe(1);
+      }
     });
   });
 

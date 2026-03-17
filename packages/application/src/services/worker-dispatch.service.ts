@@ -33,7 +33,11 @@ import { JobType } from "@factory/domain";
 import type { WorkerDispatchUnitOfWork } from "../ports/worker-dispatch.ports.js";
 import type { ActorInfo } from "../events/domain-events.js";
 import type { JobQueueService } from "./job-queue.service.js";
-import type { WorkerSupervisorService, SpawnWorkerParams } from "./worker-supervisor.service.js";
+import type {
+  WorkerSupervisorService,
+  SpawnWorkerParams,
+  SpawnWorkerResult,
+} from "./worker-supervisor.service.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -117,6 +121,10 @@ export interface DispatchSuccessResult {
   readonly taskId: string;
   /** ID of the worker that was spawned. */
   readonly workerId: string;
+  /** ID of the lease associated with this dispatch. */
+  readonly leaseId: string;
+  /** Result from the worker supervisor containing finalize data and output events. */
+  readonly spawnResult: SpawnWorkerResult;
 }
 
 /**
@@ -293,7 +301,7 @@ export function createWorkerDispatchService(
         };
 
         // Step 4: Spawn the worker (async — this is the core async operation)
-        await deps.workerSupervisorService.spawnWorker(spawnParams);
+        const spawnResult = await deps.workerSupervisorService.spawnWorker(spawnParams);
 
         // Step 5: Complete the dispatch job on success
         deps.jobQueueService.completeJob(jobId);
@@ -304,6 +312,8 @@ export function createWorkerDispatchService(
           jobId,
           taskId: payload.taskId,
           workerId: payload.workerId,
+          leaseId: payload.leaseId,
+          spawnResult,
         };
       } catch (error: unknown) {
         // Fail the dispatch job on any error during context resolution or spawn
