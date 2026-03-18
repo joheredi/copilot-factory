@@ -149,7 +149,9 @@ export default function WorkerDetailPage() {
 
       {/* Worker output panel */}
       <WorkerOutputPanel
-        workerId={worker.status === "busy" ? worker.workerId : null}
+        workerId={
+          worker.status === "running" || worker.status === "starting" ? worker.workerId : null
+        }
         taskId={worker.currentTaskId ?? ""}
       />
     </div>
