@@ -49,6 +49,7 @@ import type {
   LeaseTransitionerPort,
   LeaseReclaimerPort,
   RunLogPersisterPort,
+  OutputForwarderPort,
   SupervisorRunContext,
   SupervisorFinalizeResult,
   SupervisorRunOutputStream,
@@ -198,6 +199,11 @@ export interface WorkerSupervisorDependencies {
    * When provided, logs are persisted after every run (success or failure).
    */
   readonly runLogPersister?: RunLogPersisterPort;
+  /**
+   * Output forwarder for streaming stdout/stderr to the real-time broadcast layer.
+   * When provided, output events are forwarded to WebSocket clients during execution.
+   */
+  readonly outputForwarder?: OutputForwarderPort;
   /** Clock function for timestamps (injectable for testing). */
   readonly clock?: () => Date;
 }
@@ -252,6 +258,7 @@ export function createWorkerSupervisorService(
     leaseTransitioner,
     leaseReclaimer,
     runLogPersister,
+    outputForwarder,
     clock = () => new Date(),
   } = deps;
 
@@ -362,7 +369,7 @@ export function createWorkerSupervisorService(
           toStatus: "running",
         });
 
-        // Step 7: Stream output events, forwarding heartbeats
+        // Step 7: Stream output events, forwarding heartbeats and output
         const outputEvents: SupervisorRunOutputStream[] = [];
         for await (const event of runtimeAdapter.streamRun(prepared.runId)) {
           outputEvents.push(event);
@@ -376,6 +383,11 @@ export function createWorkerSupervisorService(
                 lastHeartbeatAt: clock(),
               });
             });
+          }
+
+          // Forward stdout/stderr to the real-time broadcast layer
+          if (outputForwarder && (event.type === "stdout" || event.type === "stderr")) {
+            outputForwarder.forwardOutput(workerId, event);
           }
         }
 

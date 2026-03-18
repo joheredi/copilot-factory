@@ -93,6 +93,9 @@ export class QueueWorkerEventsService implements OnModuleInit, OnModuleDestroy {
   /** Prune throttle entries older than this many milliseconds. */
   static readonly THROTTLE_CLEANUP_AGE_MS = 30_000;
 
+  /** Milliseconds to batch output events before broadcasting. */
+  static readonly OUTPUT_BATCH_INTERVAL_MS = 200;
+
   private readonly logger: Logger;
 
   /**
@@ -100,6 +103,15 @@ export class QueueWorkerEventsService implements OnModuleInit, OnModuleDestroy {
    * Entries are pruned during the periodic queue depth polling cycle.
    */
   private readonly heartbeatLastBroadcast = new Map<string, number>();
+
+  /** Pending output batches per worker, flushed after OUTPUT_BATCH_INTERVAL_MS. */
+  private readonly outputBatches = new Map<
+    string,
+    {
+      chunks: Array<{ stream: string; content: string; timestamp: string }>;
+      timer: ReturnType<typeof setTimeout> | null;
+    }
+  >();
 
   /** Handle for the queue depth polling interval. */
   private queueDepthTimer: ReturnType<typeof setInterval> | null = null;
@@ -144,6 +156,13 @@ export class QueueWorkerEventsService implements OnModuleInit, OnModuleDestroy {
   onModuleDestroy(): void {
     this.stopQueueDepthPolling();
     this.heartbeatLastBroadcast.clear();
+
+    // Flush any pending output batches before shutdown
+    for (const [workerId] of this.outputBatches) {
+      this.flushOutputBatch(workerId);
+    }
+    this.outputBatches.clear();
+
     this.logger.info("Queue worker events service stopped");
   }
 
@@ -195,6 +214,66 @@ export class QueueWorkerEventsService implements OnModuleInit, OnModuleDestroy {
    *
    * @param workerId - Worker whose status changed (used to look up pool)
    */
+
+  /**
+   * Broadcast worker output (stdout/stderr) to subscribed clients.
+   *
+   * Batches output within {@link OUTPUT_BATCH_INTERVAL_MS} to avoid flooding
+   * WebSocket connections with per-character output events.
+   *
+   * @param workerId - Worker producing the output
+   * @param stream - Output stream type ("stdout" or "stderr")
+   * @param content - Output content
+   * @param timestamp - ISO 8601 timestamp of the output
+   */
+  broadcastWorkerOutput(
+    workerId: string,
+    stream: string,
+    content: string,
+    timestamp: string,
+  ): void {
+    let batch = this.outputBatches.get(workerId);
+    if (!batch) {
+      batch = { chunks: [], timer: null };
+      this.outputBatches.set(workerId, batch);
+    }
+
+    batch.chunks.push({ stream, content, timestamp });
+
+    if (!batch.timer) {
+      batch.timer = setTimeout(() => {
+        this.flushOutputBatch(workerId);
+      }, QueueWorkerEventsService.OUTPUT_BATCH_INTERVAL_MS);
+      batch.timer.unref();
+    }
+  }
+
+  private flushOutputBatch(workerId: string): void {
+    const batch = this.outputBatches.get(workerId);
+    if (!batch || batch.chunks.length === 0) {
+      this.outputBatches.delete(workerId);
+      return;
+    }
+
+    try {
+      this.broadcaster.broadcastToEntity(EventChannel.Workers, workerId, {
+        type: "worker.output",
+        data: {
+          workerId,
+          chunks: batch.chunks,
+        },
+      });
+    } catch (error: unknown) {
+      this.logger.error("Failed to broadcast worker output event", {
+        workerId,
+        chunkCount: batch.chunks.length,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    this.outputBatches.delete(workerId);
+  }
+
   broadcastPoolSummary(workerId: string): void {
     try {
       const snapshot = this.getWorkerPoolSnapshot(workerId);

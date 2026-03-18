@@ -51,6 +51,7 @@ import { createLogger } from "@factory/observability";
 import type { Logger } from "@factory/observability";
 
 import { DomainEventBroadcasterAdapter } from "../events/domain-event-broadcaster.adapter.js";
+import { QueueWorkerEventsService } from "../events/queue-worker-events.service.js";
 import { DATABASE_CONNECTION } from "../infrastructure/database/database.module.js";
 import type { DatabaseConnection } from "../infrastructure/database/connection.js";
 import { createSqliteUnitOfWork } from "../infrastructure/unit-of-work/sqlite-unit-of-work.js";
@@ -67,6 +68,7 @@ import {
   createReclaimUnitOfWork,
 } from "./application-adapters.js";
 import { createHeartbeatForwarderAdapter } from "./heartbeat-forwarder-adapter.js";
+import { createOutputForwarderAdapter } from "./output-forwarder-adapter.js";
 import {
   createInfrastructureAdapters,
   resolveInfrastructureConfig,
@@ -134,6 +136,7 @@ export class AutomationService implements OnModuleInit, OnModuleDestroy {
   constructor(
     @Inject(DATABASE_CONNECTION) private readonly conn: DatabaseConnection,
     @Inject(DomainEventBroadcasterAdapter) eventEmitter: DomainEventEmitter,
+    private readonly queueWorkerEventsService: QueueWorkerEventsService,
   ) {
     this.logger = createLogger("automation-runtime");
 
@@ -172,6 +175,9 @@ export class AutomationService implements OnModuleInit, OnModuleDestroy {
     );
 
     const heartbeatForwarder = createHeartbeatForwarderAdapter({ heartbeatService });
+    const outputForwarder = createOutputForwarderAdapter({
+      queueWorkerEventsService: this.queueWorkerEventsService,
+    });
 
     const infraConfig = resolveInfrastructureConfig();
     const { workspaceProvider, packetMounter, runtimeAdapter, runLogPersister } =
@@ -207,6 +213,7 @@ export class AutomationService implements OnModuleInit, OnModuleDestroy {
         },
       },
       runLogPersister,
+      outputForwarder,
       clock,
     });
 

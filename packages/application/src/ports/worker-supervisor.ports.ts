@@ -353,6 +353,24 @@ export interface HeartbeatForwarderPort {
   forwardHeartbeat(leaseId: string, workerId: string, isTerminal: boolean): void;
 }
 
+// ─── Output Forwarder Port ──────────────────────────────────────────────────
+
+/**
+ * Port for forwarding worker output events to the real-time broadcast layer.
+ *
+ * Called during the streamRun() loop for stdout/stderr events so the
+ * web UI can display worker output in real time.
+ */
+export interface OutputForwarderPort {
+  /**
+   * Forward a worker output event for real-time broadcasting.
+   *
+   * @param workerId - The worker producing the output.
+   * @param event - The output event (stdout/stderr with content and timestamp).
+   */
+  forwardOutput(workerId: string, event: SupervisorRunOutputStream): void;
+}
+
 // ─── Unit of Work ───────────────────────────────────────────────────────────
 
 /**
