@@ -30,7 +30,7 @@
  */
 
 import { spawn } from "node:child_process";
-import { join } from "node:path";
+import { join, dirname, isAbsolute } from "node:path";
 import { randomUUID } from "node:crypto";
 
 import type { ZodType } from "zod";
@@ -446,6 +446,31 @@ export function createDefaultProcessSpawner(): CliProcessSpawner {
 
 // ─── Adapter Implementation ──────────────────────────────────────────────────
 
+// ─── PATH Augmentation ───────────────────────────────────────────────────────
+
+/**
+ * Build a spawn environment with the binary's parent directory prepended
+ * to PATH. This ensures that shebang scripts (e.g., `#!/usr/bin/env node`)
+ * can resolve their interpreter even when the parent process has a
+ * stripped PATH (common in IDE-launched processes).
+ *
+ * Returns `undefined` (inherit parent env) if the binary path is not
+ * absolute, since there's no directory to augment with.
+ */
+function augmentPathForBinary(binaryPath: string): Record<string, string> | undefined {
+  if (!isAbsolute(binaryPath)) {
+    return undefined;
+  }
+
+  const binDir = dirname(binaryPath);
+  const currentPath = process.env["PATH"] ?? "";
+  const augmentedPath = currentPath.includes(binDir) ? currentPath : `${binDir}:${currentPath}`;
+
+  return { ...process.env, PATH: augmentedPath } as Record<string, string>;
+}
+
+// ─── Adapter ─────────────────────────────────────────────────────────────────
+
 /**
  * Copilot CLI execution adapter implementing the {@link WorkerRuntime} contract.
  *
@@ -572,9 +597,16 @@ export class CopilotCliAdapter implements WorkerRuntime {
     const copilotFlags = ["-p", promptContent, "--allow-all-tools"];
     const cliArgs = [...this.baseArgs, ...copilotFlags];
 
+    // Ensure the binary's directory is in PATH so shebang scripts (e.g.,
+    // #!/usr/bin/env node) can resolve their interpreter. This is needed
+    // when the control-plane runs in an environment with a stripped PATH
+    // (e.g., launched from an IDE that doesn't load shell profiles).
+    const spawnEnv = augmentPathForBinary(this.binaryPath);
+
     // Spawn the process
     const process = this.processSpawner(this.binaryPath, cliArgs, {
       cwd: state.context.workspacePaths.worktreePath,
+      env: spawnEnv,
     });
 
     state.process = process;
