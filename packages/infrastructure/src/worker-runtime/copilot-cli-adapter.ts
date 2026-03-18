@@ -992,9 +992,10 @@ export class CopilotCliAdapter implements WorkerRuntime {
       return "partial";
     }
 
-    // Non-zero exit code with no valid packet — check stdout for session completion
-    // markers that indicate the CLI finished its work normally.
-    if (hasSessionCompletionMarkers(state.stdoutBuffer)) {
+    // Non-zero exit code with no valid packet — check stdout and stderr for session
+    // completion markers that indicate the CLI finished its work normally. The Copilot
+    // CLI may print its session summary to either stream.
+    if (hasSessionCompletionMarkers(state.stdoutBuffer, state.stderrBuffer)) {
       return "partial";
     }
 
@@ -1003,12 +1004,14 @@ export class CopilotCliAdapter implements WorkerRuntime {
 }
 
 /**
- * Checks whether the Copilot CLI stdout buffer contains session completion markers.
+ * Checks whether the Copilot CLI output contains session completion markers.
  *
  * The Copilot CLI prints usage statistics (session time, code changes, model breakdown)
- * at the end of a normal session. Their presence indicates the session completed, even
- * if the process exited with a non-zero code.
+ * at the end of a normal session. These may appear on either stdout or stderr. Their
+ * presence indicates the session completed, even if the process exited with a non-zero
+ * code.
  */
-export function hasSessionCompletionMarkers(stdout: string): boolean {
-  return stdout.includes("Total session time:") || stdout.includes("Total code changes:");
+export function hasSessionCompletionMarkers(stdout: string, stderr: string): boolean {
+  const combined = stdout + stderr;
+  return combined.includes("Total session time:") || combined.includes("Total code changes:");
 }

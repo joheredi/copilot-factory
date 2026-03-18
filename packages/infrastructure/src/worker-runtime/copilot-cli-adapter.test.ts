@@ -997,6 +997,31 @@ describe("CopilotCliAdapter", () => {
     });
 
     /**
+     * Validates that session completion markers in stderr (not just stdout)
+     * are detected. The Copilot CLI prints its session summary to stderr.
+     */
+    it("produces status 'partial' for non-zero exit code with completion markers in stderr", async () => {
+      const { adapter, processSpawner } = createTestAdapter();
+      const prepared = await adapter.prepareRun(createTestRunContext());
+      await adapter.startRun(prepared.runId);
+
+      const process = processSpawner.getProcess();
+      process.emitStdout("Working on implementation...\n");
+      process.emitStderr("Total usage est: 6 Premium requests\n");
+      process.emitStderr("API time spent: 6m 5s\n");
+      process.emitStderr("Total session time: 8m 13s\n");
+      process.emitStderr("Total code changes: +349 -0\n");
+      process.emitExit(1);
+      await new Promise((r) => setTimeout(r, 20));
+
+      const result = await adapter.finalizeRun(prepared.runId);
+
+      expect(result.status).toBe("partial");
+      expect(result.packetOutput).toBeNull();
+      expect(result.exitCode).toBe(1);
+    });
+
+    /**
      * Validates that finalization cleans up run state so that
      * subsequent calls with the same run ID throw.
      */
@@ -1357,7 +1382,7 @@ describe("hasSessionCompletionMarkers", () => {
   it("returns true when stdout contains 'Total session time:'", () => {
     const stdout =
       "Working on task...\nTotal usage est: 6 Premium requests\nTotal session time: 8m 13s\n";
-    expect(hasSessionCompletionMarkers(stdout)).toBe(true);
+    expect(hasSessionCompletionMarkers(stdout, "")).toBe(true);
   });
 
   /**
@@ -1365,7 +1390,7 @@ describe("hasSessionCompletionMarkers", () => {
    */
   it("returns true when stdout contains 'Total code changes:'", () => {
     const stdout = "Implementation complete\nTotal code changes: +349 -0\n";
-    expect(hasSessionCompletionMarkers(stdout)).toBe(true);
+    expect(hasSessionCompletionMarkers(stdout, "")).toBe(true);
   });
 
   /**
@@ -1373,21 +1398,32 @@ describe("hasSessionCompletionMarkers", () => {
    */
   it("returns true when stdout contains both markers", () => {
     const stdout = "Total session time: 8m 13s\nTotal code changes: +349 -0\n";
-    expect(hasSessionCompletionMarkers(stdout)).toBe(true);
+    expect(hasSessionCompletionMarkers(stdout, "")).toBe(true);
   });
 
   /**
-   * Validates that stdout without markers returns false.
+   * Validates detection of markers in stderr. The Copilot CLI may print
+   * its session summary to stderr instead of stdout.
    */
-  it("returns false when stdout has no completion markers", () => {
-    const stdout = "Error: something went wrong\nFatal: connection refused\n";
-    expect(hasSessionCompletionMarkers(stdout)).toBe(false);
+  it("returns true when stderr contains completion markers", () => {
+    const stderr =
+      "Total usage est: 6 Premium requests\nTotal session time: 8m 13s\nTotal code changes: +349 -0\n";
+    expect(hasSessionCompletionMarkers("", stderr)).toBe(true);
   });
 
   /**
-   * Validates that an empty string returns false.
+   * Validates that neither stream having markers returns false.
    */
-  it("returns false for empty stdout", () => {
-    expect(hasSessionCompletionMarkers("")).toBe(false);
+  it("returns false when neither stream has completion markers", () => {
+    const stdout = "Error: something went wrong\n";
+    const stderr = "Fatal: connection refused\n";
+    expect(hasSessionCompletionMarkers(stdout, stderr)).toBe(false);
+  });
+
+  /**
+   * Validates that empty strings return false.
+   */
+  it("returns false for empty stdout and stderr", () => {
+    expect(hasSessionCompletionMarkers("", "")).toBe(false);
   });
 });
