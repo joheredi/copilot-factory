@@ -222,9 +222,9 @@ function mapRunStatusToWorkerStatus(
 ): WorkerEntityStatus {
   switch (runStatus) {
     case "success":
+    case "partial":
       return "completed";
     case "failed":
-    case "partial":
       return "failed";
     case "cancelled":
       return "cancelled";
@@ -408,7 +408,7 @@ export function createWorkerSupervisorService(
           }
         }
 
-        if (finalizeResult.status === "success") {
+        if (finalizeResult.status === "success" || finalizeResult.status === "partial") {
           // ── Success path: transition worker to completing → completed ──
 
           unitOfWork.runInTransaction((repos) => {

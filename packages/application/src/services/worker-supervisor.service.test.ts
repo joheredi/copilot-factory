@@ -702,11 +702,11 @@ describe("WorkerSupervisorService", () => {
     });
 
     /**
-     * @why Verifies that a partial run status (timeout with some progress)
-     * maps to "failed" Worker entity status, since partial runs need
-     * retry/escalation just like fully failed runs.
+     * @why Verifies that a partial run status (worker completed work but
+     * didn't produce a structured result packet) maps to "completed"
+     * Worker entity status, since the worker did finish its session.
      */
-    it("should map partial run status to failed worker status", async () => {
+    it("should map partial run status to completed worker status", async () => {
       const workerRepo = createMockWorkerRepo();
       const unitOfWork = createMockUnitOfWork(workerRepo);
       const runtimeAdapter = createMockRuntimeAdapter({ finalStatus: "partial" });
@@ -722,7 +722,7 @@ describe("WorkerSupervisorService", () => {
       });
 
       const result = await service.spawnWorker(createTestSpawnParams());
-      expect(result.worker.status).toBe("failed");
+      expect(result.worker.status).toBe("completed");
     });
 
     /**

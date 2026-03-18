@@ -334,7 +334,7 @@ export class AutomationService implements OnModuleInit, OnModuleDestroy {
           if (result.dispatched) {
             const { finalizeResult } = result.spawnResult;
 
-            if (finalizeResult.status === "success") {
+            if (finalizeResult.status === "success" || finalizeResult.status === "partial") {
               this.logger.info("Worker dispatch succeeded", {
                 jobId: result.jobId,
                 taskId: result.taskId,
