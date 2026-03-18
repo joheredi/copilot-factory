@@ -5,6 +5,7 @@ import { useDashboardData } from "./hooks/use-dashboard-data.js";
 import { useProjectFilter } from "./hooks/use-project-filter.js";
 import { useFactoryState, useStartFactory, usePauseFactory } from "../../api/hooks/index.js";
 import { TaskSummaryCards } from "./components/task-summary-cards.js";
+import { PipelineVisualization } from "./components/pipeline-visualization.js";
 import { WorkerPoolSummaryCard } from "./components/worker-pool-summary.js";
 import { RecentActivityFeed } from "./components/recent-activity-feed.js";
 import { ProjectSelector } from "./components/project-selector.js";
@@ -34,9 +35,11 @@ import { CreateRepositoryDialog } from "../projects/components/CreateRepositoryD
  */
 export default function DashboardPage() {
   const [projectFilter, projectActions] = useProjectFilter();
-  const { taskCounts, poolSummary, recentActivity, isLoading, isError } = useDashboardData({
-    repositoryIds: projectFilter.repositoryIds.length > 0 ? projectFilter.repositoryIds : undefined,
-  });
+  const { taskCounts, statusCounts, poolSummary, recentActivity, isLoading, isError } =
+    useDashboardData({
+      repositoryIds:
+        projectFilter.repositoryIds.length > 0 ? projectFilter.repositoryIds : undefined,
+    });
   const [showCreateProject, setShowCreateProject] = useState(false);
   const [showCreateRepository, setShowCreateRepository] = useState(false);
 
@@ -121,6 +124,8 @@ export default function DashboardPage() {
       )}
 
       <TaskSummaryCards counts={taskCounts} isLoading={isLoading} />
+
+      <PipelineVisualization statusCounts={statusCounts} isLoading={isLoading} />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <WorkerPoolSummaryCard summary={poolSummary} isLoading={isLoading} />

@@ -67,6 +67,8 @@ export interface PoolSummary {
 export interface DashboardData {
   /** Task counts grouped by operator-facing category. */
   readonly taskCounts: TaskCategoryCounts;
+  /** Per-status task counts for pipeline visualization. */
+  readonly statusCounts: ReadonlyMap<string, number>;
   /** Worker pool summary. */
   readonly poolSummary: PoolSummary;
   /** Most recent audit events for the activity feed. */
@@ -269,6 +271,7 @@ export function useDashboardData(options?: DashboardDataOptions): DashboardData 
 
   return {
     taskCounts,
+    statusCounts: taskCountsByStatus as ReadonlyMap<string, number>,
     poolSummary,
     recentActivity,
     isLoading,
