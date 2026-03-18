@@ -26,6 +26,8 @@ import {
   Query,
 } from "@nestjs/common";
 import { ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { readFile } from "node:fs/promises";
+import { basename, join, resolve } from "node:path";
 
 import { CreateTaskDto } from "./dtos/create-task.dto.js";
 import { TaskFilterQueryDto } from "./dtos/task-filter-query.dto.js";
@@ -41,6 +43,10 @@ import {
   type AuditEventResponse,
   type MappedPaginatedResponse,
 } from "../common/response-mappers.js";
+import { DATABASE_CONNECTION } from "../infrastructure/database/database.module.js";
+import type { DatabaseConnection } from "../infrastructure/database/connection.js";
+import { createTaskRepository } from "../infrastructure/repositories/task.repository.js";
+import { createRepositoryRepository } from "../infrastructure/repositories/repository.repository.js";
 
 /**
  * Handles HTTP requests for task management.
@@ -60,6 +66,7 @@ export class TasksController {
   constructor(
     @Inject(TasksService) private readonly tasksService: TasksService,
     @Inject(AuditService) private readonly auditService: AuditService,
+    @Inject(DATABASE_CONNECTION) private readonly conn: DatabaseConnection,
   ) {}
 
   /**
@@ -212,5 +219,45 @@ export class TasksController {
       throw new NotFoundException(`Task with ID "${id}" not found`);
     }
     return mapTask(task);
+  }
+
+  /**
+   * Get persisted worker run logs for a task.
+   *
+   * Reads stdout.log and stderr.log from the task's workspace log
+   * directory. Returns empty strings when log files do not exist.
+   *
+   * @param taskId Task UUID.
+   * @returns Object containing stdout and stderr log contents.
+   * @throws NotFoundException if the task or its repository does not exist.
+   */
+  @Get(":taskId/logs")
+  @ApiOperation({ summary: "Get worker run logs for a task" })
+  @ApiParam({ name: "taskId", description: "Task UUID" })
+  @ApiResponse({ status: 200, description: "Worker run logs." })
+  @ApiResponse({ status: 404, description: "Task or repository not found." })
+  async getTaskLogs(@Param("taskId") taskId: string): Promise<{ stdout: string; stderr: string }> {
+    const taskRepo = createTaskRepository(this.conn.db);
+    const task = taskRepo.findById(taskId);
+    if (!task) {
+      throw new NotFoundException(`Task with ID "${taskId}" not found`);
+    }
+
+    const repoRepo = createRepositoryRepository(this.conn.db);
+    const repository = repoRepo.findById(task.repositoryId);
+    if (!repository) {
+      throw new NotFoundException(`Repository with ID "${task.repositoryId}" not found`);
+    }
+
+    const workspacesRoot = resolve(process.env["WORKSPACES_ROOT"] ?? "./data/workspaces");
+    const repoName = basename(repository.localCheckoutPath ?? repository.name);
+    const logsDir = join(workspacesRoot, repoName, taskId, "logs");
+
+    const [stdout, stderr] = await Promise.all([
+      readFile(join(logsDir, "stdout.log"), "utf-8").catch(() => ""),
+      readFile(join(logsDir, "stderr.log"), "utf-8").catch(() => ""),
+    ]);
+
+    return { stdout, stderr };
   }
 }
