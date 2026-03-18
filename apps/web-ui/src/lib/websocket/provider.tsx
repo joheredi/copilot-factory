@@ -21,6 +21,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type {
   ConnectionState,
   FactoryEvent,
+  FactoryEventListener,
   SubscriptionRequest,
   WebSocketContextValue,
 } from "./types";
@@ -90,6 +91,7 @@ const DEFAULT_CHANNELS: readonly EventChannel[] = [
 export function WebSocketProvider({ children, url, autoConnect = true }: WebSocketProviderProps) {
   const [state, setState] = useState<ConnectionState>("disconnected");
   const socketRef = useRef<Socket | null>(null);
+  const listenersRef = useRef<Set<FactoryEventListener>>(new Set());
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -126,6 +128,9 @@ export function WebSocketProvider({ children, url, autoConnect = true }: WebSock
 
     socket.on(FACTORY_EVENT_NAME, (event: FactoryEvent) => {
       invalidateQueriesForEvent(queryClient, event);
+      for (const listener of listenersRef.current) {
+        listener(event);
+      }
     });
 
     return () => {
@@ -151,10 +156,20 @@ export function WebSocketProvider({ children, url, autoConnect = true }: WebSock
     }
   }, []);
 
+  const addListener = useCallback((listener: FactoryEventListener) => {
+    listenersRef.current.add(listener);
+  }, []);
+
+  const removeListener = useCallback((listener: FactoryEventListener) => {
+    listenersRef.current.delete(listener);
+  }, []);
+
   const contextValue: WebSocketContextValue = {
     state,
     subscribe,
     unsubscribe,
+    addListener,
+    removeListener,
   };
 
   return <WebSocketContext.Provider value={contextValue}>{children}</WebSocketContext.Provider>;

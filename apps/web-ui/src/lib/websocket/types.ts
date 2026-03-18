@@ -65,6 +65,14 @@ export interface SubscriptionRequest {
 }
 
 /**
+ * Callback signature for components that need direct access to factory events.
+ *
+ * Used by {@link WebSocketContextValue.addListener} for streaming use-cases
+ * (e.g., worker stdout) where query-cache invalidation is not sufficient.
+ */
+export type FactoryEventListener = (event: FactoryEvent) => void;
+
+/**
  * Context value provided by {@link WebSocketProvider}.
  *
  * Exposes connection state and subscription management to consuming components.
@@ -76,6 +84,14 @@ export interface WebSocketContextValue {
   subscribe: (channel: EventChannel, entityId?: string) => void;
   /** Unsubscribe from a channel and optionally an entity-specific room. */
   unsubscribe: (channel: EventChannel, entityId?: string) => void;
+  /**
+   * Register a callback that receives every incoming {@link FactoryEvent}.
+   * Useful for streaming use-cases (e.g., worker output) where the
+   * consumer needs the raw event payload, not just cache invalidation.
+   */
+  addListener: (listener: FactoryEventListener) => void;
+  /** Remove a previously registered event listener. */
+  removeListener: (listener: FactoryEventListener) => void;
 }
 
 /**

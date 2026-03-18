@@ -34,6 +34,7 @@ import { TaskArtifactsTab } from "./components/TaskArtifactsTab.js";
 import { TaskDependenciesTab } from "./components/TaskDependenciesTab.js";
 import { TaskActionBar } from "./components/operator-actions/TaskActionBar.js";
 import { EditTaskDialog } from "./components/EditTaskDialog.js";
+import { WorkerOutputPanel } from "./WorkerOutputPanel.js";
 import type { TaskPriority } from "../../api/types.js";
 
 /**
@@ -143,6 +144,9 @@ export default function TaskDetailPage() {
           <TabsTrigger value="dependencies" data-testid="tab-dependencies">
             Dependencies
           </TabsTrigger>
+          <TabsTrigger value="output" data-testid="tab-output">
+            Output
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
@@ -167,6 +171,10 @@ export default function TaskDetailPage() {
             dependencies={detail.dependencies}
             dependents={detail.dependents}
           />
+        </TabsContent>
+
+        <TabsContent value="output">
+          <WorkerOutputPanel workerId={detail.currentLease?.workerId ?? null} taskId={task.id} />
         </TabsContent>
       </Tabs>
     </div>
