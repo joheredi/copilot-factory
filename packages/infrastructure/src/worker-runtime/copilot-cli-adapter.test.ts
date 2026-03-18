@@ -30,6 +30,7 @@ import {
   generatePrompt,
   extractPacketFromStdout,
   validatePacketSchema,
+  hasSessionCompletionMarkers,
   OUTPUT_PACKET_FILENAME,
   PROMPT_FILENAME,
   RESULT_PACKET_START_DELIMITER,
@@ -919,6 +920,83 @@ describe("CopilotCliAdapter", () => {
     });
 
     /**
+     * Validates that a non-zero exit code with a valid result packet still
+     * produces status "success". The Copilot CLI may exit with non-zero
+     * codes even after completing work successfully.
+     */
+    it("produces status 'success' for non-zero exit code with valid packet", async () => {
+      const { adapter, fs, processSpawner } = createTestAdapter();
+      const context = createTestRunContext();
+      const prepared = await adapter.prepareRun(context);
+      await adapter.startRun(prepared.runId);
+
+      // Write valid output packet
+      const outputPath = `/workspace/outputs/${OUTPUT_PACKET_FILENAME}`;
+      fs.files.set(outputPath, JSON.stringify(createTestDevResultPacket()));
+
+      // Simulate Copilot CLI session summary followed by non-zero exit
+      const process = processSpawner.getProcess();
+      process.emitStdout("Implementation complete\n");
+      process.emitStdout("Total session time: 8m 13s\n");
+      process.emitStdout("Total code changes: +349 -0\n");
+      process.emitExit(1);
+      await new Promise((r) => setTimeout(r, 20));
+
+      const result = await adapter.finalizeRun(prepared.runId);
+
+      expect(result.status).toBe("success");
+      expect(result.packetOutput).not.toBeNull();
+      expect(result.exitCode).toBe(1);
+    });
+
+    /**
+     * Validates that a non-zero exit code with no valid packet but with
+     * session completion markers produces "partial" instead of "failed".
+     * This covers the case where the Copilot CLI completed its work but
+     * didn't produce a structured result packet.
+     */
+    it("produces status 'partial' for non-zero exit code with session completion markers", async () => {
+      const { adapter, processSpawner } = createTestAdapter();
+      const prepared = await adapter.prepareRun(createTestRunContext());
+      await adapter.startRun(prepared.runId);
+
+      // Simulate Copilot CLI session summary (no packet file written)
+      const process = processSpawner.getProcess();
+      process.emitStdout("Working on implementation...\n");
+      process.emitStdout("Total usage est: 6 Premium requests\n");
+      process.emitStdout("Total session time: 8m 13s\n");
+      process.emitStdout("Total code changes: +349 -0\n");
+      process.emitExit(1);
+      await new Promise((r) => setTimeout(r, 20));
+
+      const result = await adapter.finalizeRun(prepared.runId);
+
+      expect(result.status).toBe("partial");
+      expect(result.packetOutput).toBeNull();
+      expect(result.exitCode).toBe(1);
+    });
+
+    /**
+     * Validates that a non-zero exit code with no valid packet and no
+     * session completion markers still produces "failed" (regression guard).
+     */
+    it("produces status 'failed' for non-zero exit code without completion markers", async () => {
+      const { adapter, processSpawner } = createTestAdapter();
+      const prepared = await adapter.prepareRun(createTestRunContext());
+      await adapter.startRun(prepared.runId);
+
+      const process = processSpawner.getProcess();
+      process.emitStderr("Fatal error: connection refused\n");
+      process.emitExit(1);
+      await new Promise((r) => setTimeout(r, 20));
+
+      const result = await adapter.finalizeRun(prepared.runId);
+
+      expect(result.status).toBe("failed");
+      expect(result.exitCode).toBe(1);
+    });
+
+    /**
      * Validates that finalization cleans up run state so that
      * subsequent calls with the same run ID throw.
      */
@@ -1267,5 +1345,49 @@ describe("validatePacketSchema", () => {
       expect(result.valid).toBe(false);
       expect(result.errors[0]).not.toContain("No schema registered");
     }
+  });
+});
+
+// ─── Unit tests for hasSessionCompletionMarkers ──────────────────────────────
+
+describe("hasSessionCompletionMarkers", () => {
+  /**
+   * Validates detection of "Total session time:" marker.
+   */
+  it("returns true when stdout contains 'Total session time:'", () => {
+    const stdout =
+      "Working on task...\nTotal usage est: 6 Premium requests\nTotal session time: 8m 13s\n";
+    expect(hasSessionCompletionMarkers(stdout)).toBe(true);
+  });
+
+  /**
+   * Validates detection of "Total code changes:" marker.
+   */
+  it("returns true when stdout contains 'Total code changes:'", () => {
+    const stdout = "Implementation complete\nTotal code changes: +349 -0\n";
+    expect(hasSessionCompletionMarkers(stdout)).toBe(true);
+  });
+
+  /**
+   * Validates that both markers together are detected.
+   */
+  it("returns true when stdout contains both markers", () => {
+    const stdout = "Total session time: 8m 13s\nTotal code changes: +349 -0\n";
+    expect(hasSessionCompletionMarkers(stdout)).toBe(true);
+  });
+
+  /**
+   * Validates that stdout without markers returns false.
+   */
+  it("returns false when stdout has no completion markers", () => {
+    const stdout = "Error: something went wrong\nFatal: connection refused\n";
+    expect(hasSessionCompletionMarkers(stdout)).toBe(false);
+  });
+
+  /**
+   * Validates that an empty string returns false.
+   */
+  it("returns false for empty stdout", () => {
+    expect(hasSessionCompletionMarkers("")).toBe(false);
   });
 });

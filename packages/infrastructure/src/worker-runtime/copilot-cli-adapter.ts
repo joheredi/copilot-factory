@@ -966,9 +966,12 @@ export class CopilotCliAdapter implements WorkerRuntime {
    * Determines the terminal {@link RunStatus} based on run state and collected artifacts.
    *
    * - `cancelled` if the run was explicitly cancelled.
-   * - `success` if exit code is 0 and the output packet is valid.
-   * - `partial` if exit code is 0 but the packet is missing or invalid.
-   * - `failed` for any other case (non-zero exit, never started, etc.).
+   * - `success` if the output packet is valid (regardless of exit code — the Copilot CLI
+   *   may exit with a non-zero code even after a successful session).
+   * - `partial` if exit code is 0 but the packet is missing or invalid, OR if exit code
+   *   is non-zero but stdout contains session completion markers indicating normal completion.
+   * - `failed` for any other case (non-zero exit with no packet and no completion markers,
+   *   never started, etc.).
    */
   private determineRunStatus(state: CopilotCliRunState, artifacts: CollectedArtifacts): RunStatus {
     if (state.phase === "cancelled") {
@@ -979,14 +982,33 @@ export class CopilotCliAdapter implements WorkerRuntime {
       return "failed";
     }
 
-    if (state.exitCode === 0 && artifacts.packetValid) {
+    // A valid result packet is the strongest signal of success. The Copilot CLI may
+    // return non-zero exit codes even after completing work successfully.
+    if (artifacts.packetValid) {
       return "success";
     }
 
-    if (state.exitCode === 0 && !artifacts.packetValid) {
+    if (state.exitCode === 0) {
+      return "partial";
+    }
+
+    // Non-zero exit code with no valid packet — check stdout for session completion
+    // markers that indicate the CLI finished its work normally.
+    if (hasSessionCompletionMarkers(state.stdoutBuffer)) {
       return "partial";
     }
 
     return "failed";
   }
+}
+
+/**
+ * Checks whether the Copilot CLI stdout buffer contains session completion markers.
+ *
+ * The Copilot CLI prints usage statistics (session time, code changes, model breakdown)
+ * at the end of a normal session. Their presence indicates the session completed, even
+ * if the process exited with a non-zero code.
+ */
+export function hasSessionCompletionMarkers(stdout: string): boolean {
+  return stdout.includes("Total session time:") || stdout.includes("Total code changes:");
 }
