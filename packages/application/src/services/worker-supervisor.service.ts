@@ -48,6 +48,7 @@ import type {
   HeartbeatForwarderPort,
   LeaseTransitionerPort,
   LeaseReclaimerPort,
+  RunLogPersisterPort,
   SupervisorRunContext,
   SupervisorFinalizeResult,
   SupervisorRunOutputStream,
@@ -192,6 +193,11 @@ export interface WorkerSupervisorDependencies {
    * retry policy, and returns the task to READY or FAILED.
    */
   readonly leaseReclaimer?: LeaseReclaimerPort;
+  /**
+   * Run log persister for writing stdout/stderr to the workspace logs directory.
+   * When provided, logs are persisted after every run (success or failure).
+   */
+  readonly runLogPersister?: RunLogPersisterPort;
   /** Clock function for timestamps (injectable for testing). */
   readonly clock?: () => Date;
 }
@@ -245,6 +251,7 @@ export function createWorkerSupervisorService(
     heartbeatForwarder,
     leaseTransitioner,
     leaseReclaimer,
+    runLogPersister,
     clock = () => new Date(),
   } = deps;
 
@@ -376,6 +383,18 @@ export function createWorkerSupervisorService(
         await runtimeAdapter.collectArtifacts(prepared.runId);
         const finalizeResult = await runtimeAdapter.finalizeRun(prepared.runId);
         const terminalStatus = mapRunStatusToWorkerStatus(finalizeResult.status);
+
+        // Step 8b: Persist run logs to workspace for post-mortem debugging
+        if (runLogPersister && finalizeResult.logs.length > 0) {
+          try {
+            await runLogPersister.persistRunLogs(
+              workspaceResult.layout.logsPath,
+              finalizeResult.logs,
+            );
+          } catch {
+            // Best-effort: log persistence failure should not block worker completion
+          }
+        }
 
         if (finalizeResult.status === "success") {
           // ── Success path: transition worker to completing → completed ──

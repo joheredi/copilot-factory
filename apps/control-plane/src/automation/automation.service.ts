@@ -174,7 +174,7 @@ export class AutomationService implements OnModuleInit, OnModuleDestroy {
     const heartbeatForwarder = createHeartbeatForwarderAdapter({ heartbeatService });
 
     const infraConfig = resolveInfrastructureConfig();
-    const { workspaceProvider, packetMounter, runtimeAdapter } =
+    const { workspaceProvider, packetMounter, runtimeAdapter, runLogPersister } =
       createInfrastructureAdapters(infraConfig);
 
     const leaseReclaimService = createLeaseReclaimService(
@@ -206,6 +206,7 @@ export class AutomationService implements OnModuleInit, OnModuleDestroy {
           });
         },
       },
+      runLogPersister,
       clock,
     });
 

@@ -316,6 +316,7 @@ export type {
   WorkerSupervisorUnitOfWork,
   LeaseTransitionerPort,
   LeaseReclaimerPort,
+  RunLogPersisterPort,
 } from "./ports/worker-supervisor.ports.js";
 
 // Services — worker supervisor for process lifecycle management

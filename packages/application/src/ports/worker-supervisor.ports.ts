@@ -418,3 +418,25 @@ export interface LeaseReclaimerPort {
    */
   reclaimLease(leaseId: string, metadata?: Record<string, unknown>): void;
 }
+
+// ─── Run Log Persister Port ─────────────────────────────────────────────────
+
+/**
+ * Port for persisting worker run logs to the workspace filesystem.
+ *
+ * After a worker run completes (success or failure), the supervisor
+ * calls this port to write stdout/stderr logs to the workspace's
+ * `logs/` directory for post-mortem debugging and audit.
+ */
+export interface RunLogPersisterPort {
+  /**
+   * Persist run logs to the given directory.
+   *
+   * Writes separate files for stdout and stderr content, aggregated
+   * from all log entries of each stream type.
+   *
+   * @param logsPath - Absolute path to the workspace logs directory.
+   * @param logs - Log entries from the finalized run.
+   */
+  persistRunLogs(logsPath: string, logs: readonly SupervisorRunLogEntry[]): Promise<void>;
+}

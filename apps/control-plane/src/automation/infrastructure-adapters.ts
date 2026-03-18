@@ -16,12 +16,15 @@
  */
 
 import { execSync } from "node:child_process";
+import { join } from "node:path";
 
 import type {
   WorkspaceProviderPort,
   PacketMounterPort,
   RuntimeAdapterPort,
+  RunLogPersisterPort,
   SupervisorRunContext,
+  SupervisorRunLogEntry,
 } from "@factory/application";
 import type {
   GitOperations,
@@ -77,6 +80,7 @@ export interface InfrastructureAdapters {
   readonly workspaceProvider: WorkspaceProviderPort;
   readonly packetMounter: PacketMounterPort;
   readonly runtimeAdapter: RuntimeAdapterPort;
+  readonly runLogPersister: RunLogPersisterPort;
 }
 
 /**
@@ -279,5 +283,38 @@ export function createInfrastructureAdapters(
     workspaceProvider: createWorkspaceProviderAdapter(workspaceManager),
     packetMounter: createPacketMounterAdapter(packetMounter),
     runtimeAdapter: createRuntimeAdapterBridge(cliAdapter),
+    runLogPersister: createRunLogPersisterAdapter(fs),
+  };
+}
+
+// ─── Run Log Persister Adapter ───────────────────────────────────────────────
+
+/**
+ * Create a {@link RunLogPersisterPort} that writes stdout/stderr logs
+ * to the workspace's `logs/` directory after each worker run.
+ *
+ * Aggregates log entries by stream type and writes one file per stream
+ * (e.g., `stdout.log`, `stderr.log`).
+ */
+export function createRunLogPersisterAdapter(fs: FileSystem): RunLogPersisterPort {
+  return {
+    async persistRunLogs(logsPath: string, logs: readonly SupervisorRunLogEntry[]): Promise<void> {
+      // Aggregate log content by stream type
+      const streams = new Map<string, string[]>();
+      for (const entry of logs) {
+        const existing = streams.get(entry.stream);
+        if (existing) {
+          existing.push(entry.content);
+        } else {
+          streams.set(entry.stream, [entry.content]);
+        }
+      }
+
+      // Write one log file per stream
+      for (const [stream, contents] of streams) {
+        const filePath = join(logsPath, `${stream}.log`);
+        await fs.writeFile(filePath, contents.join(""));
+      }
+    },
   };
 }
