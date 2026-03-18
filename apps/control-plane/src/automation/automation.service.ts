@@ -325,21 +325,39 @@ export class AutomationService implements OnModuleInit, OnModuleDestroy {
         if (result.processed) {
           if (result.dispatched) {
             const { finalizeResult } = result.spawnResult;
-            this.logger.info("Worker dispatch succeeded", {
-              jobId: result.jobId,
-              taskId: result.taskId,
-              workerId: result.workerId,
-              runStatus: finalizeResult.status,
-              exitCode: finalizeResult.exitCode,
-              durationMs: finalizeResult.durationMs,
-            });
 
-            // Process the worker result — advance the task through
-            // the state machine when the worker completed successfully.
-            // Failure cases are already handled by the supervisor
-            // (lease reclaim → task back to READY or FAILED/ESCALATED).
             if (finalizeResult.status === "success") {
+              this.logger.info("Worker dispatch succeeded", {
+                jobId: result.jobId,
+                taskId: result.taskId,
+                workerId: result.workerId,
+                runStatus: finalizeResult.status,
+                exitCode: finalizeResult.exitCode,
+                durationMs: finalizeResult.durationMs,
+              });
+
+              // Process the worker result — advance the task through
+              // the state machine when the worker completed successfully.
+              // Failure cases are already handled by the supervisor
+              // (lease reclaim → task back to READY or FAILED/ESCALATED).
               this.processSuccessfulWorkerResult(result.taskId);
+            } else {
+              // Extract stderr logs for diagnostics — spawn errors and
+              // runtime failures are captured in the log entries.
+              const stderrLogs = finalizeResult.logs
+                .filter((l) => l.stream === "stderr")
+                .map((l) => l.content)
+                .join("");
+
+              this.logger.error("Worker run failed", {
+                jobId: result.jobId,
+                taskId: result.taskId,
+                workerId: result.workerId,
+                runStatus: finalizeResult.status,
+                exitCode: finalizeResult.exitCode,
+                durationMs: finalizeResult.durationMs,
+                stderr: stderrLogs || undefined,
+              });
             }
           } else {
             this.logger.warn("Worker dispatch failed", {

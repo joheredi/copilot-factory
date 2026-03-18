@@ -147,13 +147,15 @@ export type CliProcessSpawner = (
 export interface CopilotCliConfig {
   /**
    * Path to the CLI binary.
-   * @default "gh"
+   * @default "copilot"
    */
   readonly binaryPath?: string;
 
   /**
    * Base arguments passed before the prompt argument.
-   * @default ["copilot"]
+   * When using "gh" as binaryPath, set to ["copilot", "--"] so that
+   * gh passes Copilot-specific flags through without intercepting them.
+   * @default []
    */
   readonly baseArgs?: readonly string[];
 
@@ -472,8 +474,8 @@ export class CopilotCliAdapter implements WorkerRuntime {
   private readonly runs = new Map<string, CopilotCliRunState>();
 
   constructor(config: CopilotCliConfig, deps: CopilotCliDependencies) {
-    this.binaryPath = config.binaryPath ?? "gh";
-    this.baseArgs = config.baseArgs ?? ["copilot"];
+    this.binaryPath = config.binaryPath ?? "copilot";
+    this.baseArgs = config.baseArgs ?? [];
     this.outputFileName = config.outputFileName ?? OUTPUT_PACKET_FILENAME;
     this.promptFileName = config.promptFileName ?? PROMPT_FILENAME;
     this.fs = deps.fs;
@@ -562,11 +564,13 @@ export class CopilotCliAdapter implements WorkerRuntime {
     }
 
     // Build the CLI command arguments.
-    // Note: The policy-aware command wrapper (T047) applies to commands that the
-    // worker executes during task work, not to the adapter spawning the CLI itself.
-    // The adapter is infrastructure — it spawns the execution medium. Policy
-    // enforcement happens within the worker's execution scope.
-    const cliArgs = [...this.baseArgs, "--prompt-file", state.promptFilePath];
+    // The Copilot CLI uses `-p` / `--prompt` for non-interactive prompt text
+    // and requires `--allow-all-tools` to run without interactive confirmation.
+    // When invoked via `gh copilot`, a `--` separator prevents `gh` from
+    // interpreting Copilot-specific flags.
+    const promptContent = await this.fs.readFile(state.promptFilePath);
+    const copilotFlags = ["-p", promptContent, "--allow-all-tools"];
+    const cliArgs = [...this.baseArgs, ...copilotFlags];
 
     // Spawn the process
     const process = this.processSpawner(this.binaryPath, cliArgs, {

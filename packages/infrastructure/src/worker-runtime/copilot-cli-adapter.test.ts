@@ -358,7 +358,7 @@ function createTestAdapter(config?: { binaryPath?: string; baseArgs?: string[] }
   const processSpawner = createFakeProcessSpawner();
 
   const adapter = new CopilotCliAdapter(
-    { binaryPath: config?.binaryPath ?? "gh", baseArgs: config?.baseArgs ?? ["copilot"] },
+    { binaryPath: config?.binaryPath ?? "copilot", baseArgs: config?.baseArgs ?? [] },
     { fs, processSpawner: processSpawner.spawner },
   );
 
@@ -434,7 +434,7 @@ describe("CopilotCliAdapter", () => {
   describe("startRun", () => {
     /**
      * Validates that startRun spawns a CLI process with the correct binary,
-     * arguments (including --prompt-file), and working directory.
+     * arguments (including -p with prompt content), and working directory.
      *
      * This ensures the worker receives the right prompt and executes in
      * the correct workspace context.
@@ -448,9 +448,9 @@ describe("CopilotCliAdapter", () => {
 
       const call = processSpawner.getLastCall();
       expect(call).not.toBeNull();
-      expect(call!.command).toBe("gh");
-      expect(call!.args).toContain("copilot");
-      expect(call!.args).toContain("--prompt-file");
+      expect(call!.command).toBe("copilot");
+      expect(call!.args).toContain("-p");
+      expect(call!.args).toContain("--allow-all-tools");
       expect(call!.options.cwd).toBe(context.workspacePaths.worktreePath);
     });
 
