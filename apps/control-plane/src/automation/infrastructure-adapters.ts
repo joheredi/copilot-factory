@@ -15,6 +15,8 @@
  * @module @factory/control-plane/automation/infrastructure-adapters
  */
 
+import { execSync } from "node:child_process";
+
 import type {
   WorkspaceProviderPort,
   PacketMounterPort,
@@ -215,14 +217,37 @@ export function resolveInfrastructureConfig(): InfrastructureAdapterConfig {
   const workspacesRoot = process.env["WORKSPACES_ROOT"] ?? "./data/workspaces";
   const artifactsRoot = process.env["ARTIFACTS_ROOT"] ?? "./data/artifacts";
 
-  // Allow overriding the Copilot CLI binary path via environment variable.
-  // Useful when the `copilot` binary is installed via NVM or a non-standard path.
+  // Resolve the Copilot CLI binary path. The control-plane process may
+  // have a stripped PATH (e.g., when started from an IDE), so we resolve
+  // the absolute path at startup using the current shell's PATH.
   const cliBinary = process.env["COPILOT_CLI_BINARY"];
-  const copilotCli: InfrastructureAdapterConfig["copilotCli"] = cliBinary
-    ? { binaryPath: cliBinary, baseArgs: [] }
-    : undefined;
+  let copilotCli: InfrastructureAdapterConfig["copilotCli"];
+
+  if (cliBinary) {
+    copilotCli = { binaryPath: cliBinary, baseArgs: [] };
+  } else {
+    const resolvedPath = resolveBinaryPath("copilot") ?? resolveBinaryPath("gh");
+    if (resolvedPath) {
+      const isCopilotDirect = resolvedPath.endsWith("/copilot") || resolvedPath === "copilot";
+      copilotCli = isCopilotDirect
+        ? { binaryPath: resolvedPath, baseArgs: [] }
+        : { binaryPath: resolvedPath, baseArgs: ["copilot", "--"] };
+    }
+  }
 
   return { workspacesRoot, artifactsRoot, copilotCli };
+}
+
+/**
+ * Resolve a binary name to its absolute path using `which`.
+ * Returns null if the binary is not found.
+ */
+function resolveBinaryPath(name: string): string | null {
+  try {
+    return execSync(`which ${name}`, { encoding: "utf-8", timeout: 5000 }).trim();
+  } catch {
+    return null;
+  }
 }
 
 /**
