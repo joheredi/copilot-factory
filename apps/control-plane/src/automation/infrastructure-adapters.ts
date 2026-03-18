@@ -214,7 +214,15 @@ export function createRuntimeAdapterBridge(adapter: CopilotCliAdapter): RuntimeA
 export function resolveInfrastructureConfig(): InfrastructureAdapterConfig {
   const workspacesRoot = process.env["WORKSPACES_ROOT"] ?? "./data/workspaces";
   const artifactsRoot = process.env["ARTIFACTS_ROOT"] ?? "./data/artifacts";
-  return { workspacesRoot, artifactsRoot };
+
+  // Allow overriding the Copilot CLI binary path via environment variable.
+  // Useful when the `copilot` binary is installed via NVM or a non-standard path.
+  const cliBinary = process.env["COPILOT_CLI_BINARY"];
+  const copilotCli: InfrastructureAdapterConfig["copilotCli"] = cliBinary
+    ? { binaryPath: cliBinary, baseArgs: [] }
+    : undefined;
+
+  return { workspacesRoot, artifactsRoot, copilotCli };
 }
 
 /**

@@ -147,15 +147,15 @@ export type CliProcessSpawner = (
 export interface CopilotCliConfig {
   /**
    * Path to the CLI binary.
-   * @default "copilot"
+   * @default "gh"
    */
   readonly binaryPath?: string;
 
   /**
    * Base arguments passed before the prompt argument.
-   * When using "gh" as binaryPath, set to ["copilot", "--"] so that
-   * gh passes Copilot-specific flags through without intercepting them.
-   * @default []
+   * The `--` separator prevents `gh` from intercepting Copilot-specific flags.
+   * Set to `[]` when using `copilot` directly as binaryPath.
+   * @default ["copilot", "--"]
    */
   readonly baseArgs?: readonly string[];
 
@@ -474,8 +474,8 @@ export class CopilotCliAdapter implements WorkerRuntime {
   private readonly runs = new Map<string, CopilotCliRunState>();
 
   constructor(config: CopilotCliConfig, deps: CopilotCliDependencies) {
-    this.binaryPath = config.binaryPath ?? "copilot";
-    this.baseArgs = config.baseArgs ?? [];
+    this.binaryPath = config.binaryPath ?? "gh";
+    this.baseArgs = config.baseArgs ?? ["copilot", "--"];
     this.outputFileName = config.outputFileName ?? OUTPUT_PACKET_FILENAME;
     this.promptFileName = config.promptFileName ?? PROMPT_FILENAME;
     this.fs = deps.fs;

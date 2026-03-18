@@ -358,7 +358,7 @@ function createTestAdapter(config?: { binaryPath?: string; baseArgs?: string[] }
   const processSpawner = createFakeProcessSpawner();
 
   const adapter = new CopilotCliAdapter(
-    { binaryPath: config?.binaryPath ?? "copilot", baseArgs: config?.baseArgs ?? [] },
+    { binaryPath: config?.binaryPath ?? "gh", baseArgs: config?.baseArgs ?? ["copilot", "--"] },
     { fs, processSpawner: processSpawner.spawner },
   );
 
@@ -448,7 +448,9 @@ describe("CopilotCliAdapter", () => {
 
       const call = processSpawner.getLastCall();
       expect(call).not.toBeNull();
-      expect(call!.command).toBe("copilot");
+      expect(call!.command).toBe("gh");
+      expect(call!.args).toContain("copilot");
+      expect(call!.args).toContain("--");
       expect(call!.args).toContain("-p");
       expect(call!.args).toContain("--allow-all-tools");
       expect(call!.options.cwd).toBe(context.workspacePaths.worktreePath);
