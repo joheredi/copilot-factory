@@ -17,6 +17,7 @@ import {
 } from "../../../components/ui/table.js";
 import { Badge } from "../../../components/ui/badge.js";
 import { cn } from "../../../lib/utils.js";
+import { Link } from "react-router-dom";
 
 /** Worker record as returned by `GET /pools/:id/workers`. */
 export interface WorkerRecord {
@@ -35,6 +36,8 @@ export interface WorkerTableProps {
   readonly workers: readonly WorkerRecord[];
   /** Whether data is still loading. */
   readonly isLoading: boolean;
+  /** Pool ID used to build worker detail links. */
+  readonly poolId: string;
 }
 
 /** Status color mapping for worker status badges. */
@@ -82,7 +85,7 @@ function formatHeartbeat(dateStr: string | null): string {
  * last heartbeat, and host information. Loading state shows skeleton rows.
  * Empty state shows an informative message.
  */
-export function WorkerTable({ workers, isLoading }: WorkerTableProps) {
+export function WorkerTable({ workers, isLoading, poolId }: WorkerTableProps) {
   if (isLoading) {
     return (
       <div data-testid="worker-table-skeleton">
@@ -148,7 +151,12 @@ export function WorkerTable({ workers, isLoading }: WorkerTableProps) {
             <TableRow key={worker.workerId} data-testid={`worker-row-${worker.workerId}`}>
               <TableCell>
                 <div className="flex flex-col">
-                  <span className="font-medium text-sm">{worker.name}</span>
+                  <Link
+                    to={`/workers/${poolId}/worker/${worker.workerId}`}
+                    className="font-medium text-sm text-primary hover:underline"
+                  >
+                    {worker.name}
+                  </Link>
                   {worker.host && (
                     <span className="text-xs text-muted-foreground">{worker.host}</span>
                   )}

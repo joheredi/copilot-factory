@@ -235,7 +235,7 @@ export default function PoolDetailPage() {
           <CardDescription>Registered workers and their current status</CardDescription>
         </CardHeader>
         <CardContent>
-          <WorkerTable workers={workers} isLoading={workersLoading} />
+          <WorkerTable workers={workers} isLoading={workersLoading} poolId={id ?? ""} />
         </CardContent>
       </Card>
 
