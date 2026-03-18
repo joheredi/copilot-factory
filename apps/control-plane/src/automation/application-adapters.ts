@@ -8,7 +8,7 @@
  * @module @factory/control-plane/automation
  */
 
-import { resolve, join } from "node:path";
+import { resolve, join, basename } from "node:path";
 import { mkdirSync } from "node:fs";
 
 import {
@@ -622,9 +622,13 @@ function buildTaskPacket(params: {
 export function createWorkerDispatchUnitOfWork(
   conn: DatabaseConnection,
   artifactsRoot?: string,
+  workspacesRoot?: string,
 ): WorkerDispatchUnitOfWork {
   const resolvedArtifactsRoot = resolve(
     artifactsRoot ?? process.env["ARTIFACTS_ROOT"] ?? "./data/artifacts",
+  );
+  const resolvedWorkspacesRoot = resolve(
+    workspacesRoot ?? process.env["WORKSPACES_ROOT"] ?? "./data/workspaces",
   );
   return {
     runInTransaction<T>(fn: (repos: WorkerDispatchTransactionRepositories) => T): T {
@@ -653,6 +657,10 @@ export function createWorkerDispatchUnitOfWork(
 
             const workerName = `worker-${task.taskId}`;
 
+            // Resolve repoPath for workspace path computation
+            const repoPath = repository.localCheckoutPath ?? repository.remoteUrl;
+            const repoId = basename(repoPath);
+
             // Build absolute paths for artifacts and ensure directories exist
             const artifactRoot = join(resolvedArtifactsRoot, task.taskId);
             const packetInputDir = join(artifactRoot, "packets", "input");
@@ -661,8 +669,10 @@ export function createWorkerDispatchUnitOfWork(
 
             mkdirSync(packetInputDir, { recursive: true });
 
+            // Compute the worktree path using the same layout as the
+            // workspace manager: {workspacesRoot}/{repoId}/{taskId}/worktree
             const workspacePaths: SupervisorWorkspacePaths = {
-              worktreePath: `worktrees/${task.taskId}`,
+              worktreePath: join(resolvedWorkspacesRoot, repoId, task.taskId, "worktree"),
               artifactRoot,
               packetInputPath,
               policySnapshotPath,
@@ -708,7 +718,7 @@ export function createWorkerDispatchUnitOfWork(
             }
 
             return {
-              repoPath: repository.localCheckoutPath ?? repository.remoteUrl,
+              repoPath,
               workerName,
               runContext: {
                 taskPacket,
